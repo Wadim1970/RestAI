@@ -101,51 +101,46 @@ export default function MenuPage() {
     // Эта логика срабатывает, только если мы прокручиваем вручную, 
     // не мешая клику на хедере.
     useEffect(() => {
-        if (loading || sections.length === 0 || !mainContainerRef.current) return;
+    // Если данные еще грузятся — выходим
+    if (loading || sections.length === 0) return;
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    // Используем isIntersecting. 
-                    // Секция считается активной, если она пересекает нашу "полосу"
-                    if (entry.isIntersecting) {
-                        const sectionName = entry.target.getAttribute('data-section');
-                        setActiveSection(sectionName);
-                    }
-                });
-            },
-            {
-                root: mainContainerRef.current,
-                /* ЖЕСТКИЕ ПАРАМЕТРЫ (rootMargin):
-                   -100px сверху: зона начинается сразу под хедером (если хедер ~80-90px)
-                   -80% снизу: зона заканчивается очень быстро, создавая узкую "линию срабатывания"
-                */
-                rootMargin: '-160px 0px -80% 0px',
-                threshold: 0 // Срабатывает сразу при касании границы
-            }
-        );
+    const observerOptions = {
+        // ВАЖНО: root: null означает, что мы следим за скроллом ВСЕГО ОКНА браузера.
+        // Это именно то, что нам нужно после перехода на естественный скролл.
+        root: null, 
+        
+        // rootMargin создает "линию срабатывания". 
+        // -120px сверху — это сразу под твоим фиксированным хедером.
+        // -70% снизу — чтобы активной считалась только верхняя видимая секция.
+        rootMargin: '-120px 0px -70% 0px',
+        threshold: 0
+    };
 
-        sections.forEach(sectionName => {
-            const element = sectionRefs.current[sectionName];
-            if (element) {
-                observer.observe(element);
+    const observerCallback = (entries) => {
+        entries.forEach(entry => {
+            // Если секция пересекла нашу невидимую "линию под хедером"
+            if (entry.isIntersecting) {
+                const sectionName = entry.target.getAttribute('data-section');
+                if (sectionName) {
+                    setActiveSection(sectionName);
+                }
             }
         });
+    };
 
-        return () => observer.disconnect();
-    }, [sections, loading]);
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
 
+    // Начинаем следить за каждой секцией
+    sections.forEach(sectionName => {
+        const element = sectionRefs.current[sectionName];
+        if (element) {
+            observer.observe(element);
+        }
+    });
 
-    if (loading) {
-        return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px'}}>Загрузка меню...</div>;
-    }
-
-    if (sections.length === 0 && !loading) {
-        return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px', color: 'red'}}>Нет данных для отображения. Проверьте Superbase.</div>;
-    }
-
-    return (
-        <>
+    return () => observer.disconnect();
+}, [sections, loading]); // Убрали зависимость от mainContainerRef
+    
             {/* --- 1. HEADER (Фиксированный) --- */}
             <MenuHeader 
                 sections={sections} 
