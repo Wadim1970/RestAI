@@ -17,11 +17,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
+  /* Убираем жесткую высоту. auto позволяет странице расти вниз */
+  height: auto !important; 
+  min-height: 100%;
+  /* Разрешаем скролл всей страницы, а не внутри блоков */
+  overflow-x: hidden;
+  overflow-y: visible !important; 
+  /* Магия для плавности скролла в Safari */
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
   display: block; 
-  min-height: 100vh;
   background-color: #ffffff;
 }
 
