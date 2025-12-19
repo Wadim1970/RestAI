@@ -82,44 +82,46 @@ export default function MenuPage() {
 
     // ЛОГИКА СИНХРОНИЗАЦИИ СКРОЛЛА
     useEffect(() => {
-        if (loading || sections.length === 0) return;
+    if (loading || sections.length === 0) return;
 
-        const observerOptions = {
-            root: null, // Следим за окном браузера
-            // Чувствительная зона: -130px (под хедером) и отсекаем нижние 80% экрана
-            rootMargin: '-130px 0px -80% 0px',
-            threshold: 0
-        };
+    const observerOptions = {
+        root: null,
+        // Сверху -116px (высота хедера), снизу -70% 
+        // Мы чуть расширили зону (было -80%), чтобы при скролле вверх 
+        // верхняя граница секции быстрее попадала в поле зрения обсервера
+        rootMargin: '-116px 0px -70% 0px',
+        // Добавляем массив порогов для более частого опроса состояния
+        threshold: [0, 0.01, 0.1]
+    };
 
-        const observerCallback = (entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const sectionName = entry.target.getAttribute('data-section');
-                    if (sectionName) {
-                        setActiveSection(sectionName);
-                    }
+    const observerCallback = (entries) => {
+        entries.forEach(entry => {
+            // entry.isIntersecting — секция зашла в зону
+            if (entry.isIntersecting) {
+                const sectionName = entry.target.getAttribute('data-section');
+                if (sectionName) {
+                    setActiveSection(sectionName);
                 }
-            });
-        };
+            }
+        });
+    };
 
-        const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
 
-        // Ждем небольшую паузу, чтобы элементы успели попасть в DOM и рефы
-        const timer = setTimeout(() => {
-            sections.forEach(sectionName => {
-                const element = sectionRefs.current[sectionName];
-                if (element) {
-                    observer.observe(element);
-                }
-            });
-        }, 150);
+    const timer = setTimeout(() => {
+        sections.forEach(sectionName => {
+            const element = sectionRefs.current[sectionName];
+            if (element) {
+                observer.observe(element);
+            }
+        });
+    }, 150);
 
-        return () => {
-            observer.disconnect();
-            clearTimeout(timer);
-        };
-    }, [sections, loading]);
-
+    return () => {
+        observer.disconnect();
+        clearTimeout(timer);
+    };
+}, [sections, loading]);
 
     if (loading) {
         return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px'}}>Загрузка меню...</div>;
