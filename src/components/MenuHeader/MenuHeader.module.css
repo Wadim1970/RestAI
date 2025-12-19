@@ -10,29 +10,24 @@
     position: fixed;
     top: 0;
     width: 100%;
-    max-width: 27.5rem; /* 440px */
-    height: 7.25rem; /* 116px */
+    max-width: 27.5rem; 
+    height: 7.25rem; 
     z-index: 1000;
-    
-    /* Центрирование на широких экранах */
     left: 50%;
     transform: translateX(-50%);
 
-    /* Градиент */
-    /* background: linear-gradient(
-        180deg, 
-        rgba(255, 255, 255, 1) 0%,   
-        rgba(255, 255, 255, 0.9) 50%, 
-        rgba(255, 255, 255, 0.7) 100%
-    );
-    
-    backdrop-filter: blur(0.75rem); /* 12px */
-    /* -webkit-backdrop-filter: blur(0.75rem);  */
+    /* 1. Уменьшаем прозрачность до 10%, чтобы блюр "проявился" */
+    background-color: rgba(255, 255, 255, 0.1); 
 
-    background-color: rgba(255, 255, 255, 0.3); /* Белый, 30% прозрачность */
-    will-change: backdrop-filter;
-    backdrop-filter: blur(15px); /* 12px -> 0.75rem */
+    /* 2. Убираем will-change, если блюр тормозит */
+    /* will-change: backdrop-filter; */
+
+    /* 3. Обязательно дублируем для Safari */
     -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
+
+    /* 4. Добавляем аппаратное ускорение именно для этого слоя */
+    -webkit-transform: translateX(-50%) translateZ(0);
 }
 
 /* --- Логотип --- */
