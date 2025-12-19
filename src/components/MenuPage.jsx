@@ -101,12 +101,13 @@ export default function MenuPage() {
     // Эта логика срабатывает, только если мы прокручиваем вручную, 
     // не мешая клику на хедере.
     useEffect(() => {
+    // Убираем привязку к mainContainerRef.current, ставим null
     if (loading || sections.length === 0) return;
 
     const observer = new IntersectionObserver(
         (entries) => {
-            entries.forEach(entry => {
-                // На iPhone лучше проверять по ratio или просто isIntersecting
+            entries.forEach((entry) => {
+                // На iPhone проверяем, что элемент пересекает верхнюю часть экрана
                 if (entry.isIntersecting) {
                     const sectionName = entry.target.getAttribute('data-section');
                     setActiveSection(sectionName);
@@ -114,17 +115,17 @@ export default function MenuPage() {
             });
         },
         {
-            /* root: null означает следить за всем экраном устройства */
-            root: null, 
-            /* -120px сверху: чтобы заголовок считался "вошедшим", когда он ниже хедера
-               -60% снизу: чтобы активной считалась только та секция, которая в верхней части
-            */
-            rootMargin: '-120px 0px -60% 0px',
-            threshold: [0, 0.1] 
+            // null — значит следим относительно всего экрана (viewport)
+            root: null,
+            // Смещаем "линию срабатывания" ближе к верху (под ваш хедер)
+            // -150px сверху, чтобы не срабатывало слишком рано
+            // -70% снизу, чтобы активной была только верхняя секция
+            rootMargin: '-150px 0px -70% 0px',
+            threshold: 0 
         }
     );
 
-    sections.forEach(sectionName => {
+    sections.forEach((sectionName) => {
         const element = sectionRefs.current[sectionName];
         if (element) {
             observer.observe(element);
