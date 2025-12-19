@@ -1,0 +1,127 @@
+/* src/components/MenuHeader/MenuHeader.module.css (ФИНАЛЬНАЯ ВЕРСИЯ С REM И ФИКСАМИ) */
+
+:root {
+    --color-primary: #304D22;
+    --color-accent: #48BF48; 
+}
+
+/* --- Главный контейнер хедера (Фиксированный) --- */
+.headerContainer {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    max-width: 27.5rem; /* 440px */
+    height: 7.25rem; /* 116px */
+    z-index: 1000;
+    
+    /* Центрирование на широких экранах */
+    left: 50%;
+    transform: translateX(-50%);
+
+    /* Градиент */
+    /* background: linear-gradient(
+        180deg, 
+        rgba(255, 255, 255, 1) 0%,   
+        rgba(255, 255, 255, 0.9) 50%, 
+        rgba(255, 255, 255, 0.7) 100%
+    );
+    
+    backdrop-filter: blur(0.75rem); /* 12px */
+    /* -webkit-backdrop-filter: blur(0.75rem);  */
+
+    background-color: rgba(255, 255, 255, 0.3); /* Белый, 30% прозрачность */
+    backdrop-filter: blur(30px); /* 12px -> 0.75rem */
+    -webkit-backdrop-filter: blur(30px);
+}
+
+/* --- Логотип --- */
+.logoArea {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; 
+    height: 4.25rem; /* 68px - до начала слайдера */
+}
+
+.logoImage {
+    width: 10.5rem; /* 168px */
+    height: 2.875rem; /* 51px */
+    margin-top: 0.2rem;
+}
+
+/* --- Слайдер разделов --- */
+.categorySlider {
+    position: absolute;
+    top: 4.25rem; /* 68px */
+    width: 100%;
+    height: 2.375rem; /* 38px */
+    
+    display: flex;
+    align-items: center;
+    gap: 0.625rem; /* 10px между кнопками */
+    padding: 0; /* УБРАНО: для корректной работы фикса отступов */
+    
+    overflow-x: auto; 
+    overflow-y: hidden;
+    white-space: nowrap; 
+    
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.categorySlider::-webkit-scrollbar {
+    display: none;
+}
+
+/* !!! ФИКС ОТСТУПОВ СЛАЙДЕРА (22px с обеих сторон) !!! */
+.categorySlider::before,
+.categorySlider::after {
+    content: '';
+    display: block;
+    width: 1.375rem; /* 22px */
+    flex-shrink: 0; 
+    height: 100%;
+}
+.categorySlider::before {
+    /* Сдвигаем влево, чтобы первая кнопка начиналась ровно с 22px */
+    margin-left: -1.375rem;
+}
+
+
+/* --- Кнопка раздела --- */
+.categoryButton {
+    height: 2.125rem; /* 34px */
+    padding: 0 0.9375rem; /* 15px */
+    background-color: rgba(255, 255, 255, 0.5);
+    box-sizing: border-box;
+    border: 1px solid var(--color-primary); 
+    border-radius: 1.125rem; /* 18px */
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem; /* 16px */
+    font-weight: 400; 
+    color: #000;
+    flex-shrink: 0; 
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.categoryButton.active {
+    background-color: var(--color-primary);
+    color: #fff;
+}
+
+/* --- Разделительная линия в самом низу хедера --- */
+.divider {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--color-primary); 
+    opacity: 0.7; 
+}

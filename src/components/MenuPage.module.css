@@ -1,0 +1,169 @@
+/* MenuPage.module.css (Дополняем/Обновляем) */
+:root {
+    --color-primary: #304D22;
+    --color-accent: #48BF48;
+    --color-price-bg: #E5E0D4;
+}
+
+/* --- Общий контейнер страницы --- */
+.menuContainer {
+    max-width: 440px; 
+    margin: 0 auto;
+    
+    position: fixed; 
+    left: 0;
+    right: 0;
+    height: 100vh; 
+    overflow-y: auto; 
+    
+    /* ВАЖНО: border-box гарантирует, что padding не расширяет контейнер */
+    box-sizing: border-box; 
+    z-index: 1; 
+    
+    padding-top: 116px; 
+    padding-bottom: 175px; 
+    
+    /* Наши законные 22px */
+    padding-left: 22px; 
+    padding-right: 22px;
+    
+    background-color: #fff;
+    text-align: left; 
+}
+
+/* --- Заголовки разделов --- */
+.menuSection h2 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: #000;
+    
+    /* Обнуляем маржины, чтобы они не складывались с паддингом контейнера */
+    margin-left: 0; 
+    padding-left: 0;
+    
+    /* Принудительно влево */
+    text-align: left;
+    display: block;
+    width: 100%;
+
+    margin-top: 42px; 
+    margin-bottom: 30px;
+}
+
+
+/* --- Сетка блюд (2 ряда) --- */
+.dishGrid {
+    display: grid;
+    /* ИЗМЕНЕНО: Используем 1fr, чтобы колонки делили место поровну, 
+       но не вылезали за границы из-за padding-ов родителя */
+    grid-template-columns: repeat(2, 1fr); 
+    
+    padding: 0 !important; 
+    margin: 0 !important;
+    
+    /* Расстояние между карточками */
+    gap: 30px 22px; 
+    
+    /* Ширина 100% от родителя (440px минус его отступы) */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* --- Карточка блюда --- */
+.dishCard {
+    /* ИЗМЕНЕНО: Убираем жесткие 188px, чтобы карточка 
+       подстраивалась под ширину колонки сетки */
+    width: 100%; 
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* --- Изображение --- */
+.dishImageContainer {
+    position: relative;
+    width: 100%;
+    /* Чтобы сохранить пропорцию квадрата при изменении ширины: */
+    aspect-ratio: 1 / 1; 
+}
+.dishImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+    display: block;
+}
+
+/* --- Поле с ценой (E5E0D4) --- */
+.priceTag {
+    position: absolute;
+    left: 1px; /* 1 пиксель от левого края */
+    bottom: 3px; /* 3 пикселя от нижнего края */
+    width: 81px;
+    height: 31px;
+    background-color: var(--color-price-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dishPrice {
+    font-family: 'Manrope', sans-serif;
+    font-size: 20px;
+    font-weight: 700; /* Bold */
+    color: var(--color-primary); /* Цвет 304D22 */
+}
+
+/* --- Кнопка выбора блюда --- */
+.selectButton {
+    position: absolute;
+    right: 3px; /* 3 пикселя от правого края */
+    bottom: 3px; /* 3 пикселя от нижнего края */
+    width: 37px;
+    height: 37px;
+    background-color: #fff;
+    border: 1px solid var(--color-accent); /* Окантовка 48BF48 */
+    
+    /* Скругления: 20, 20, 0, 20 */
+    border-radius: 20px 20px 0 20px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.selectButton.selected {
+    background-color: var(--color-accent); /* Зеленый 48BF48 */
+    border-color: #fff;
+}
+
+.checkmarkIcon {
+    /* Стиль для изображения галочки (21x15) */
+    width: 21px;
+    height: 15px;
+    
+    /* --- ЗАМЕНА ЗАГЛУШКИ НА ИЗОБРАЖЕНИЕ --- */
+    background-image: url('/icons/free-icon-checkmark-.png'); /* ПУТЬ К ВАШЕЙ ИКОНКЕ */
+    background-size: contain; /* Изображение масштабируется, чтобы полностью поместиться */
+    background-repeat: no-repeat; /* Предотвращаем повторение иконки */
+    background-position: center; /* Центрируем иконку внутри блока 21x15 */
+    
+    /* background-color: white; - Эту строку удаляем! */
+}
+
+/* --- Название блюда под изображением --- */
+.dishName {
+    font-family: 'Manrope', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    /* Название блюда внутри карточки можно оставить по центру или тоже влево */
+    text-align: center; 
+    width: 100%;
+    margin-top: 10px;
+}
+
+.menuSection {
+    /* Высота вашего хедера + небольшой запас */
+    scroll-margin-top: 160px; 
+}
