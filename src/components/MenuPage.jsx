@@ -101,39 +101,25 @@ export default function MenuPage() {
     // Эта логика срабатывает, только если мы прокручиваем вручную, 
     // не мешая клику на хедере.
     useEffect(() => {
-    // Убираем привязку к mainContainerRef.current, ставим null
-    if (loading || sections.length === 0) return;
+    const handleScroll = () => {
+        const sectionElements = Object.values(sectionRefs.current);
+        
+        // Находим секцию, которая сейчас ближе всего к верху экрана (с отступом 150px)
+        const currentSection = sectionElements.find(el => {
+            if (!el) return false;
+            const rect = el.getBoundingClientRect();
+            return rect.top >= 0 && rect.top <= 150;
+        });
 
-    const observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach((entry) => {
-                // На iPhone проверяем, что элемент пересекает верхнюю часть экрана
-                if (entry.isIntersecting) {
-                    const sectionName = entry.target.getAttribute('data-section');
-                    setActiveSection(sectionName);
-                }
-            });
-        },
-        {
-            // null — значит следим относительно всего экрана (viewport)
-            root: null,
-            // Смещаем "линию срабатывания" ближе к верху (под ваш хедер)
-            // -150px сверху, чтобы не срабатывало слишком рано
-            // -70% снизу, чтобы активной была только верхняя секция
-            rootMargin: '-150px 0px -70% 0px',
-            threshold: 0 
+        if (currentSection) {
+            const name = currentSection.getAttribute('data-section');
+            if (name) setActiveSection(name);
         }
-    );
+    };
 
-    sections.forEach((sectionName) => {
-        const element = sectionRefs.current[sectionName];
-        if (element) {
-            observer.observe(element);
-        }
-    });
-
-    return () => observer.disconnect();
-}, [sections, loading]);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+}, [sections]);
 
         sections.forEach(sectionName => {
             const element = sectionRefs.current[sectionName];
