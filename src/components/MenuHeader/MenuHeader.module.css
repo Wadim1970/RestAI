@@ -25,7 +25,7 @@
     -webkit-backface-visibility: hidden;
 
     /* 1. Уменьшаем прозрачность до 10%, чтобы блюр "проявился" */
-    background-color: rgba(255, 255, 255, 0.1); 
+    background-color: rgba(255, 255, 255, 0.3); 
 
     /* 2. Убираем will-change, если блюр тормозит */
     /* will-change: backdrop-filter; */
