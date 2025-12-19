@@ -1,15 +1,26 @@
 /* src/styles.css - Адаптивная версия */
 
 /* === Общие стили === */
+/* === Общие стили === */
 body { 
     margin: 0; 
     padding: 0; 
-    overflow: hidden; 
+    /* ЗАМЕНИТЕ overflow: hidden на: */
+    overflow-x: hidden; 
+    overflow-y: auto; 
+    /* Разрешаем документу расти */
+    height: auto;
+    min-height: 100%;
     font-family: 'Inter', sans-serif;
+    /* Важно для плавности на iPhone */
+    -webkit-overflow-scrolling: touch;
 }
+
 #root {
-    width: 100vw;
-    height: 100vh;
+    width: 100%; /* Вместо 100vw для лучшей совместимости */
+    /* ЗАМЕНИТЕ height: 100vh на: */
+    min-height: 100vh;
+    height: auto;
 }
 
 /* 1. VideoBackground.css */
