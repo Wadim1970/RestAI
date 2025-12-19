@@ -1,52 +1,50 @@
 /* src/components/MenuFooter/MenuFooter.module.css (ФИНАЛЬНЫЙ КОД С REM И АДАПТИВНОСТЬЮ КНОПОК) */
 
+/* src/components/MenuFooter/MenuFooter.module.css */
+
 :root {
-    --color-primary: #304D22; /* Чат, текст, окантовка */
-    --color-accent: #48BF48; /* Зеленый (активный заказ) */
-    --color-call: #FF9D00;  /* Оранжевый (кнопка вызова) */
-    --color-price-bg: #E5E0D4; /* Светлая окантовка корзины */
+    --color-primary: #304D22; 
+    --color-accent: #48BF48; 
+    --color-call: #FF9D00;  
+    --color-price-bg: #E5E0D4; 
 }
 
-/* --- Главный контейнер футера (Фиксированный) --- */
+/* --- Главный контейнер футера --- */
 .footerContainer {
     position: fixed;
     bottom: 0;
     width: 100%;
     max-width: 27.5rem; /* 440px */
-    height: 7.8125rem; /* 125px */
+    height: 6.375rem;   /* ИЗМЕНЕНО: 102px */
     z-index: 1000; 
     
-    /* Центрирование */
     left: 50%;
     transform: translateX(-50%);
     
-    background-color: rgba(255, 255, 255, 0.3); /* Белый, 30% прозрачность */
+    background-color: rgba(255, 255, 255, 0.3); 
     will-change: backdrop-filter;
-    backdrop-filter: blur(20px); /* 12px -> 0.75rem */
+    backdrop-filter: blur(20px); 
     -webkit-backdrop-filter: blur(20px);
     
-    /* Окантовка сверху */
     border-top: 1px solid rgba(48, 77, 34, 0.4); 
 }
 
 /* --- Контейнер для кнопок --- */
 .buttonArea {
     display: flex;
-    /* ИСПРАВЛЕНИЕ: Используем GAP для гарантированного расстояния 15px */
     justify-content: space-between; 
-    gap: 0.9375rem; /* 15px между кнопками */
+    gap: 0.9375rem; /* 15px */
     
-    padding-top: 1.4375rem; /* 23px */
-    padding-left: 1.375rem; /* 22px */
+    padding-top: 1rem;      /* ИЗМЕНЕНО: 16px от верхнего края */
+    padding-left: 1.375rem;  /* 22px */
     padding-right: 1.375rem; /* 22px */
 }
 
 /* --- Общие стили для кнопок-контейнеров --- */
 .navItem {
-    /* ИСПРАВЛЕНИЕ: Адаптивная ширина */
     flex-grow: 1; 
     flex-shrink: 1;
-    max-width: 7.5rem; /* 120px - ограничение для широких экранов */
+    max-width: 7.5rem; 
     
     display: flex;
     flex-direction: column;
@@ -54,8 +52,8 @@
 }
 
 .navButton {
-    height: 3.625rem; /* 58px */
-    width: 100%; /* Теперь занимает всю доступную (адаптивную) ширину navItem */
+    height: 3.625rem; /* 58px - высоту самих кнопок оставляем прежней */
+    width: 100%; 
     display: flex;
     align-items: center;
     justify-content: center;
@@ -67,18 +65,17 @@
 
 /* --- Подписи под кнопками --- */
 .label {
-    margin-top: 0.375rem; /* 6px */
+    margin-top: 0.375rem; /* Сохранено: 6px */
     font-family: 'Manrope', sans-serif;
     font-size: 0.8125rem; /* 13px */
-    font-weight: 400; /* Regular */
+    font-weight: 400; 
     color: var(--color-primary); 
     text-align: center;
 }
 
-/* --- 1. Кнопка Чата (304D22) --- */
+/* --- 1. Кнопка Чата --- */
 .chatButton {
     background-color: var(--color-primary); 
-    /* Скругления: ЛВ-26, ЛН-15, ПВ-34, ПН-34 */
     border-radius: 1.625rem 2.125rem 2.125rem 0.9375rem;
 }
 
@@ -86,62 +83,41 @@
     width: 3.5rem; /* 56px */
     height: 3.5rem; /* 56px */
     position: absolute;
-    left: 0.0625rem; /* 1px */
-    top: 0.0625rem; /* 1px */
-    
-    /* Скругления аватара: ЛВ-30, ЛН-15, ПВ-37, ПН-37 */
+    left: 0.0625rem; 
+    top: 0.0625rem; 
     border-radius: 1.875rem 2.3125rem 2.3125rem 0.9375rem; 
     object-fit: cover;
 }
 
 /* --- 2. Кнопка Заказа (Корзина) --- */
-
 .orderButton {
-    /* ВОЗВРАЩАЕМ ОБЩИЕ СТИЛИ (РАДИУС И ПЕРЕХОДЫ) */
     border-radius: 2.125rem;
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .orderButton:not(.active) {
     background-color: #fff;
-    border: 1px solid var(--color-primary); /* Темно-зеленая окантовка */
+    border: 1px solid var(--color-primary);
 }
-
 
 .navButton.orderButton.active {
-    background-color: var(--color-accent); /* Зеленый 48BF48 */
-    border: 1px solid var(--color-primary); /* Сохраняем темно-зеленую рамку */
+    background-color: var(--color-accent); 
+    border: 1px solid var(--color-primary);
 }
 
-
-.orderButton:focus,
-.orderButton:focus-visible,
-.orderButton:active {
-    /* ПРИНУДИТЕЛЬНО ВОССТАНАВЛИВАЕМ РАМКУ (на случай, если она сбилась) */
-    border-color: var(--color-primary); 
-    /* ФОН должен вернуться к белому, если это неактивное состояние */
-    background-color: #fff;
-}
-
-.orderButton.active:focus,
-.orderButton.active:active {
-    background-color: var(--color-accent);
-    border-color: var(--color-primary); /* Делаем рамку зеленой для визуального эффекта */
-}
 .orderIcon {
     width: 1.875rem; /* 30px */
-    height: 1.875rem; /* 30px */
+    height: 1.875rem; 
 }
 
-/* --- 3. Кнопка Вызова официанта (FF9D00) --- */
+/* --- 3. Кнопка Вызова официанта --- */
 .callButton {
     background-color: var(--color-call); 
-    border: 1px solid var(--color-primary); /* Окантовка E5E0D4 */
-    /* Скругления: ЛВ-34, ЛН-34, ПВ-26, ПН-15 */
+    border: 1px solid var(--color-primary); 
     border-radius: 2.125rem 1.625rem 0.9375rem 2.125rem;
 }
 
 .callIcon {
     width: 2.25rem; /* 36px */
-    height: 2.25rem; /* 36px */
+    height: 2.25rem; 
 }
