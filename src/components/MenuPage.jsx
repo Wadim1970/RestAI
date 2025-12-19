@@ -101,29 +101,38 @@ export default function MenuPage() {
     // Эта логика срабатывает, только если мы прокручиваем вручную, 
     // не мешая клику на хедере.
     useEffect(() => {
-        if (loading || sections.length === 0 || !mainContainerRef.current) return;
+    if (loading || sections.length === 0) return;
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    // Используем isIntersecting. 
-                    // Секция считается активной, если она пересекает нашу "полосу"
-                    if (entry.isIntersecting) {
-                        const sectionName = entry.target.getAttribute('data-section');
-                        setActiveSection(sectionName);
-                    }
-                });
-            },
-            {
-                root: mainContainerRef.current,
-                /* ЖЕСТКИЕ ПАРАМЕТРЫ (rootMargin):
-                   -100px сверху: зона начинается сразу под хедером (если хедер ~80-90px)
-                   -80% снизу: зона заканчивается очень быстро, создавая узкую "линию срабатывания"
-                */
-                rootMargin: '-160px 0px -80% 0px',
-                threshold: 0 // Срабатывает сразу при касании границы
-            }
-        );
+    const observer = new IntersectionObserver(
+        (entries) => {
+            entries.forEach(entry => {
+                // На iPhone лучше проверять по ratio или просто isIntersecting
+                if (entry.isIntersecting) {
+                    const sectionName = entry.target.getAttribute('data-section');
+                    setActiveSection(sectionName);
+                }
+            });
+        },
+        {
+            /* root: null означает следить за всем экраном устройства */
+            root: null, 
+            /* -120px сверху: чтобы заголовок считался "вошедшим", когда он ниже хедера
+               -60% снизу: чтобы активной считалась только та секция, которая в верхней части
+            */
+            rootMargin: '-120px 0px -60% 0px',
+            threshold: [0, 0.1] 
+        }
+    );
+
+    sections.forEach(sectionName => {
+        const element = sectionRefs.current[sectionName];
+        if (element) {
+            observer.observe(element);
+        }
+    });
+
+    return () => observer.disconnect();
+}, [sections, loading]);
 
         sections.forEach(sectionName => {
             const element = sectionRefs.current[sectionName];
