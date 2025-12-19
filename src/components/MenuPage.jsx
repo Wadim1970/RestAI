@@ -101,25 +101,29 @@ export default function MenuPage() {
     // Эта логика срабатывает, только если мы прокручиваем вручную, 
     // не мешая клику на хедере.
     useEffect(() => {
-    const handleScroll = () => {
-        const sectionElements = Object.values(sectionRefs.current);
-        
-        // Находим секцию, которая сейчас ближе всего к верху экрана (с отступом 150px)
-        const currentSection = sectionElements.find(el => {
-            if (!el) return false;
-            const rect = el.getBoundingClientRect();
-            return rect.top >= 0 && rect.top <= 150;
-        });
+        if (loading || sections.length === 0 || !mainContainerRef.current) return;
 
-        if (currentSection) {
-            const name = currentSection.getAttribute('data-section');
-            if (name) setActiveSection(name);
-        }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-}, [sections]);
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    // Используем isIntersecting. 
+                    // Секция считается активной, если она пересекает нашу "полосу"
+                    if (entry.isIntersecting) {
+                        const sectionName = entry.target.getAttribute('data-section');
+                        setActiveSection(sectionName);
+                    }
+                });
+            },
+            {
+                root: mainContainerRef.current,
+                /* ЖЕСТКИЕ ПАРАМЕТРЫ (rootMargin):
+                   -100px сверху: зона начинается сразу под хедером (если хедер ~80-90px)
+                   -80% снизу: зона заканчивается очень быстро, создавая узкую "линию срабатывания"
+                */
+                rootMargin: '-160px 0px -80% 0px',
+                threshold: 0 // Срабатывает сразу при касании границы
+            }
+        );
 
         sections.forEach(sectionName => {
             const element = sectionRefs.current[sectionName];
