@@ -10,25 +10,23 @@
     max-width: 440px; 
     margin: 0 auto;
     
-    position: fixed; 
-    left: 0;
-    right: 0;
-    height: 100vh; 
-    overflow-y: auto; 
+    /* Убираем fixed и 100vh */
+    position: relative; 
+    min-height: 100vh;
     
-    /* ВАЖНО: border-box гарантирует, что padding не расширяет контейнер */
+    /* Убираем внутренний скролл, пусть скроллится вся страница */
+    overflow-y: visible; 
+    
     box-sizing: border-box; 
     z-index: 1; 
     
     padding-top: 116px; 
     padding-bottom: 175px; 
-    
-    /* Наши законные 22px */
     padding-left: 22px; 
     padding-right: 22px;
     
     background-color: #fff;
-    text-align: left; 
+    text-align: left;
 }
 
 /* --- Заголовки разделов --- */
