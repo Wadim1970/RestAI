@@ -13,29 +13,20 @@
     max-width: 27.5rem; 
     height: 7.25rem; 
     z-index: 1000;
+    
     left: 50%;
-    transform: translateX(-50%);
+    /* ОБЪЕДИНЯЕМ ТРАНСФОРМАЦИИ */
+    transform: translateX(-50%) translateZ(0);
+    -webkit-transform: translateX(-50%) translateZ(0);
 
-    //Добавленный блок для прорисовки блюра
-    -webkit-transform: translateZ(0); 
-    transform: translateZ(0);
+    /* ОСТАВЛЯЕМ ТОЛЬКО ОДИН БЛОК БЛЮРА */
     -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
     backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+
+    background-color: rgba(255, 255, 255, 0.2); 
+    
     perspective: 1000px;
     -webkit-backface-visibility: hidden;
-
-    /* 1. Уменьшаем прозрачность до 10%, чтобы блюр "проявился" */
-    background-color: rgba(255, 255, 255, 0.3); 
-
-    /* 2. Убираем will-change, если блюр тормозит */
-    /* will-change: backdrop-filter; */
-
-    /* 3. Обязательно дублируем для Safari */
-    -webkit-backdrop-filter: blur(15px);
-    backdrop-filter: blur(15px);
-
-    /* 4. Добавляем аппаратное ускорение именно для этого слоя */
-    -webkit-transform: translateX(-50%) translateZ(0);
 }
 
 /* --- Логотип --- */
