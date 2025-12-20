@@ -14,27 +14,26 @@
     position: fixed;
     bottom: 0;
     width: 100%;
-    max-width: 27.5rem; /* 440px */
-    height: 6.375rem;   /* ИЗМЕНЕНО: 102px */
+    max-width: 27.5rem; 
+    height: 6.375rem;
     z-index: 1000; 
-
-    //Добавленный блок для прорисовки блюра
-    -webkit-transform: translateZ(0); 
-    transform: translateZ(0);
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
-    perspective: 1000px;
-    -webkit-backface-visibility: hidden;
     
     left: 50%;
-    transform: translateX(-50%);
+    /* ОБЪЕДИНЯЕМ ТРАНСФОРМАЦИИ В ОДНУ СТРОКУ */
+    transform: translateX(-50%) translateZ(0);
+    -webkit-transform: translateX(-50%) translateZ(0);
+
+    /* БЛЮР (одна четкая инструкция) */
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
     
-    background-color: rgba(255, 255, 255, 0.3); 
-    will-change: backdrop-filter;
-    backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px);
+    background-color: rgba(255, 255, 255, 0.2); /* Сделал чуть прозрачнее для эффекта */
     
     border-top: 1px solid rgba(48, 77, 34, 0.4); 
+    
+    /* Дополнительные параметры для стабилизации */
+    perspective: 1000px;
+    -webkit-backface-visibility: hidden;
 }
 
 /* --- Контейнер для кнопок --- */
