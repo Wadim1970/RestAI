@@ -4,6 +4,15 @@ import styles from './DishModal.module.css';
 const DishModal = ({ isOpen, onClose, dish }) => {
   const [count, setCount] = useState(0);
 
+useEffect(() => {
+  if (isOpen) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = 'unset';
+  }
+  return () => { document.body.style.overflow = 'unset'; };
+}, [isOpen]);
+  
   if (!isOpen || !dish) return null;
 
   // Проверка типа продукта
