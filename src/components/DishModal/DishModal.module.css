@@ -253,29 +253,46 @@
     margin-left: auto; 
     
     /* Твоя ширина 120px -> 27.27vw */
-    width: 50vw; /* Можно оставить 50vw или поставить свои 27.27vw */
-    height: 13.18vw;
+    width: 38.64vw; /* Примерно 170px, чтобы влезло "Добавить в заказ" */
+    height: 12.27vw; /* Примерно 54px */
     border-radius: 6.82vw;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    
+    /* Важно: чтобы рамка не увеличивала размер кнопки */
+    box-sizing: border-box; 
+    
+    /* Плавный переход, чтобы глаз не цеплялся за смену */
+    transition: all 0.2s ease;
+    
+    flex-shrink: 0;
     font-size: 4.09vw; /* 18px */
 }
 
 .addToCartBtn {
     background-color: #48BF48;
     color: white;
-    border: none;
+    border: 0.68vw solid #48BF48; /* Добавляем прозрачную или цветную рамку той же толщины */
+    font-weight: bold;
+    font-size: 3.64vw; /* 16px */
+    padding: 0;
 }
 
 .counterBtn {
     background-color: white;
-    border: 0.68vw solid #304D22;
+    /* Та же толщина рамки, что и у кнопки выше (0.68vw ~ 3px) */
+    border: 0.68vw solid #304D22; 
     justify-content: space-between;
-    padding: 0 4.32vw;
+    padding: 0 3.41vw; /* Внутренние отступы для иконок */
 }
-
+.countNumber {
+    font-size: 4.09vw; /* 18px */
+    font-weight: bold;
+    color: #304D22;
+    min-width: 5.68vw;
+    text-align: center;
+}
 /* Стили для иконок внутри кнопок */
 .controlIcon {
     width: 4.77vw; /* 21px */
