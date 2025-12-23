@@ -210,12 +210,16 @@
     /* 58px -> 13.18vw */
     width: 13.18vw;
     height: 13.18vw;
-    background-color: #304D22;
-    /* 1.625rem -> пропорционально в vw */
-    border-radius: 6.6vw 8.6vw 8.6vw 3.8vw;
+    background-color: #304D22; /* Твой основной зеленый */
+    
+    /* Скругления по твоим параметрам (ЛВ-26, ПВ-34, ПН-34, ЛН-15) */
+    /* В CSS порядок: Top-Left, Top-Right, Bottom-Right, Bottom-Left */
+    border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; 
     border: none;
-    /* 12px -> 2.73vw */
     margin-right: 2.73vw;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0; /* Чтобы кнопка не сплющивалась */
 }
 
 .chatAvatar {
@@ -223,10 +227,14 @@
     width: 12.73vw;
     height: 12.73vw;
     position: absolute;
+    /* 1px -> 0.23vw */
     left: 0.23vw;
     top: 0.23vw;
-    border-radius: 7.7vw 9.4vw 9.4vw 3.8vw;
+    
+    /* Скругления аватара: ЛВ-30, ПВ-37, ПН-37, ЛН-15 */
+    border-radius: 6.82vw 8.41vw 8.41vw 3.41vw; 
     object-fit: cover;
+    display: block;
 }
 
 .addToCartBtn {
