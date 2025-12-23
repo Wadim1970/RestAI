@@ -89,20 +89,20 @@ useEffect(() => {
 
             {/* Кнопка Корзины */}
             {count === 0 ? (
-              <button className={styles.addToCartBtn} onClick={() => setCount(1)}>
-                Добавить в корзину
-              </button>
-            ) : (
-              <div className={styles.counterBtn}>
-                <button onClick={() => setCount(count - 1)} className={styles.minusBtn}>
-                  <div className={styles.minusIcon}></div>
-                </button>
-                <span className={styles.countNumber}>{count}</span>
-                <button onClick={() => setCount(count + 1)} className={styles.plusBtn}>
-                  <div className={styles.plusIcon}></div>
-                </button>
-              </div>
-            )}
+             <button className={styles.addToCartBtn} onClick={() => setCount(1)}>
+              Добавить в заказ
+             </button>
+             ) : (
+            <div className={styles.counterBtn}>
+             <button onClick={() => setCount(count - 1)} className={styles.minusBtn}>
+              <img src="/icons/icon-minus.png" alt="minus" className={styles.controlIcon} />
+             </button>
+            <span className={styles.countNumber}>{count}</span>
+            <button onClick={() => setCount(count + 1)} className={styles.plusBtn}>
+             <img src="/icons/icon-plus.png" alt="plus" className={styles.controlIcon} />
+            </button>
+            </div>
+           )}
           </div>
         </div>
       </div>
