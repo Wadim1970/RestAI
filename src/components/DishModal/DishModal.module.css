@@ -192,7 +192,7 @@
 .nutriLabel {
     /* 16px -> 3.64vw */
     font-size: 3.64vwvw;
-    font-weight: 400;
+    font-weight: 300;
     /* 4px -> 0.91vw */
     margin-top: 0.91vw;
 }
