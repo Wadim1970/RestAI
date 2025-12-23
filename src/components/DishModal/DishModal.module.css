@@ -4,26 +4,45 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 99999;
+    
+    /* ВКЛЮЧАЕМ СКРОЛЛ ВСЕГО ФОНА */
+    display: block; /* Изменяем flex на block */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+    
+    /* Центрируем содержимое по горизонтали */
+    text-align: center;
+}
+
+.overlay::before {
+    content: "";
+    display: inline-block;
+    height: 100%;
+    vertical-align: bottom;
 }
 
 .modal {
-    /* 420px -> 95.45vw */
+   /* Чтобы модалка была блоком внутри оверлея */
+    display: inline-block;
+    vertical-align: bottom;
+    text-align: left; /* Возвращаем выравнивание текста */
+    
     width: 95.45vw; 
+    max-width: 420px; 
     background-color: #FBFBF9;
+    
     /* 20px -> 4.54vw */
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
-    max-height: 90vh;
-    overflow-y: auto;
-    /* 80px отступ снизу */
-    padding-bottom: 18.18vw; 
-    /* Заходит за край экрана */
-    margin-bottom: -4.54vw; 
+    
+    /* ВЫСОТА ТЕПЕРЬ ЗАВИСИТ ОТ КОНТЕНТА */
+    height: auto; 
+    
+    /* ОТСТУП 50px ОТ НИЗА ЭКРАНА */
+    margin-bottom: 50px; 
+    
     animation: slideUp 0.3s ease-out;
 }
 
@@ -34,12 +53,11 @@
 
 .imageContainer {
     position: relative;
-    /* 396px -> 90vw */
     width: 90vw;
+    max-width: 396px;
     height: 90vw;
-    /* 12px -> 2.73vw */
+    max-height: 396px;
     margin: 2.73vw auto;
-    /* 10px -> 2.27vw */
     border-radius: 2.27vw;
     overflow: hidden;
 }
