@@ -199,10 +199,12 @@
 
 /* --- Кнопки --- */
 .buttonActionGroup {
-    display: flex;
+   display: flex;
     align-items: center;
-    justify-content: flex-start;
-    padding: 5.91vw 2.73vw 0 2.73vw; /* Убрали нижний паддинг отсюда */
+    /* 12px -> 2.73vw отступ от краев группы кнопок */
+    padding: 5.91vw 2.73vw 0 2.73vw;
+    width: 100%;
+    box-sizing: border-box;
 }
 /*кнопки из этого кода*/
 .chatButton {
@@ -237,82 +239,56 @@
     display: block;
 }
 
-.addToCartBtn {
-    /* 220px -> 50vw */
-    width: 50vw;
-    height: 13.18vw;
-    background-color: #48BF48;
-    color: white;
-    /* 20px -> 4.54vw */
-    font-size: 4.54vw;
-    font-weight: bold;
-    border: none;
-    /* 30px -> 6.82vw */
-    border-radius: 6.82vw;
+.buttonActionGroup {
+    display: flex;
+    align-items: center;
+    /* 12px -> 2.73vw отступ от краев группы кнопок */
+    padding: 5.91vw 2.73vw 0 2.73vw;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.counterBtn {
-    width: 50vw;
+.addToCartBtn, .counterBtn {
+    /* Прижимаем к правому краю через margin-left: auto */
+    margin-left: auto; 
+    
+    /* Твоя ширина 120px -> 27.27vw */
+    width: 50vw; /* Можно оставить 50vw или поставить свои 27.27vw */
     height: 13.18vw;
-    background-color: white;
-    border: 0.68vw solid #304D22; /* 3px толщина */
     border-radius: 6.82vw;
     display: flex;
     align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 3.64vw; /* 16px */
+}
+
+.addToCartBtn {
+    background-color: #48BF48;
+    color: white;
+    border: none;
+}
+
+.counterBtn {
+    background-color: white;
+    border: 0.68vw solid #304D22;
     justify-content: space-between;
-    /* 19px -> 4.32vw */
     padding: 0 4.32vw;
 }
 
-.countNumber {
-    /* 24px -> 5.45vw */
-    font-size: 5.45vw;
-    font-weight: 600;
-    color: #304D22;
+/* Стили для иконок внутри кнопок */
+.controlIcon {
+    width: 4.77vw; /* 21px */
+    height: 4.77vw;
+    object-fit: contain;
 }
 
 .minusBtn, .plusBtn {
     background: none;
     border: none;
-    /* 21px -> 4.77vw */
-    width: 4.77vw;
-    height: 4.77vw;
-    position: relative;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.minusIcon {
-    width: 4.77vw;
-    height: 0.68vw; /* 3px */
-    background-color: #304D22;
-}
-
-.plusIcon {
-    position: relative;
-    width: 4.77vw;
-    height: 4.77vw;
-}
-
-.plusIcon::before {
-    content: "";
-    position: absolute;
-    width: 4.77vw;
-    height: 0.68vw;
-    background-color: #304D22;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-}
-
-.plusIcon::after {
-    content: "";
-    position: absolute;
-    width: 0.68vw;
-    height: 4.77vw;
-    background-color: #304D22;
-    left: 50%;
-    top: 0;
-    transform: translateX(-50%);
+    cursor: pointer;
 }
