@@ -184,12 +184,14 @@
 }
 
 .nutriValue {
-    font-size: 3.18vw;
+    /* 18px -> 4.09vw */
+    font-size: 4.09vw;
     font-weight: bold;
 }
 
 .nutriLabel {
-    font-size: 3.18vw;
+    /* 20px -> 4.55vw */
+    font-size: 4.55vw;
     font-weight: 400;
     /* 4px -> 0.91vw */
     margin-top: 0.91vw;
