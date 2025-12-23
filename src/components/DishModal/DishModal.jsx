@@ -84,7 +84,7 @@ useEffect(() => {
           <div className={styles.buttonActionGroup}>
             {/* Кнопка Чата */}
             <button className={styles.chatButton}>
-              <img src="/icons/avatar-ai.png" className={styles.chatAvatar} alt="AI Chat" />
+              <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
             </button>
 
             {/* Кнопка Корзины */}
