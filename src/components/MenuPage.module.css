@@ -88,13 +88,16 @@
     align-items: center;
     justify-content: center;
     background-color: transparent; /* Или добавьте легкий фон, если нужно */
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent; /* Убираем синюю вспышку при нажатии на iPhone */
 }
 
 .dishImage {
     /* Вместо height: 100% используем более строгие правила */
     width: 100%;
     height: 100%;
-    
+    pointer-events: none; /* Картинка становится "прозрачной" для кликов */
+    -webkit-user-drag: none; /* Запрещаем перетаскивание на iPhone */
     /* Это заставит картинку вписаться в квадрат без искажений */
     object-fit: contain; 
     
