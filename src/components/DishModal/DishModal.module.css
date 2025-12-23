@@ -7,13 +7,14 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 99999;
     
-    /* ВКЛЮЧАЕМ СКРОЛЛ ВСЕГО ФОНА */
-    display: block; /* Изменяем flex на block */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+    -webkit-overflow-scrolling: touch;
     
-    /* Центрируем содержимое по горизонтали */
-    text-align: center;
+    /* 1. Отступ 30px сверху при начальном появлении */
+    padding-top: 30px;
 }
 
 .overlay::before {
@@ -24,24 +25,23 @@
 }
 
 .modal {
-   /* Чтобы модалка была блоком внутри оверлея */
-    display: inline-block;
-    vertical-align: bottom;
-    text-align: left; /* Возвращаем выравнивание текста */
-    
-    width: 95.45vw; 
+   width: 95.45vw; 
     max-width: 420px; 
     background-color: #FBFBF9;
-    
-    /* 20px -> 4.54vw */
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
     
-    /* ВЫСОТА ТЕПЕРЬ ЗАВИСИТ ОТ КОНТЕНТА */
+    /* Убираем ограничение высоты, чтобы росло по контенту */
     height: auto; 
+    flex-shrink: 0; /* Чтобы flex не сжимал модалку */
+
+    /* 2. Фон до самого низа экрана */
+    /* Делаем огромный внутренний отступ снизу и компенсируем его отрицательным margin */
+    padding-bottom: 50px; 
+    margin-bottom: -20px; /* Слегка утапливаем, чтобы не было щелей */
     
-    /* ОТСТУП 50px ОТ НИЗА ЭКРАНА */
-    margin-bottom: 50px; 
+    /* Создаем "хвост" фона, который закроет пустоту при скролле */
+    box-shadow: 0 500px 0 500px #FBFBF9; 
     
     animation: slideUp 0.3s ease-out;
 }
@@ -181,8 +181,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    /* 26px -> 5.91vw сверху, 50px -> 11.36vw снизу */
-    padding: 5.91vw 2.73vw 11.36vw 2.73vw;
+    padding: 5.91vw 2.73vw 0 2.73vw; /* Убрали нижний паддинг отсюда */
 }
 
 .chatButton {
