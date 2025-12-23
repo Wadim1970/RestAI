@@ -150,8 +150,8 @@
 }
 
 .sectionTitle {
-    /* 16px -> 3.64vw */
-    font-size: 4.09vw;
+    /* 20px -> 4.55vw */
+    font-size: 4.55vw;
     font-weight: bold;
     color: black;
     /* 18px -> 4.09vw */
@@ -161,8 +161,8 @@
 }
 
 .descriptionText, .ingredientsText {
-    /* 14px -> 3.18vw */
-    font-size: 3.64vw;
+    /* 18px -> 4.09vw */
+    font-size: 4.09vw;
     font-weight: 400;
     /*межстрочный интервал*/
     line-height: 1.4;
