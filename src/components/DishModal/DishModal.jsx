@@ -49,7 +49,11 @@ useEffect(() => {
 
           {/* Состав */}
           <h3 className={styles.sectionTitle}>Состав:</h3>
-          <p className={styles.ingredientsText}>{dish.ingredients}</p>
+          <p className={styles.ingredientsText}>
+           {Array.isArray(dish.ingredients) 
+           ? dish.ingredients.join(', ') 
+           : dish.ingredients}
+          </p>
 
           {/* Пищевая ценность (только для еды/напитков) */}
           {!isAlcohol && (
