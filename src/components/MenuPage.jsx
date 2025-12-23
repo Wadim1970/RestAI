@@ -2,16 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import styles from './MenuPage.module.css';
 
-// Импорт новых компонентов
+// Импорт компонентов
 import MenuHeader from './MenuHeader/MenuHeader'; 
 import MenuFooter from './MenuFooter/MenuFooter'; 
+import DishModal from './DishModal/DishModal'; // <-- Добавили импорт
 
-// --- НАСТРОЙКИ SUPABASE ---
 const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co'; 
 const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83'; 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Временная заглушка для иконки
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
 export default function MenuPage() {
@@ -20,7 +19,10 @@ export default function MenuPage() {
     const [selectedDishes, setSelectedDishes] = useState({}); 
     const [activeSection, setActiveSection] = useState(''); 
 
-    // REF ДЛЯ ОТСЛЕЖИВАНИЯ СЕКЦИЙ
+    // --- НОВОЕ: СОСТОЯНИЕ ДЛЯ МОДАЛЬНОГО ОКНА ---
+    const [selectedDishForModal, setSelectedDishForModal] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const sectionRefs = useRef({}); 
 
     useEffect(() => {
@@ -37,9 +39,7 @@ export default function MenuPage() {
                 const items = Array.isArray(menuItems) ? menuItems : []; 
                 const grouped = items.reduce((acc, item) => {
                     const section = item.menu_section;
-                    if (!acc[section]) {
-                        acc[section] = [];
-                    }
+                    if (!acc[section]) acc[section] = [];
                     acc[section].push(item);
                     return acc;
                 }, {});
@@ -53,14 +53,19 @@ export default function MenuPage() {
     const sections = Object.keys(groupedMenu || {}); 
     const isOrderActive = Object.keys(selectedDishes).length > 0;
 
-    const toggleDishSelection = (dishId) => {
+    // --- НОВОЕ: ФУНКЦИЯ ОТКРЫТИЯ МОДАЛКИ ---
+    const handleOpenModal = (dish) => {
+        setSelectedDishForModal(dish);
+        setIsModalOpen(true);
+    };
+
+    // Обновленная функция выбора (галочка)
+    const toggleDishSelection = (e, dishId) => {
+        e.stopPropagation(); // Чтобы не открывалась модалка при нажатии на галочку
         setSelectedDishes(prev => {
             const newState = { ...prev };
-            if (newState[dishId]) {
-                delete newState[dishId]; 
-            } else {
-                newState[dishId] = true;
-            }
+            if (newState[dishId]) delete newState[dishId]; 
+            else newState[dishId] = true;
             return newState;
         });
     };
@@ -69,10 +74,7 @@ export default function MenuPage() {
         setActiveSection(sectionName); 
         const element = sectionRefs.current[sectionName];
         if (element) {
-            element.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     };
     
@@ -80,56 +82,35 @@ export default function MenuPage() {
     const handleOrderClick = () => console.log("Переход в Корзину");
     const handleCallClick = () => console.log("Вызов официанта");
 
-    // ЛОГИКА СИНХРОНИЗАЦИИ СКРОЛЛА
     useEffect(() => {
-    if (loading || sections.length === 0) return;
-
-    const observerOptions = {
-        root: null,
-        // Сверху -116px (высота хедера), снизу -70% 
-        // Мы чуть расширили зону (было -80%), чтобы при скролле вверх 
-        // верхняя граница секции быстрее попадала в поле зрения обсервера
-        rootMargin: '-116px 0px -70% 0px',
-        // Добавляем массив порогов для более частого опроса состояния
-        threshold: [0, 0.01, 0.1]
-    };
-
-    const observerCallback = (entries) => {
-        entries.forEach(entry => {
-            // entry.isIntersecting — секция зашла в зону
-            if (entry.isIntersecting) {
-                const sectionName = entry.target.getAttribute('data-section');
-                if (sectionName) {
-                    setActiveSection(sectionName);
+        if (loading || sections.length === 0) return;
+        const observerOptions = {
+            root: null,
+            rootMargin: '-116px 0px -70% 0px',
+            threshold: [0, 0.01, 0.1]
+        };
+        const observerCallback = (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionName = entry.target.getAttribute('data-section');
+                    if (sectionName) setActiveSection(sectionName);
                 }
-            }
-        });
-    };
+            });
+        };
+        const observer = new IntersectionObserver(observerCallback, observerOptions);
+        const timer = setTimeout(() => {
+            sections.forEach(sectionName => {
+                const element = sectionRefs.current[sectionName];
+                if (element) observer.observe(element);
+            });
+        }, 150);
+        return () => {
+            observer.disconnect();
+            clearTimeout(timer);
+        };
+    }, [sections, loading]);
 
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-
-    const timer = setTimeout(() => {
-        sections.forEach(sectionName => {
-            const element = sectionRefs.current[sectionName];
-            if (element) {
-                observer.observe(element);
-            }
-        });
-    }, 150);
-
-    return () => {
-        observer.disconnect();
-        clearTimeout(timer);
-    };
-}, [sections, loading]);
-
-    if (loading) {
-        return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px'}}>Загрузка меню...</div>;
-    }
-
-    if (sections.length === 0 && !loading) {
-        return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px', color: 'red'}}>Нет данных для отображения.</div>;
-    }
+    if (loading) return <div className={styles.menuContainer} style={{textAlign: 'center', paddingTop: '150px'}}>Загрузка меню...</div>;
 
     return (
         <>
@@ -145,23 +126,24 @@ export default function MenuPage() {
                         <section 
                             key={sectionName} 
                             className={styles.menuSection} 
-                            id={sectionName.toLowerCase().replace(/\s/g, '-')}
                             ref={el => sectionRefs.current[sectionName] = el}
                             data-section={sectionName}
                         >
                             <h2>{sectionName}</h2>
-                            
                             <div className={styles.dishGrid}>
                                 {groupedMenu[sectionName] && groupedMenu[sectionName].map(dish => (
                                     <div key={dish.id} className={styles.dishCard}>
-                                        <div className={styles.dishImageContainer}>
+                                        <div 
+                                            className={styles.dishImageContainer}
+                                            onClick={() => handleOpenModal(dish)} // <-- КЛИК ТУТ
+                                        >
                                             {dish.image_url && <img src={dish.image_url} alt={dish.dish_name} className={styles.dishImage} />}
                                             <div className={styles.priceTag}>
                                                 <p className={styles.dishPrice}>{dish.cost_rub} ₽</p>
                                             </div>
                                             <button 
                                                 className={`${styles.selectButton} ${selectedDishes[dish.id] ? styles.selected : ''}`}
-                                                onClick={() => toggleDishSelection(dish.id)}
+                                                onClick={(e) => toggleDishSelection(e, dish.id)} // <-- STOP PROPAGATION ТУТ
                                             >
                                                 {selectedDishes[dish.id] && <Checkmark />}
                                             </button>
@@ -180,6 +162,13 @@ export default function MenuPage() {
                 onChatClick={handleChatClick}
                 onOrderClick={handleOrderClick}
                 onCallClick={handleCallClick}
+            />
+
+            {/* ВСТАВЛЯЕМ КОМПОНЕНТ МОДАЛКИ */}
+            <DishModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                dish={selectedDishForModal} 
             />
         </>
     );
