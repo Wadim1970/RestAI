@@ -7,11 +7,16 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 99999;
     
-    display: block; 
+    /* Возвращаем flex для центрирования и мгновенного показа */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end; /* Окно всегда "приклеено" к низу при открытии */
+    
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     
-    /* Отступ сверху (наш зазор 30px) */
+    /* Зазор сверху 30px, чтобы окно не било в потолок */
     padding-top: 30px;
 }
 
@@ -25,27 +30,19 @@
 .modal {
     width: calc(100% - 20px); 
     max-width: 420px; 
-    
-    /* 2. Центрируем блок горизонтально */
-    margin-left: auto;
-    margin-right: auto;
-    
     background-color: #FBFBF9;
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
+    
+    /* Убираем лишние марджины, flex сделает всё за нас */
+    margin: 0 auto; 
+    
     height: auto; 
-    
-    /* 3. Отступ снизу для кнопок и "хвост" фона */
+    flex-shrink: 0; 
+
     padding-bottom: 50px; 
-    
-    /* Тень только ВНИЗ, чтобы не вылезала по бокам */
-    /* формат: x y blur spread color */
     box-shadow: 0 500px 0 0 #FBFBF9; 
     
-    /* Отрицательный марджин снизу убираем, если есть, 
-       чтобы не сбивать расчеты */
-    margin-bottom: 0;
-
     animation: slideUp 0.3s ease-out;
 }
 
@@ -56,11 +53,13 @@
 
 .imageContainer {
     position: relative;
-    width: 90vw;
-    max-width: 396px;
-    height: 90vw;
-    max-height: 396px;
-    margin: 2.73vw auto;
+    /* 90vw - это примерно ширина модалки минус отступы */
+    width: calc(100% - 5.46vw); 
+    aspect-ratio: 1 / 1;
+    
+    /* Одинаковые отступы: сверху и по бокам (примерно 12px в адаптивном виде) */
+    margin: 2.73vw auto; 
+    
     border-radius: 2.27vw;
     overflow: hidden;
 }
