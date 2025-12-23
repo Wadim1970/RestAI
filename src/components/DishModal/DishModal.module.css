@@ -204,28 +204,22 @@
     justify-content: flex-start;
     padding: 5.91vw 2.73vw 0 2.73vw; /* Убрали нижний паддинг отсюда */
 }
-
+/*перенесенные кнопки*/
 .chatButton {
-    position: relative;
-    /* 58px -> 13.18vw */
-    width: 13.18vw;
-    height: 13.18vw;
-    background-color: #304D22;
-    /* 1.625rem -> пропорционально в vw */
-    border-radius: 6.6vw 8.6vw 8.6vw 3.8vw;
-    border: none;
-    /* 12px -> 2.73vw */
-    margin-right: 2.73vw;
+    background-color: var(--color-primary); 
+    /* Скругления: ЛВ-26, ЛН-15, ПВ-34, ПН-34 */
+    border-radius: 1.625rem 2.125rem 2.125rem 0.9375rem;
 }
 
 .chatAvatar {
-    /* 56px -> 12.73vw */
-    width: 12.73vw;
-    height: 12.73vw;
+    width: 3.5rem; /* 56px */
+    height: 3.5rem; /* 56px */
     position: absolute;
-    left: 0.23vw;
-    top: 0.23vw;
-    border-radius: 7.7vw 9.4vw 9.4vw 3.8vw;
+    left: 0.0625rem; /* 1px */
+    top: 0.0625rem; /* 1px */
+    
+    /* Скругления аватара: ЛВ-30, ЛН-15, ПВ-37, ПН-37 */
+    border-radius: 1.875rem 2.3125rem 2.3125rem 0.9375rem; 
     object-fit: cover;
 }
 
