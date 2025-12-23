@@ -1,0 +1,272 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.modal {
+    /* 420px -> 95.45vw */
+    width: 95.45vw; 
+    background-color: #FBFBF9;
+    /* 20px -> 4.54vw */
+    border-radius: 4.54vw 4.54vw 0 0;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+    /* 80px отступ снизу */
+    padding-bottom: 18.18vw; 
+    /* Заходит за край экрана */
+    margin-bottom: -4.54vw; 
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.imageContainer {
+    position: relative;
+    /* 396px -> 90vw */
+    width: 90vw;
+    height: 90vw;
+    /* 12px -> 2.73vw */
+    margin: 2.73vw auto;
+    /* 10px -> 2.27vw */
+    border-radius: 2.27vw;
+    overflow: hidden;
+}
+
+.mainImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dragLine {
+    position: absolute;
+    /* 12px -> 2.73vw */
+    top: 2.73vw;
+    left: 50%;
+    transform: translateX(-50%);
+    /* 150px -> 34.09vw */
+    width: 34.09vw;
+    /* 4px -> 0.91vw */
+    height: 0.91vw;
+    background-color: #E5E0D4;
+    border-radius: 0.45vw;
+}
+
+.closeBtn {
+    position: absolute;
+    /* 12px -> 2.73vw */
+    top: 2.73vw;
+    right: 2.73vw;
+    /* 34px -> 7.73vw */
+    width: 7.73vw;
+    height: 7.73vw;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.priceTag {
+    position: absolute;
+    /* 6px -> 1.36vw */
+    left: 1.36vw;
+    bottom: 1.36vw;
+    /* 140px -> 31.82vw, 56px -> 12.73vw */
+    width: 31.82vw;
+    height: 12.73vw;
+    background-color: #E5E0D4;
+    border-radius: 1.82vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.priceText {
+    /* 24px -> 5.45vw */
+    font-size: 5.45vw;
+    font-weight: bold;
+    color: #304D22;
+    margin-top: 1.13vw; /* Отступ 5px */
+}
+
+.weightText {
+    /* 16px -> 3.64vw */
+    font-size: 3.64vw;
+    font-weight: 400;
+    color: #304D22;
+}
+
+.content {
+    text-align: center;
+    /* 12px -> 2.73vw */
+    padding: 0 2.73vw;
+}
+
+.sectionTitle {
+    /* 16px -> 3.64vw */
+    font-size: 3.64vw;
+    font-weight: bold;
+    color: black;
+    /* 18px -> 4.09vw */
+    margin-top: 4.09vw;
+    /* 4px -> 0.91vw */
+    margin-bottom: 0.91vw;
+}
+
+.descriptionText, .ingredientsText {
+    /* 14px -> 3.18vw */
+    font-size: 3.18vw;
+    font-weight: 300;
+    color: black;
+    margin: 0;
+}
+
+.nutritionalGrid {
+    display: flex;
+    justify-content: space-between;
+    /* 45px -> 10.23vw */
+    padding: 0.91vw 10.23vw;
+}
+
+.nutriItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.nutriValue {
+    font-size: 3.18vw;
+    font-weight: bold;
+}
+
+.nutriLabel {
+    font-size: 3.18vw;
+    font-weight: 400;
+    /* 4px -> 0.91vw */
+    margin-top: 0.91vw;
+}
+
+/* --- Кнопки --- */
+.buttonActionGroup {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* 26px -> 5.91vw сверху, 50px -> 11.36vw снизу */
+    padding: 5.91vw 2.73vw 11.36vw 2.73vw;
+}
+
+.chatButton {
+    position: relative;
+    /* 58px -> 13.18vw */
+    width: 13.18vw;
+    height: 13.18vw;
+    background-color: #304D22;
+    /* 1.625rem -> пропорционально в vw */
+    border-radius: 6.6vw 8.6vw 8.6vw 3.8vw;
+    border: none;
+    /* 12px -> 2.73vw */
+    margin-right: 2.73vw;
+}
+
+.chatAvatar {
+    /* 56px -> 12.73vw */
+    width: 12.73vw;
+    height: 12.73vw;
+    position: absolute;
+    left: 0.23vw;
+    top: 0.23vw;
+    border-radius: 7.7vw 9.4vw 9.4vw 3.8vw;
+    object-fit: cover;
+}
+
+.addToCartBtn {
+    /* 220px -> 50vw */
+    width: 50vw;
+    height: 13.18vw;
+    background-color: #48BF48;
+    color: white;
+    /* 20px -> 4.54vw */
+    font-size: 4.54vw;
+    font-weight: bold;
+    border: none;
+    /* 30px -> 6.82vw */
+    border-radius: 6.82vw;
+}
+
+.counterBtn {
+    width: 50vw;
+    height: 13.18vw;
+    background-color: white;
+    border: 0.68vw solid #304D22; /* 3px толщина */
+    border-radius: 6.82vw;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* 19px -> 4.32vw */
+    padding: 0 4.32vw;
+}
+
+.countNumber {
+    /* 24px -> 5.45vw */
+    font-size: 5.45vw;
+    font-weight: 600;
+    color: #304D22;
+}
+
+.minusBtn, .plusBtn {
+    background: none;
+    border: none;
+    /* 21px -> 4.77vw */
+    width: 4.77vw;
+    height: 4.77vw;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.minusIcon {
+    width: 4.77vw;
+    height: 0.68vw; /* 3px */
+    background-color: #304D22;
+}
+
+.plusIcon {
+    position: relative;
+    width: 4.77vw;
+    height: 4.77vw;
+}
+
+.plusIcon::before {
+    content: "";
+    position: absolute;
+    width: 4.77vw;
+    height: 0.68vw;
+    background-color: #304D22;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
+.plusIcon::after {
+    content: "";
+    position: absolute;
+    width: 0.68vw;
+    height: 4.77vw;
+    background-color: #304D22;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+}
