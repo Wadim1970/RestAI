@@ -3,25 +3,33 @@ import styles from './DishModal.module.css';
 
 const DishModal = ({ isOpen, onClose, dish }) => {
   const [count, setCount] = useState(0);
+  const [isClosing, setIsClosing] = useState(false);
   
-  // Рефы для отслеживания свайпа
   const touchStart = useRef(null);
   const touchEnd = useRef(null);
   const modalRef = useRef(null);
-
-  // Минимальное расстояние для срабатывания свайпа (в пикселях)
   const minSwipeDistance = 50;
+
+  // Плавное закрытие
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 300);
+  };
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      setIsClosing(false);
+      setCount(0); // Сбрасываем счетчик при открытии нового блюда
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  // Обработчики свайпа
+  // Обработка свайпа
   const onTouchStart = (e) => {
     touchEnd.current = null;
     touchStart.current = e.targetTouches[0].clientY;
@@ -29,27 +37,21 @@ const DishModal = ({ isOpen, onClose, dish }) => {
 
   const onTouchMove = (e) => {
     touchEnd.current = e.targetTouches[0].clientY;
-    
-    // Визуальный эффект: если тянем вниз, смещаем окно (опционально)
     const distance = touchEnd.current - touchStart.current;
     if (distance > 0 && modalRef.current) {
       modalRef.current.style.transform = `translateY(${distance}px)`;
-      modalRef.current.style.transition = 'none'; // Убираем анимацию при движении пальцем
+      modalRef.current.style.transition = 'none';
     }
   };
 
   const onTouchEnd = () => {
     if (!touchStart.current || !touchEnd.current) return;
-    
     const distance = touchEnd.current - touchStart.current;
-    const isSwipeDown = distance > minSwipeDistance;
-
-    if (isSwipeDown) {
-      onClose(); // Закрываем, если свайпнули вниз
+    if (distance > minSwipeDistance) {
+      handleClose();
     } else if (modalRef.current) {
-      // Возвращаем окно на место, если свайп был коротким
       modalRef.current.style.transform = 'translateY(0)';
-      modalRef.current.style.transition = 'transform 0.3s ease-out';
+      modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
     }
   };
 
@@ -58,42 +60,49 @@ const DishModal = ({ isOpen, onClose, dish }) => {
   const isAlcohol = dish.product_type === 'alcohol';
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`} onClick={handleClose}>
       <div 
         ref={modalRef}
-        className={styles.modal} 
+        className={`${styles.modal} ${isClosing ? styles.slideDown : ''}`} 
         onClick={e => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Полоска сверху, за которую "тянем" */}
+        {/* Декоративная линия (ручка для свайпа) */}
         <div className={styles.dragLine}></div>
 
+        {/* Изображение и элементы на нем */}
         <div className={styles.imageContainer}>
           <img src={dish.image_url} alt={dish.dish_name} className={styles.mainImage} />
           
-          <button className={styles.closeBtn} onClick={onClose}>
+          <button className={styles.closeBtn} onClick={handleClose}>
             <img src="/icons/icon-on.png" alt="Close" />
           </button>
 
           <div className={styles.priceTag}>
             <div className={styles.priceText}>{dish.cost_rub} ₽</div>
             <div className={styles.weightText}>
-              {(dish.nutritional_info?.weight_value || dish.weight_g || '').toString().replace('/', '')}
+              {dish.nutritional_info?.weight_value || dish.weight_g}
             </div>
           </div>
         </div>
 
+        {/* Контент модального окна */}
         <div className={styles.content}>
+          <h2 className={styles.dishNameText}>{dish.dish_name}</h2>
+
           <h3 className={styles.sectionTitle}>Описание:</h3>
           <p className={styles.descriptionText}>{dish.description}</p>
 
           <h3 className={styles.sectionTitle}>Состав:</h3>
           <p className={styles.ingredientsText}>
-            {Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : dish.ingredients}
+            {Array.isArray(dish.ingredients) 
+              ? dish.ingredients.join(', ') 
+              : dish.ingredients}
           </p>
 
+          {/* Секция БЖУ только для не-алкоголя */}
           {!isAlcohol && (
             <>
               <h3 className={styles.sectionTitle}>Пищевая ценность:</h3>
@@ -118,6 +127,7 @@ const DishModal = ({ isOpen, onClose, dish }) => {
             </>
           )}
 
+          {/* Блок управления заказом */}
           <div className={styles.buttonActionGroup}>
             <button className={styles.chatButton}>
               <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
