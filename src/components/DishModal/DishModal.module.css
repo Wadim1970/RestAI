@@ -1,5 +1,5 @@
 .overlay {
-    position: fixed;
+   position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -7,16 +7,12 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 99999;
     
-    /* Возвращаем flex для центрирования и мгновенного показа */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end; /* Окно всегда "приклеено" к низу при открытии */
-    
+    /* Уходим от flex-end, который ломает скролл */
+    display: block; 
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     
-    /* Зазор сверху 30px, чтобы окно не било в потолок */
+    /* Это создаст тот самый зазор сверху 30px, если модалка длинная */
     padding-top: 30px;
 }
 
@@ -34,8 +30,14 @@
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
     
-    /* Убираем лишние марджины, flex сделает всё за нас */
+    /* Центрируем горизонтально */
     margin: 0 auto; 
+    
+    /* Магия прижимания к низу: */
+    /* Если контента мало, этот margin-top заставит окно прилипнуть к низу экрана */
+    margin-top: calc(100vh - 30px); 
+    /* Но если контент длинный, он просто начнется после padding-top оверлея */
+    transform: translateY(-100%); 
     
     height: auto; 
     flex-shrink: 0; 
@@ -43,12 +45,14 @@
     padding-bottom: 50px; 
     box-shadow: 0 500px 0 0 #FBFBF9; 
     
-    animation: slideUp 0.3s ease-out;
+    /* Анимация теперь должна быть чистой */
+    animation: slideUp 0.3s ease-out forwards;
 }
 
 @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+    from { transform: translateY(0); }
+    /* Выезжаем из-за нижней границы к своей позиции */
+    to { transform: translateY(-100%); }
 }
 
 .imageContainer {
