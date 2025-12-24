@@ -1,5 +1,5 @@
 .overlay {
-   position: fixed;
+  position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -7,12 +7,14 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 99999;
     
-    /* Уходим от flex-end, который ломает скролл */
-    display: block; 
+    display: flex;
+    flex-direction: column;
+    /* justify-content: flex-end НЕ используем, он ломает скролл длинных окон */
+    
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     
-    /* Это создаст тот самый зазор сверху 30px, если модалка длинная */
+    /* Тот самый зазор 30px сверху */
     padding-top: 30px;
 }
 
@@ -24,44 +26,42 @@
 }
 
 .modal {
-    width: calc(100% - 20px); 
+   width: calc(100% - 20px); 
     max-width: 420px; 
     background-color: #FBFBF9;
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
     
-    /* Центрируем горизонтально */
-    margin: 0 auto; 
+    margin-left: auto;
+    margin-right: auto;
     
-    /* Магия прижимания к низу: */
-    /* Если контента мало, этот margin-top заставит окно прилипнуть к низу экрана */
-    margin-top: calc(100vh - 30px); 
-    /* Но если контент длинный, он просто начнется после padding-top оверлея */
-    transform: translateY(-100%); 
+    /* МАГИЯ ЗДЕСЬ: margin-top: auto прижимает модалку к низу оверлея, 
+       но позволяет скроллить вверх, если она длинная */
+    margin-top: auto; 
     
     height: auto; 
     flex-shrink: 0; 
 
     padding-bottom: 50px; 
+    /* "Хвост" фона вниз */
     box-shadow: 0 500px 0 0 #FBFBF9; 
     
-    /* Анимация теперь должна быть чистой */
-    animation: slideUp 0.3s ease-out forwards;
+    /* Анимация выезда ровно снизу экрана */
+    animation: slideUp 0.3s ease-out;
 }
 
 @keyframes slideUp {
-    from { transform: translateY(0); }
-    /* Выезжаем из-за нижней границы к своей позиции */
-    to { transform: translateY(-100%); }
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
 .imageContainer {
     position: relative;
-    /* 90vw - это примерно ширина модалки минус отступы */
     width: calc(100% - 5.46vw); 
     aspect-ratio: 1 / 1;
     
-    /* Одинаковые отступы: сверху и по бокам (примерно 12px в адаптивном виде) */
+    /* 2.73vw (~12px) сверху и по бокам. 
+       Именно этот margin-top делает зазор внутри модалки! */
     margin: 2.73vw auto; 
     
     border-radius: 2.27vw;
