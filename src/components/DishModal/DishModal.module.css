@@ -48,6 +48,7 @@
     
     /* Анимация выезда ровно снизу экрана */
     animation: slideUp 0.3s ease-out;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 @keyframes slideUp {
