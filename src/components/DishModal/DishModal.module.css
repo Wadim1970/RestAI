@@ -209,19 +209,14 @@
 /*кнопки из этого кода*/
 .chatButton {
     position: relative;
-    /* 58px -> 13.18vw */
-    width: 27.27vw;
-    height: 13.18vw;
-    background-color: #304D22; /* Твой основной зеленый */
-    
-    /* Скругления по твоим параметрам (ЛВ-26, ПВ-34, ПН-34, ЛН-15) */
-    /* В CSS порядок: Top-Left, Top-Right, Bottom-Right, Bottom-Left */
+    width: 13.18vw;  /* Оставляем чуть шире (58px), как в футере для формы */
+    height: 12.73vw; /* СТАЛО: 56px */
+    background-color: #304D22;
     border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; 
     border: none;
     margin-right: 2.73vw;
     padding: 0;
-    cursor: pointer;
-    flex-shrink: 0; /* Чтобы кнопка не сплющивалась */
+    flex-shrink: 0;
 }
 
 .chatAvatar {
@@ -249,25 +244,17 @@
 }
 
 .addToCartBtn, .counterBtn {
-    /* Прижимаем к правому краю через margin-left: auto */
     margin-left: auto; 
+    width: 50vw;      /* Твои 220px */
+    height: 12.73vw;  /* СТАЛО: 56px (было 12.27) */
     
-    /* Твоя ширина 120px -> 27.27vw */
-    width: 50.00vw; /* Примерно 220px, чтобы влезло "Добавить в заказ" */
-    height: 12.27vw; /* Примерно 54px */
     border-radius: 6.82vw;
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    /* Важно: чтобы рамка не увеличивала размер кнопки */
     box-sizing: border-box; 
-    
-    /* Плавный переход, чтобы глаз не цеплялся за смену */
     transition: all 0.2s ease;
-    
     flex-shrink: 0;
-    font-size: 4.09vw; /* 18px */
 }
 
 .addToCartBtn {
