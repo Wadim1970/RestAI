@@ -223,7 +223,8 @@
     cursor: pointer;
     
     /* Гарантируем, что аватар будет центрирован */
-    display: flex;
+    display: block;
+    /* Возможно прийдется удалить: */
     align-items: center;
     justify-content: center;
 }
@@ -240,7 +241,9 @@
     display: block;
     
     /* Убираем absolute, так как используем flex родителя для центровки */
-    position: relative; 
+    position: relative;
+    left: 0.23vw;
+    top: 0;
 }
 
 .buttonActionGroup {
