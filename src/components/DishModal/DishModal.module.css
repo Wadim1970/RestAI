@@ -210,7 +210,7 @@
 .chatButton {
     position: relative;
     /* Кнопка чуть больше аватара */
-    width: 45.45vw;  /* ~200px */
+    width: 27.27vw;  /* ~120px */
     height: 13.18vw;  /* ~58px */
     background-color: #304D22;
     
