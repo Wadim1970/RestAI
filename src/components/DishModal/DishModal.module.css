@@ -55,6 +55,16 @@
     to { transform: translateY(0); }
 }
 
+.slideDown {
+    transform: translateY(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+.fadeOut {
+    background: rgba(0, 0, 0, 0) !important;
+    transition: background 0.3s ease !important;
+}
+
 .imageContainer {
     position: relative;
     width: calc(100% - 5.46vw); 
