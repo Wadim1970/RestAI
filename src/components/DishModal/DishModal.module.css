@@ -209,29 +209,38 @@
 /*кнопки из этого кода*/
 .chatButton {
     position: relative;
-    width: 13.18vw;  /* Оставляем чуть шире (58px), как в футере для формы */
-    height: 12.73vw; /* СТАЛО: 56px */
+    /* Кнопка чуть больше аватара */
+    width: 13.18vw;  /* ~58px */
+    height: 12.73vw; /* 56px */
     background-color: #304D22;
+    
+    /* Скругления (твои параметры) */
     border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; 
     border: none;
     margin-right: 2.73vw;
     padding: 0;
     flex-shrink: 0;
+    cursor: pointer;
+    
+    /* Гарантируем, что аватар будет центрирован */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .chatAvatar {
-    /* 56px -> 12.73vw */
-    width: 12.73vw;
-    height: 12.73vw;
-    position: absolute;
-    /* 1px -> 0.23vw */
-    left: 0.23vw;
-    top: 0.23vw;
+    /* Аватар на 2-4 пикселя меньше кнопки, чтобы была видна зеленая рамка */
+    width: 11.82vw;  /* ~52px (было 12.73) */
+    height: 11.82vw; /* ~52px (было 12.73) */
     
-    /* Скругления аватара: ЛВ-30, ПВ-37, ПН-37, ЛН-15 */
+    /* Скругления аватара (твои параметры) */
     border-radius: 6.82vw 8.41vw 8.41vw 3.41vw; 
+    
     object-fit: cover;
     display: block;
+    
+    /* Убираем absolute, так как используем flex родителя для центровки */
+    position: relative; 
 }
 
 .buttonActionGroup {
