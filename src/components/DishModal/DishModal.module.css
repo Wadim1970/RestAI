@@ -68,52 +68,50 @@
 
 .imageContainer {
     position: relative;
-    width: calc(100% - 5.46vw); 
-    aspect-ratio: 1 / 1;
+    /* 396px -> 90vw (396/440 * 100) */
+    width: 90vw; 
+    height: 90vw; 
     
-    /* 2.73vw (~12px) сверху и по бокам. 
-       Именно этот margin-top делает зазор внутри модалки! */
-    margin: 2.73vw auto; 
+    /* Отступы 12px -> 2.73vw (сверху, слева, справа) */
+    margin: 2.73vw auto 0 auto; 
     
+    /* Скругление 10px -> 2.27vw */
     border-radius: 2.27vw;
     overflow: hidden;
+    background-color: #eee; /* Фон на случай долгой загрузки */
+    flex-shrink: 0; /* Чтобы flex не сжимал картинку */
 }
 
 .mainImage {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* Гарантирует, что фото заполнит квадрат 396x396 без искажений */
+    object-fit: cover; 
+    display: block;
 }
 
 .dragLine {
     position: absolute;
-    /* 12px -> 2.73vw */
-    top: 2.73vw;
+    top: 2.73vw; /* 12px от верха изображения */
     left: 50%;
     transform: translateX(-50%);
-    /* 150px -> 34.09vw */
-    width: 34.09vw;
-    /* 4px -> 0.91vw */
-    height: 0.91vw;
+    width: 34.09vw; /* 150px */
+    height: 0.91vw; /* 4px */
     background-color: #E5E0D4;
     border-radius: 0.45vw;
+    z-index: 11
 }
 
 .closeBtn {
     position: absolute;
-    /* 1. Делаем отступ от края картинки */
-    top: 2.73vw; 
-    right: 2.73vw;
-    
-    /* 2. Размеры кнопки (34px -> 7.73vw) */
-    width: 7.73vw;
-    height: 7.73vw;
-    
-    /* 3. Очищаем лишние стили */
+    top: 2.73vw; /* 12px от верха изображения */
+    right: 2.73vw; /* 12px от правого края изображения */
+    width: 7.73vw; /* 34px */
+    height: 7.73vw; /* 34px */
     background: none;
     border: none;
     padding: 0;
-    z-index: 10; /* Чтобы была поверх картинки */
+    z-index: 12; 
     
     /* 4. Убираем "прилипание" к краям смартфона */
     display: flex;
