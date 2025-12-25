@@ -1,20 +1,36 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import MainScreen from './components/MainScreen'; // Наш главный экран
-import MenuPage from './components/MenuPage'; // Новая страница меню
+import MainScreen from './components/MainScreen';
+import MenuPage from './components/MenuPage';
 
 function App() {
+  // Главное состояние корзины: { dishId: количество }
+  const [cart, setCart] = useState({});
+
+  // Функция добавления/изменения количества
+  const updateCart = (dishId, delta) => {
+    setCart(prevCart => {
+      const currentCount = prevCart[dishId] || 0;
+      const newCount = Math.max(0, currentCount + delta);
+      
+      if (newCount === 0) {
+        const { [dishId]: _, ...rest } = prevCart;
+        return rest;
+      }
+      return { ...prevCart, [dishId]: newCount };
+    });
+  };
+
   return (
     <div className="App">
-      {/* BrowserRouter оборачивает все приложение для управления маршрутами */}
       <BrowserRouter>
         <Routes>
-          {/* Маршрут для главной страницы (аватар) */}
           <Route path="/" element={<MainScreen />} />
-          {/* Маршрут для страницы меню */}
-          <Route path="/menu" element={<MenuPage />} />
-          {/* Можно добавить 404 страницу, но пока не будем усложнять */}
+          <Route 
+            path="/menu" 
+            element={<MenuPage cart={cart} updateCart={updateCart} />} 
+          />
         </Routes>
       </BrowserRouter>
     </div>
