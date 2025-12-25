@@ -10,7 +10,6 @@ const DishModal = ({ isOpen, onClose, dish }) => {
   const modalRef = useRef(null);
   const minSwipeDistance = 50;
 
-  // Плавное закрытие
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -23,13 +22,12 @@ const DishModal = ({ isOpen, onClose, dish }) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setIsClosing(false);
-      setCount(0); // Сбрасываем счетчик при открытии нового блюда
+      setCount(0);
     } else {
       document.body.style.overflow = 'unset';
     }
   }, [isOpen]);
 
-  // Обработка свайпа
   const onTouchStart = (e) => {
     touchEnd.current = null;
     touchStart.current = e.targetTouches[0].clientY;
@@ -69,17 +67,13 @@ const DishModal = ({ isOpen, onClose, dish }) => {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Декоративная линия (ручка для свайпа) */}
         <div className={styles.dragLine}></div>
 
-        {/* Изображение и элементы на нем */}
         <div className={styles.imageContainer}>
           <img src={dish.image_url} alt={dish.dish_name} className={styles.mainImage} />
-          
           <button className={styles.closeBtn} onClick={handleClose}>
             <img src="/icons/icon-on.png" alt="Close" />
           </button>
-
           <div className={styles.priceTag}>
             <div className={styles.priceText}>{dish.cost_rub} ₽</div>
             <div className={styles.weightText}>
@@ -88,23 +82,44 @@ const DishModal = ({ isOpen, onClose, dish }) => {
           </div>
         </div>
 
-        {/* Контент модального окна */}
-        <div className={styles.content}>
-          <h2 className={styles.dishNameText}>{dish.dish_name}</h2>
+        <div className={`${styles.content} ${isAlcohol ? styles.alcoholContent : ''}`}>
+          
+          {/* --- ВЕРСТКА ДЛЯ АЛКОГОЛЯ --- */}
+          {isAlcohol ? (
+            <div className={styles.alcoholWrapper}>
+              <h2 className={styles.alcoholTitle}>{dish.dish_name}</h2>
+              
+              <div className={styles.specsContainer}>
+                {dish.nutritional_info && Object.entries(dish.nutritional_info).map(([key, value]) => (
+                  key !== 'weight_value' && (
+                    <div key={key} className={styles.specRow}>
+                      <span className={styles.specKey}>{key}:</span>
+                      <span className={styles.specValue}>{value}</span>
+                    </div>
+                  )
+                ))}
+              </div>
 
-          <h3 className={styles.sectionTitle}>Описание:</h3>
-          <p className={styles.descriptionText}>{dish.description}</p>
+              <h3 className={styles.alcoholSectionLabel}>Вкус</h3>
+              <p className={styles.alcoholText}>{dish.ingredients}</p>
 
-          <h3 className={styles.sectionTitle}>Состав:</h3>
-          <p className={styles.ingredientsText}>
-            {Array.isArray(dish.ingredients) 
-              ? dish.ingredients.join(', ') 
-              : dish.ingredients}
-          </p>
+              <h3 className={styles.alcoholSectionLabel}>Аромат</h3>
+              <p className={styles.alcoholText}>{dish.specific_details}</p>
 
-          {/* Секция БЖУ только для не-алкоголя */}
-          {!isAlcohol && (
+              <h3 className={styles.alcoholSectionLabel}>Рекомендации к употреблению:</h3>
+              <p className={styles.alcoholText}>{dish.description}</p>
+            </div>
+          ) : (
+            /* --- ВЕРСТКА ДЛЯ ЕДЫ (ТВОЯ СТАРАЯ) --- */
             <>
+              <h3 className={styles.sectionTitle}>Описание:</h3>
+              <p className={styles.descriptionText}>{dish.description}</p>
+
+              <h3 className={styles.sectionTitle}>Состав:</h3>
+              <p className={styles.ingredientsText}>
+                {Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : dish.ingredients}
+              </p>
+
               <h3 className={styles.sectionTitle}>Пищевая ценность:</h3>
               <div className={styles.nutritionalGrid}>
                 <div className={styles.nutriItem}>
@@ -127,7 +142,7 @@ const DishModal = ({ isOpen, onClose, dish }) => {
             </>
           )}
 
-          {/* Блок управления заказом */}
+          {/* Блок кнопок (общий для всех) */}
           <div className={styles.buttonActionGroup}>
             <button className={styles.chatButton}>
               <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
