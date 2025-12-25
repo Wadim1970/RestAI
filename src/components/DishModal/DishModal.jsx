@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './DishModal.module.css';
 
-const DishModal = ({ isOpen, onClose, dish }) => {
-  const [count, setCount] = useState(0);
+// Добавили пропсы currentCount и updateCart
+const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
   const [isClosing, setIsClosing] = useState(false);
   
   const touchStart = useRef(null);
@@ -22,7 +22,6 @@ const DishModal = ({ isOpen, onClose, dish }) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setIsClosing(false);
-      setCount(0);
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -110,7 +109,7 @@ const DishModal = ({ isOpen, onClose, dish }) => {
               <p className={styles.alcoholText}>{dish.description}</p>
             </div>
           ) : (
-            /* --- ВЕРСТКА ДЛЯ ЕДЫ (ТВОЯ СТАРАЯ) --- */
+            /* --- ВЕРСТКА ДЛЯ ЕДЫ --- */
             <>
               <h3 className={styles.sectionTitle}>Описание:</h3>
               <p className={styles.descriptionText}>{dish.description}</p>
@@ -142,23 +141,23 @@ const DishModal = ({ isOpen, onClose, dish }) => {
             </>
           )}
 
-          {/* Блок кнопок (общий для всех) */}
+          {/* Блок кнопок: теперь использует функцию updateCart */}
           <div className={styles.buttonActionGroup}>
             <button className={styles.chatButton}>
               <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
             </button>
 
-            {count === 0 ? (
-              <button className={styles.addToCartBtn} onClick={() => setCount(1)}>
+            {currentCount === 0 ? (
+              <button className={styles.addToCartBtn} onClick={() => updateCart(dish.id, 1)}>
                 Добавить в заказ
               </button>
             ) : (
               <div className={styles.counterBtn}>
-                <button onClick={() => setCount(count - 1)} className={styles.minusBtn}>
+                <button onClick={() => updateCart(dish.id, -1)} className={styles.minusBtn}>
                   <img src="/icons/icon-minus.png" alt="minus" className={styles.controlIcon} />
                 </button>
-                <span className={styles.countNumber}>{count}</span>
-                <button onClick={() => setCount(count + 1)} className={styles.plusBtn}>
+                <span className={styles.countNumber}>{currentCount}</span>
+                <button onClick={() => updateCart(dish.id, 1)} className={styles.plusBtn}>
                   <img src="/icons/icon-plus.png" alt="plus" className={styles.controlIcon} />
                 </button>
               </div>
