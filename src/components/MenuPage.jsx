@@ -5,7 +5,8 @@ import styles from './MenuPage.module.css';
 // Импорт компонентов
 import MenuHeader from './MenuHeader/MenuHeader'; 
 import MenuFooter from './MenuFooter/MenuFooter'; 
-import DishModal from './DishModal/DishModal'; // <-- Добавили импорт
+import DishModal from './DishModal/DishModal';
+import CartModal from './CartModal/CartModal'; // <-- НОВОЕ: Импорт корзины
 
 const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co'; 
 const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83'; 
@@ -13,15 +14,18 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
-export default function MenuPage() {
+// НОВОЕ: Принимаем cart и updateCart из App.js
+export default function MenuPage({ cart, updateCart }) {
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
-    const [selectedDishes, setSelectedDishes] = useState({}); 
     const [activeSection, setActiveSection] = useState(''); 
 
-    // --- НОВОЕ: СОСТОЯНИЕ ДЛЯ МОДАЛЬНОГО ОКНА ---
+    // СОСТОЯНИЕ ДЛЯ МОДАЛЬНОГО ОКНА БЛЮДА
     const [selectedDishForModal, setSelectedDishForModal] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // НОВОЕ: СОСТОЯНИЕ ДЛЯ МОДАЛЬНОГО ОКНА КОРЗИНЫ
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     const sectionRefs = useRef({}); 
 
@@ -51,23 +55,33 @@ export default function MenuPage() {
     }, []);
 
     const sections = Object.keys(groupedMenu || {}); 
-    const isOrderActive = Object.keys(selectedDishes).length > 0;
+    
+    // НОВОЕ: Проверка, есть ли что-то в корзине для активации футера
+    const isOrderActive = Object.keys(cart).length > 0;
 
-    // --- НОВОЕ: ФУНКЦИЯ ОТКРЫТИЯ МОДАЛКИ ---
+    // НОВОЕ: Получаем массив объектов блюд, которые лежат в корзине
+    const cartItems = [];
+    sections.forEach(sec => {
+        groupedMenu[sec].forEach(dish => {
+            if (cart[dish.id]) {
+                cartItems.push({ ...dish, count: cart[dish.id] });
+            }
+        });
+    });
+
     const handleOpenModal = (dish) => {
         setSelectedDishForModal(dish);
         setIsModalOpen(true);
     };
 
-    // Обновленная функция выбора (галочка)
+    // Обновленная функция выбора (теперь работает с глобальной корзиной)
     const toggleDishSelection = (e, dishId) => {
-        e.stopPropagation(); // Чтобы не открывалась модалка при нажатии на галочку
-        setSelectedDishes(prev => {
-            const newState = { ...prev };
-            if (newState[dishId]) delete newState[dishId]; 
-            else newState[dishId] = true;
-            return newState;
-        });
+        e.stopPropagation();
+        if (cart[dishId]) {
+            updateCart(dishId, -cart[dishId]); // Удаляем всё количество
+        } else {
+            updateCart(dishId, 1); // Добавляем 1 шт
+        }
     };
     
     const handleSectionClick = (sectionName) => {
@@ -79,7 +93,10 @@ export default function MenuPage() {
     };
     
     const handleChatClick = () => console.log("Переход в Чат");
-    const handleOrderClick = () => console.log("Переход в Корзину");
+    
+    // НОВОЕ: Открытие корзины
+    const handleOrderClick = () => setIsCartOpen(true);
+    
     const handleCallClick = () => console.log("Вызов официанта");
 
     useEffect(() => {
@@ -135,17 +152,17 @@ export default function MenuPage() {
                                     <div key={dish.id} className={styles.dishCard}>
                                         <div 
                                             className={styles.dishImageContainer}
-                                            onClick={() => handleOpenModal(dish)} // <-- КЛИК ТУТ
+                                            onClick={() => handleOpenModal(dish)}
                                         >
                                             {dish.image_url && <img src={dish.image_url} alt={dish.dish_name} className={styles.dishImage} />}
                                             <div className={styles.priceTag}>
                                                 <p className={styles.dishPrice}>{dish.cost_rub} ₽</p>
                                             </div>
                                             <button 
-                                                className={`${styles.selectButton} ${selectedDishes[dish.id] ? styles.selected : ''}`}
-                                                onClick={(e) => toggleDishSelection(e, dish.id)} // <-- STOP PROPAGATION ТУТ
+                                                className={`${styles.selectButton} ${cart[dish.id] ? styles.selected : ''}`}
+                                                onClick={(e) => toggleDishSelection(e, dish.id)}
                                             >
-                                                {selectedDishes[dish.id] && <Checkmark />}
+                                                {cart[dish.id] && <Checkmark />}
                                             </button>
                                         </div>
                                         <p className={styles.dishName}>{dish.dish_name}</p>
@@ -164,11 +181,22 @@ export default function MenuPage() {
                 onCallClick={handleCallClick}
             />
 
-            {/* ВСТАВЛЯЕМ КОМПОНЕНТ МОДАЛКИ */}
+            {/* МОДАЛКА БЛЮДА: Передаем count и updateCart */}
             <DishModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
-                dish={selectedDishForModal} 
+                dish={selectedDishForModal}
+                currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
+                updateCart={updateCart}
+            />
+
+            {/* НОВОЕ: МОДАЛКА КОРЗИНЫ */}
+            <CartModal 
+                isOpen={isCartOpen}
+                onClose={() => setIsCartOpen(false)}
+                cartItems={cartItems}
+                updateCart={updateCart}
+                onOrder={(comment) => console.log("Заказ отправлен:", comment)}
             />
         </>
     );
