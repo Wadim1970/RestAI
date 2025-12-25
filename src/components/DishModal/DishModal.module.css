@@ -31,20 +31,22 @@
     background-color: #FBFBF9;
     border-radius: 4.54vw 4.54vw 0 0;
     position: relative;
-    
+
     margin-left: auto;
     margin-right: auto;
+
+    /* МАГИЯ ЗДЕСЬ: margin-top: auto прижимает модалку к низу оверлея, 
+       но позволяет скроллить вверх, если она длинная */
     margin-top: auto; 
-    
-    /* Добавляем это: */
-    display: block !important; 
-    overflow: hidden; /* Чтобы скругления модалки работали корректно */
-    
+
     height: auto; 
+    flex-shrink: 0; 
 
     padding-bottom: 50px; 
+    /* "Хвост" фона вниз */
     box-shadow: 0 500px 0 0 #FBFBF9; 
-    
+
+    /* Анимация выезда ровно снизу экрана */
     animation: slideUp 0.3s ease-out;
     transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
