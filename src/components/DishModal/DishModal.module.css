@@ -68,34 +68,41 @@
 
 .imageContainer {
     position: relative;
-    /* Явное указание размеров в vw (396px) */
+    /* 396px -> 90vw */
     width: 90vw !important; 
     height: 90vw !important;
     
-    /* Соотношение сторон 1 к 1 */
-    aspect-ratio: 1 / 1 !important;
-    
-    /* Отступ сверху 12px, центрирование по горизонтали */
+    /* Отступы 12px сверху и центрирование */
     margin: 2.73vw auto 0 auto !important; 
     
     /* Скругление 10px */
     border-radius: 2.27vw !important;
     
-    /* Прячем все, что не влезает в квадрат */
+    /* КРИТИЧНО: Чтобы картинка не вываливалась */
     overflow: hidden !important;
     
-    /* Блокируем любые попытки Flexbox сжать или растянуть картинку */
-    flex: none !important;
-    display: block !important; 
+    /* Как на главной: гарантируем квадрат через aspect-ratio */
+    aspect-ratio: 1 / 1;
     
-    z-index: 5;
+    /* Защита от флекс-сжатия */
+    flex-shrink: 0;
+    background-color: transparent;
 }
 
 .mainImage {
-   width: 100% !important;
+   /* Точно как на главной странице */
+    width: 100% !important;
     height: 100% !important;
-    object-fit: cover !important;
-    display: block !important;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    
+    /* ИЗМЕНЕНО: Используем contain, чтобы картинка вписалась в 396x396 */
+    /* Если хочешь, чтобы еда была на весь квадрат без полей — ставь cover */
+    object-fit: contain; 
+    
+    /* Убираем влияние на скролл и клики */
+    pointer-events: none;
 }
 
 .dragLine {
