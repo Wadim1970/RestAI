@@ -34,19 +34,17 @@
     
     margin-left: auto;
     margin-right: auto;
-    
-    /* МАГИЯ ЗДЕСЬ: margin-top: auto прижимает модалку к низу оверлея, 
-       но позволяет скроллить вверх, если она длинная */
     margin-top: auto; 
     
+    /* Добавляем это: */
+    display: block !important; 
+    overflow: hidden; /* Чтобы скругления модалки работали корректно */
+    
     height: auto; 
-    flex-shrink: 0; 
 
     padding-bottom: 50px; 
-    /* "Хвост" фона вниз */
     box-shadow: 0 500px 0 0 #FBFBF9; 
     
-    /* Анимация выезда ровно снизу экрана */
     animation: slideUp 0.3s ease-out;
     transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
@@ -68,32 +66,34 @@
 
 .imageContainer {
     position: relative;
-    /* Жестко задаем ширину и высоту 396px */
-    width: 90vw !important;
+    /* Явное указание размеров в vw (396px) */
+    width: 90vw !important; 
     height: 90vw !important;
     
-    /* Добавляем эти две строки, чтобы размер не «плавал» */
-    min-height: 90vw !important;
-    max-height: 90vw !important;
+    /* Соотношение сторон 1 к 1 */
+    aspect-ratio: 1 / 1 !important;
     
-    /* Отступы 12px сверху, авто-центрирование по бокам */
+    /* Отступ сверху 12px, центрирование по горизонтали */
     margin: 2.73vw auto 0 auto !important; 
     
-    border-radius: 2.27vw;
-    overflow: hidden;
-    background-color: #eee;
+    /* Скругление 10px */
+    border-radius: 2.27vw !important;
     
-    /* Запрещаем контейнеру сжиматься, если контента внизу слишком много */
-    flex-shrink: 0 !important;
+    /* Прячем все, что не влезает в квадрат */
+    overflow: hidden !important;
+    
+    /* Блокируем любые попытки Flexbox сжать или растянуть картинку */
+    flex: none !important;
+    display: block !important; 
+    
     z-index: 5;
 }
 
 .mainImage {
-    width: 100%;
-    height: 100%;
-    /* Гарантирует, что фото заполнит квадрат 396x396 без искажений */
-    object-fit: cover; 
-    display: block;
+   width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
 }
 
 .dragLine {
