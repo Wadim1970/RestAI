@@ -323,3 +323,60 @@
     justify-content: center;
     cursor: pointer;
 }
+
+/* Алкогольная специфика */
+.alcoholContent {
+    text-align: left !important;
+    padding: 0 !important;
+}
+
+.alcoholWrapper {
+    padding-top: 9.09vw; /* 40px от картинки */
+}
+
+.alcoholTitle {
+    font-size: 5.45vw; /* 24px */
+    font-weight: 600;
+    margin-left: 5vw; /* 22px */
+    width: 87.5vw; /* 385px */
+    line-height: 1.2;
+    margin-bottom: 4.55vw; /* 20px до характеристик */
+}
+
+.specsContainer {
+    margin-bottom: 4.55vw;
+}
+
+.specRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5vw; /* 22px отступы */
+    margin-bottom: 1.82vw; /* 8px между строками */
+}
+
+.specKey {
+    font-size: 3.64vw; /* 16px */
+    font-weight: 500;
+}
+
+.specValue {
+    font-size: 3.64vw; /* 16px */
+    font-weight: 400;
+    text-align: right;
+}
+
+.alcoholSectionLabel {
+    font-size: 3.64vw; /* 16px */
+    font-weight: 700;
+    margin-left: 5vw; /* 22px */
+    margin-top: 4.55vw; /* 20px от верхнего текста */
+    margin-bottom: 1.82vw; /* 8px до текста под ним */
+}
+
+.alcoholText {
+    font-size: 3.64vw; /* 16px */
+    font-weight: 300;
+    margin-left: 5vw; /* 22px */
+    width: 88.64vw; /* 390px */
+    line-height: 1.4;
+}
