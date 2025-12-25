@@ -286,7 +286,7 @@
 .addToCartBtn, .counterBtn {
     margin-left: auto; 
     width: 50vw;      /* Твои 220px */
-    height: 12.73vw;  /* СТАЛО: 56px (было 12.27) */
+    height: 13.64vw;  /* СТАЛО: 60px (было 12.27) */
     
     border-radius: 6.82vw;
     display: flex;
