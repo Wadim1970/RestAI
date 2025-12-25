@@ -68,18 +68,24 @@
 
 .imageContainer {
     position: relative;
-    /* 396px -> 90vw (396/440 * 100) */
-    width: 90vw; 
-    height: 90vw; 
+    /* Жестко задаем ширину и высоту 396px */
+    width: 90vw !important;
+    height: 90vw !important;
     
-    /* Отступы 12px -> 2.73vw (сверху, слева, справа) */
-    margin: 2.73vw auto 0 auto; 
+    /* Добавляем эти две строки, чтобы размер не «плавал» */
+    min-height: 90vw !important;
+    max-height: 90vw !important;
     
-    /* Скругление 10px -> 2.27vw */
+    /* Отступы 12px сверху, авто-центрирование по бокам */
+    margin: 2.73vw auto 0 auto !important; 
+    
     border-radius: 2.27vw;
     overflow: hidden;
-    background-color: #eee; /* Фон на случай долгой загрузки */
-    flex-shrink: 0; /* Чтобы flex не сжимал картинку */
+    background-color: #eee;
+    
+    /* Запрещаем контейнеру сжиматься, если контента внизу слишком много */
+    flex-shrink: 0 !important;
+    z-index: 5;
 }
 
 .mainImage {
