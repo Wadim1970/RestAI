@@ -11,12 +11,18 @@
 .modal {
     width: 100%;
     max-width: 440px;
-    height: 90vh;
+    /* Вместо жестких 90vh делаем гибкую высоту с ограничением */
+    height: auto; 
+    max-height: 92%; /* Оставляем 8% зазора сверху */
     background: #FBFBF9;
-    border-radius: 4.54vw 4.54vw 0 0;
+    border-radius: 20px 20px 0 0; /* Используем px для надежности на iOS */
     display: flex;
     flex-direction: column;
     margin: 0 auto;
+    
+    /* Важно для iOS: предотвращаем вылет за пределы */
+    position: relative;
+    bottom: 0;
 }
 
 .dragLine {
