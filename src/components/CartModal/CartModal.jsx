@@ -53,10 +53,20 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
 
-    // Двигаем модалку вниз только если скролл списка в самом верху
-    if (distance > 0 && modalRef.current && (!listRef.current || listRef.current.scrollTop <= 0)) {
+    // УМНАЯ ПРОВЕРКА СКРОЛЛА:
+    // Мы разрешаем двигать (свайпать) модальное окно ТОЛЬКО если:
+    // 1. Дистанция больше 0 (тянем вниз)
+    // 2. Список внутри (listRef) находится в самом-самом верху (scrollTop <= 0)
+    
+    const isListAtTop = !listRef.current || listRef.current.scrollTop <= 0;
+
+    if (distance > 0 && isListAtTop && modalRef.current) {
+      // Если мы вверху списка и тянем вниз — двигаем модалку
       modalRef.current.style.transform = `translateY(${distance}px)`;
       modalRef.current.style.transition = 'none';
+      
+      // Блокируем стандартный скролл контента, чтобы не дергался
+      if (e.cancelable) e.preventDefault();
     }
   };
 
