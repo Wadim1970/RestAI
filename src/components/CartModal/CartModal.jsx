@@ -63,15 +63,26 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
 
-    // Условие стало строже:
-    // 1. Тянем вниз (distance > 0)
-    // 2. Модалка существует
-    // 3. Список вверху (scrollTop <= 0)
-    // 4. И ГЛАВНОЕ: касание началось, когда список УЖЕ был вверху (canSwipeModal.current)
-    if (distance > 0 && modalRef.current && listRef.current && listRef.current.scrollTop <= 0 && canSwipeModal.current) {
+    // 1. Если список внутри прокручен хоть на 1 пиксель, 
+    // помечаем, что идет скролл контента, и выходим.
+    if (listRef.current && listRef.current.scrollTop > 0) {
+      isScrollingList.current = true;
+      return; 
+    }
+
+    // 2. Двигаем модалку только при соблюдении ВСЕХ условий:
+    if (
+      distance > 0 &&               // тянем вниз
+      modalRef.current &&           // модалка на месте
+      listRef.current &&            // список найден
+      listRef.current.scrollTop <= 0 && // список в самом верху
+      canSwipeModal.current &&      // коснулись, когда список уже был вверху
+      !isScrollingList.current      // за это касание список не двигался
+    ) {
       modalRef.current.style.transform = `translateY(${distance}px)`;
       modalRef.current.style.transition = 'none';
       
+      // Блокируем «родной» скролл браузера, чтобы не дергалось
       if (e.cancelable) e.preventDefault();
     }
   };
