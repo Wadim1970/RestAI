@@ -6,7 +6,7 @@ import styles from './MenuPage.module.css';
 import MenuHeader from './MenuHeader/MenuHeader'; 
 import MenuFooter from './MenuFooter/MenuFooter'; 
 import DishModal from './DishModal/DishModal';
-import CartModal from './CartModal/CartModal'; // Проверь путь! Если создал папку, добавь /CartModal/CartModal
+import CartModal from './CartModal/CartModal';
 
 const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co'; 
 const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83'; 
@@ -15,7 +15,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
 export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], onConfirmOrder }) {
-
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState(''); 
@@ -26,6 +25,8 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
     const [isCartOpen, setIsCartOpen] = useState(false);
 
     const sectionRefs = useRef({}); 
+    // Флаг, чтобы скролл не дергался, когда мы сами нажимаем на кнопку в хедере
+    const isScrollingRef = useRef(false);
 
     useEffect(() => {
         async function fetchMenu() {
@@ -46,6 +47,11 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
                     return acc;
                 }, {});
                 setGroupedMenu(grouped);
+                
+                // Устанавливаем первую секцию активной по умолчанию
+                const firstSection = Object.keys(grouped)[0];
+                if (firstSection) setActiveSection(firstSection);
+
             } catch (err) {
                 console.error('Ошибка Supabase:', err);
             } finally {
@@ -55,8 +61,53 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
         fetchMenu();
     }, []);
 
+    // --- ЛОГИКА ОТСЛЕЖИВАНИЯ СКРОЛЛА ---
+    useEffect(() => {
+        if (loading || Object.keys(groupedMenu).length === 0) return;
+
+        const options = {
+            root: null,
+            rootMargin: '-160px 0px -70% 0px', // Отступ сверху под высоту хедера
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            // Если мы сейчас программно скроллим (после клика), игнорируем события
+            if (isScrollingRef.current) return;
+
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.getAttribute('data-section'));
+                }
+            });
+        }, options);
+
+        // Начинаем следить за каждой секцией
+        const sectionsElements = document.querySelectorAll(`section.${styles.menuSection}`);
+        sectionsElements.forEach((section) => observer.observe(section));
+
+        return () => observer.disconnect();
+    }, [loading, groupedMenu]);
+
+    const handleSectionClick = (sectionName) => {
+        isScrollingRef.current = true; // Блокируем observer
+        setActiveSection(sectionName); 
+        
+        const element = sectionRefs.current[sectionName];
+        if (element) {
+            const yOffset = -150; // Смещение, чтобы заголовок не прятался под хедером
+            const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+            
+            window.scrollTo({ top: y, behavior: 'smooth' });
+
+            // Снимаем блокировку observer через секунду (когда скролл закончится)
+            setTimeout(() => {
+                isScrollingRef.current = false;
+            }, 1000);
+        }
+    };
+
     // БЕЗОПАСНЫЙ СБОР ДАННЫХ ДЛЯ КОРЗИНЫ
-    // Мы создаем массив только если данные загружены и cart не пустой
     const cartItems = groupedMenu && Object.keys(groupedMenu).length > 0 
     ? Object.values(groupedMenu).flat().filter(dish => cart && cart[dish.id]).map(dish => ({
         ...dish,
@@ -79,14 +130,6 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
             updateCart(dishId, -currentCount); 
         } else {
             updateCart(dishId, 1);
-        }
-    };
-    
-    const handleSectionClick = (sectionName) => {
-        setActiveSection(sectionName); 
-        const element = sectionRefs.current[sectionName];
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     };
 
@@ -156,9 +199,9 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 cartItems={cartItems}
-                confirmedOrders={confirmedOrders || []} // Добавляем защиту || []
+                confirmedOrders={confirmedOrders || []}
                 updateCart={updateCart}
-                onConfirmOrder={onConfirmOrder} // Передаем правильную функцию
+                onConfirmOrder={onConfirmOrder}
             />
         </>
     );
