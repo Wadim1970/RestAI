@@ -54,6 +54,12 @@
     flex: 1;
     overflow-y: auto;
     padding: 0 5vw;
+    
+    /* Остановка передачи скролла родителю (решает проблему инерции на Android) */
+    overscroll-behavior-y: contain; 
+    
+    /* Плавный "резиновый" скролл для старых версий iOS */
+    -webkit-overflow-scrolling: touch; 
 }
 
 .cartItem {
@@ -209,3 +215,5 @@
   transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   will-change: transform;
 }
+
+
