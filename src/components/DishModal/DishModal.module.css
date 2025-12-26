@@ -107,7 +107,7 @@
 
 .dragLine {
     position: absolute;
-    top: 2.73vw; /* 12px от верха изображения */
+    top: 6.4vw; /* 24px от верха изображения */
     left: 50%;
     transform: translateX(-50%);
     width: 34.09vw; /* 150px */
