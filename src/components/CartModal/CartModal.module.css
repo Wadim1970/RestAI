@@ -12,7 +12,7 @@
     width: 100%;
     max-width: 440px;
     /* Вместо жестких 90vh делаем гибкую высоту с ограничением */
-    height: auto; 
+    height: 99%;
     max-height: 96.5%; /* Оставляем 8% зазора сверху */
     background: #FBFBF9;
     border-radius: 20px 20px 0 0; /* Используем px для надежности на iOS */
