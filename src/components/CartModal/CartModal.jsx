@@ -11,8 +11,9 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const modalRef = useRef(null);
   const listRef = useRef(null); // Реф для списка блюд
   const minSwipeDistance = 150;
-
+  const canSwipeModal = useRef(false); // Разрешено ли закрытие в текущем цикле касания
   // Авто-скролл вниз при подтверждении заказа
+ 
   useEffect(() => {
     if (confirmedOrders.length > 0 && listRef.current) {
       setTimeout(() => {
@@ -44,28 +45,33 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   }, [isOpen]);
 
   // --- ЛОГИКА СВАЙПА (как в DishModal) ---
-  const onTouchStart = (e) => {
+ const onTouchStart = (e) => {
     touchEnd.current = null;
     touchStart.current = e.targetTouches[0].clientY;
+    
+    // ПРЕДОХРАНИТЕЛЬ: Проверяем, был ли список в самом верху В МОМЕНТ КАСАНИЯ.
+    // Если да — разрешаем потенциальный свайп на закрытие.
+    // Если нет (список был прокручен) — свайп модалки будет запрещен, пока не переприложишь палец.
+    if (listRef.current && listRef.current.scrollTop <= 0) {
+      canSwipeModal.current = true;
+    } else {
+      canSwipeModal.current = false;
+    }
   };
 
   const onTouchMove = (e) => {
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
 
-    // УМНАЯ ПРОВЕРКА СКРОЛЛА:
-    // Мы разрешаем двигать (свайпать) модальное окно ТОЛЬКО если:
-    // 1. Дистанция больше 0 (тянем вниз)
-    // 2. Список внутри (listRef) находится в самом-самом верху (scrollTop <= 0)
-    
-    const isListAtTop = !listRef.current || listRef.current.scrollTop <= 0;
-
-    if (distance > 0 && isListAtTop && modalRef.current) {
-      // Если мы вверху списка и тянем вниз — двигаем модалку
+    // Условие стало строже:
+    // 1. Тянем вниз (distance > 0)
+    // 2. Модалка существует
+    // 3. Список вверху (scrollTop <= 0)
+    // 4. И ГЛАВНОЕ: касание началось, когда список УЖЕ был вверху (canSwipeModal.current)
+    if (distance > 0 && modalRef.current && listRef.current && listRef.current.scrollTop <= 0 && canSwipeModal.current) {
       modalRef.current.style.transform = `translateY(${distance}px)`;
       modalRef.current.style.transition = 'none';
       
-      // Блокируем стандартный скролл контента, чтобы не дергался
       if (e.cancelable) e.preventDefault();
     }
   };
