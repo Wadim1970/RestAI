@@ -9,7 +9,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const touchStart = useRef(null);
   const touchEnd = useRef(null);
   const modalRef = useRef(null);
-  const minSwipeDistance = 50;
+  const minSwipeDistance = 150;
 
   // Функция плавного закрытия
   const handleClose = () => {
