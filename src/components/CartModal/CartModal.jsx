@@ -1,15 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 
 const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder }) => {
   const [comment, setComment] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
+  
+  // Рефы для логики свайпа
+  const touchStart = useRef(null);
+  const touchEnd = useRef(null);
+  const modalRef = useRef(null);
+  const minSwipeDistance = 50;
+
+  // Функция плавного закрытия
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false); // Сбрасываем для следующего открытия
+    }, 300);
+  };
+
+  // Блокировка скролла основной страницы при открытой модалке
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      setIsClosing(false);
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isOpen]);
+
+  // --- ЛОГИКА СВАЙПА (как в DishModal) ---
+  const onTouchStart = (e) => {
+    touchEnd.current = null;
+    touchStart.current = e.targetTouches[0].clientY;
+  };
+
+  const onTouchMove = (e) => {
+    touchEnd.current = e.targetTouches[0].clientY;
+    const distance = touchEnd.current - touchStart.current;
+
+    // Двигаем модалку только вниз
+    if (distance > 0 && modalRef.current) {
+      modalRef.current.style.transform = `translateY(${distance}px)`;
+      modalRef.current.style.transition = 'none';
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
+    const distance = touchEnd.current - touchStart.current;
+
+    if (distance > minSwipeDistance) {
+      handleClose();
+    } else if (modalRef.current) {
+      // Возвращаем на место, если свайп был коротким
+      modalRef.current.style.transform = 'translateY(0)';
+      modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    }
+  };
 
   if (!isOpen) return null;
 
   const hasNewItems = cartItems.length > 0;
   const hasConfirmedItems = confirmedOrders.length > 0;
 
-  // Безопасный расчет сумм
   const newItemsSum = cartItems.reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
   const confirmedSum = confirmedOrders.reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
   const totalSum = newItemsSum + confirmedSum;
@@ -22,17 +77,26 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+    <div 
+      className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`} 
+      onClick={handleClose}
+    >
+      <div 
+        ref={modalRef}
+        className={`${styles.modal} ${isClosing ? styles.slideDown : ''}`} 
+        onClick={e => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <div className={styles.dragLine}></div>
         
         <div className={styles.header}>
           <h2 className={styles.title}>Ваш заказ</h2>
-          <button className={styles.closeBtn} onClick={onClose}>×</button>
+          <button className={styles.closeBtn} onClick={handleClose}>×</button>
         </div>
 
         <div className={styles.itemList}>
-          {/* НОВЫЕ БЛЮДА (с кнопками +/-) */}
           {hasNewItems && (
             <div className={styles.newItemsSection}>
               {cartItems.map(item => (
@@ -52,14 +116,12 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
             </div>
           )}
 
-          {/* КНОПКА ДОБАВИТЬ (только если есть подтвержденные) */}
           {hasConfirmedItems && (
-            <button className={styles.addMoreBtn} onClick={onClose}>
+            <button className={styles.addMoreBtn} onClick={handleClose}>
               + Добавить к заказу
             </button>
           )}
 
-          {/* ПОДТВЕРЖДЕННЫЕ (без кнопок изменения) */}
           {hasConfirmedItems && (
             <div className={styles.confirmedSection}>
               <h3 className={styles.sectionDivider}>Уже готовится</h3>
@@ -78,13 +140,14 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
           {!hasNewItems && !hasConfirmedItems && <div className={styles.emptyText}>Корзина пуста</div>}
         </div>
 
-        <div className={styles.footer}>
+        <div className={styles.footer} onClick={() => document.activeElement.blur()}>
           {hasNewItems && (
             <textarea 
               className={styles.commentField}
               placeholder="Комментарий к заказу..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              onClick={(e) => e.stopPropagation()} // Чтобы клик по полю не скрывал клавиатуру сразу
             />
           )}
           
