@@ -18,9 +18,9 @@ const CartModal = ({
   const hasConfirmedItems = confirmedOrders.length > 0;
 
   // Сумма за новые позиции
-  const newItemsSum = (cartItems || []).reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
-  const confirmedSum = (confirmedOrders || []).reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
-  const totalSum = newItemsSum + confirmedSum;
+ const newItemsSum = (cartItems || []).reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
+const confirmedSum = (confirmedOrders || []).reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
+const totalSum = newItemsSum + confirmedSum;
 
   const handleOrderSubmit = () => {
     onConfirmOrder(cartItems); // Передаем новые блюда в confirmedOrders через App.js
