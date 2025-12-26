@@ -87,17 +87,32 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     }
   };
 
-  const onTouchEnd = () => {
-    if (!touchStart.current || !touchEnd.current) return;
+ const onTouchEnd = () => {
+    // 1. Если палец не двигался или мы скроллили список блюд — ничего не делаем
+    if (!touchStart.current || !touchEnd.current || isScrollingList.current) {
+      // Сбрасываем трансформацию на случай, если модалка чуть-чуть дернулась
+      if (modalRef.current) {
+        modalRef.current.style.transform = 'translateY(0)';
+        modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+      }
+      return; 
+    }
+
     const distance = touchEnd.current - touchStart.current;
 
-    if (distance > minSwipeDistance) {
+    // 2. Закрываем, только если дистанция больше порога И мы НЕ скроллили список
+    if (distance > minSwipeDistance && canSwipeModal.current) {
       handleClose();
     } else if (modalRef.current) {
       // Возвращаем на место, если свайп был коротким
       modalRef.current.style.transform = 'translateY(0)';
       modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
     }
+
+    // Сбрасываем флаги для следующего касания
+    touchStart.current = null;
+    touchEnd.current = null;
+    isScrollingList.current = false;
   };
 
   if (!isOpen) return null;
