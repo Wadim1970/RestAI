@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
-export default function MenuPage({ cart, updateCart, confirmedOrders, onConfirmOrder }) {
+export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], onConfirmOrder }) {
 
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
@@ -57,14 +57,12 @@ export default function MenuPage({ cart, updateCart, confirmedOrders, onConfirmO
 
     // БЕЗОПАСНЫЙ СБОР ДАННЫХ ДЛЯ КОРЗИНЫ
     // Мы создаем массив только если данные загружены и cart не пустой
-    const cartItems = [];
-    if (!loading && groupedMenu) {
-        Object.values(groupedMenu).flat().forEach(dish => {
-            if (cart[dish.id]) {
-                cartItems.push({ ...dish, count: cart[dish.id] });
-            }
-        });
-    }
+    const cartItems = groupedMenu && Object.keys(groupedMenu).length > 0 
+    ? Object.values(groupedMenu).flat().filter(dish => cart && cart[dish.id]).map(dish => ({
+        ...dish,
+        count: cart[dish.id]
+      }))
+    : [];
 
     const sections = Object.keys(groupedMenu || {}); 
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
