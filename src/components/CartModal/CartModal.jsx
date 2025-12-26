@@ -5,11 +5,24 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const [comment, setComment] = useState('');
   const [isClosing, setIsClosing] = useState(false);
   
-  // Рефы для логики свайпа
+  // Рефы для логики свайпа и скролла
   const touchStart = useRef(null);
   const touchEnd = useRef(null);
   const modalRef = useRef(null);
+  const listRef = useRef(null); // Реф для списка блюд
   const minSwipeDistance = 150;
+
+  // Авто-скролл вниз при подтверждении заказа
+  useEffect(() => {
+    if (confirmedOrders.length > 0 && listRef.current) {
+      setTimeout(() => {
+        listRef.current.scrollTo({
+          top: listRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
+  }, [confirmedOrders.length]);
 
   // Функция плавного закрытия
   const handleClose = () => {
@@ -40,8 +53,8 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
 
-    // Двигаем модалку только вниз
-    if (distance > 0 && modalRef.current) {
+    // Двигаем модалку вниз только если скролл списка в самом верху
+    if (distance > 0 && modalRef.current && (!listRef.current || listRef.current.scrollTop <= 0)) {
       modalRef.current.style.transform = `translateY(${distance}px)`;
       modalRef.current.style.transition = 'none';
     }
@@ -96,7 +109,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
           <button className={styles.closeBtn} onClick={handleClose}>×</button>
         </div>
 
-        <div className={styles.itemList}>
+        <div className={styles.itemList} ref={listRef}>
           {hasNewItems && (
             <div className={styles.newItemsSection}>
               {cartItems.map(item => (
@@ -147,7 +160,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
               placeholder="Комментарий к заказу..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              onClick={(e) => e.stopPropagation()} // Чтобы клик по полю не скрывал клавиатуру сразу
+              onClick={(e) => e.stopPropagation()} 
             />
           )}
           
