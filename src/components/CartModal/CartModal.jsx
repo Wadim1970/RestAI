@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+imimport React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 
 const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder }) => {
@@ -9,16 +9,19 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const touchStart = useRef(null);
   const touchEnd = useRef(null);
   const modalRef = useRef(null);
-  const listRef = useRef(null); // Реф для списка блюд
+  const listRef = useRef(null); 
   const minSwipeDistance = 150;
-  const canSwipeModal = useRef(false); // Разрешено ли закрытие в текущем цикле касания
-  // Авто-скролл вниз при подтверждении заказа
- 
+
+  // ФЛАГИ ЗАЩИТЫ (Добавлены корректно)
+  const canSwipeModal = useRef(false); 
+  const isScrollingList = useRef(false); 
+
+  // Авто-скролл вверх к кнопке "+ Добавить"
   useEffect(() => {
     if (confirmedOrders.length > 0 && listRef.current) {
       setTimeout(() => {
         listRef.current.scrollTo({
-          top: 0, // Скроллим в самый верх, к кнопке "+ Добавить"
+          top: 0,
           behavior: 'smooth'
         });
       }, 100);
@@ -30,11 +33,11 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     setIsClosing(true);
     setTimeout(() => {
       onClose();
-      setIsClosing(false); // Сбрасываем для следующего открытия
+      setIsClosing(false);
     }, 300);
   };
 
-  // Блокировка скролла основной страницы при открытой модалке
+  // Блокировка скролла основной страницы
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -44,14 +47,13 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     }
   }, [isOpen]);
 
-  // --- ЛОГИКА СВАЙПА (как в DishModal) ---
- const onTouchStart = (e) => {
+  // --- ЛОГИКА СВАЙПА ---
+  const onTouchStart = (e) => {
     touchEnd.current = null;
     touchStart.current = e.targetTouches[0].clientY;
+    isScrollingList.current = false; // Сброс при новом касании
     
-    // ПРЕДОХРАНИТЕЛЬ: Проверяем, был ли список в самом верху В МОМЕНТ КАСАНИЯ.
-    // Если да — разрешаем потенциальный свайп на закрытие.
-    // Если нет (список был прокручен) — свайп модалки будет запрещен, пока не переприложишь палец.
+    // Если список в самом верху — разрешаем свайп модалки
     if (listRef.current && listRef.current.scrollTop <= 0) {
       canSwipeModal.current = true;
     } else {
@@ -63,53 +65,38 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
 
-    // 1. Если список внутри прокручен хоть на 1 пиксель, 
-    // помечаем, что идет скролл контента, и выходим.
+    // Если список прокрутился хоть на 1 пиксель — это скролл контента
     if (listRef.current && listRef.current.scrollTop > 0) {
       isScrollingList.current = true;
-      return; 
     }
 
-    // 2. Двигаем модалку только при соблюдении ВСЕХ условий:
+    // Двигаем модалку только если соблюдены все условия
     if (
-      distance > 0 &&               // тянем вниз
-      modalRef.current &&           // модалка на месте
-      listRef.current &&            // список найден
-      listRef.current.scrollTop <= 0 && // список в самом верху
-      canSwipeModal.current &&      // коснулись, когда список уже был вверху
-      !isScrollingList.current      // за это касание список не двигался
+      distance > 0 && 
+      modalRef.current && 
+      canSwipeModal.current && 
+      !isScrollingList.current
     ) {
       modalRef.current.style.transform = `translateY(${distance}px)`;
       modalRef.current.style.transition = 'none';
-      
-      // Блокируем «родной» скролл браузера, чтобы не дергалось
       if (e.cancelable) e.preventDefault();
     }
   };
 
- const onTouchEnd = () => {
-    // 1. Если палец не двигался или мы скроллили список блюд — ничего не делаем
-    if (!touchStart.current || !touchEnd.current || isScrollingList.current) {
-      // Сбрасываем трансформацию на случай, если модалка чуть-чуть дернулась
-      if (modalRef.current) {
-        modalRef.current.style.transform = 'translateY(0)';
-        modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
-      }
-      return; 
-    }
+  const onTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
 
     const distance = touchEnd.current - touchStart.current;
 
-    // 2. Закрываем, только если дистанция больше порога И мы НЕ скроллили список
-    if (distance > minSwipeDistance && canSwipeModal.current) {
+    // Закрываем только если не было скролла списка и дистанция достаточна
+    if (distance > minSwipeDistance && canSwipeModal.current && !isScrollingList.current) {
       handleClose();
     } else if (modalRef.current) {
-      // Возвращаем на место, если свайп был коротким
       modalRef.current.style.transform = 'translateY(0)';
       modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
     }
 
-    // Сбрасываем флаги для следующего касания
+    // Сброс всех значений
     touchStart.current = null;
     touchEnd.current = null;
     isScrollingList.current = false;
