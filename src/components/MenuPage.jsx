@@ -14,7 +14,8 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
-export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], onConfirmOrder }) {
+export default function MenuPage({ cart, updateCart, confirmedOrders, onConfirmOrder }) {
+
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState(''); 
