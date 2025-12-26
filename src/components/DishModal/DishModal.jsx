@@ -8,7 +8,7 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
   const touchStart = useRef(null);
   const touchEnd = useRef(null);
   const modalRef = useRef(null);
-  const minSwipeDistance = 50;
+  const minSwipeDistance = 150;
 
   const handleClose = () => {
     setIsClosing(true);
