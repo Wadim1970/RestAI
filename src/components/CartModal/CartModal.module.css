@@ -70,11 +70,22 @@
 
 .counter { display: flex; align-items: center; gap: 3vw; }
 .countBtn {
-    width: 8vw; height: 8vw;
-    border-radius: 50%; border: 1px solid #304D22;
-    background: none; color: #304D22;
-    display: flex; align-items: center; justify-content: center;
+    width: 8vw; 
+    height: 8vw;
+    min-width: 8vw;  /* Добавляем, чтобы кнопка не сжималась */
+    min-height: 8vw; /* Добавляем для iOS */
+    border-radius: 50%; 
+    border: 1px solid #304D22;
+    background: none; 
+    color: #304D22;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
     font-size: 5vw;
+    padding: 0;      /* Убираем лишние отступы Safari */
+    line-height: 1;  /* Центрируем символ внутри */
+    flex-shrink: 0;  /* Запрещаем flex-контейнеру сплющивать кнопку */
+    -webkit-appearance: none; /* Убираем системные стили Apple */
 }
 
 /* --- НОВЫЕ СТИЛИ ДЛЯ ИСТОРИИ ЗАКАЗА --- */
