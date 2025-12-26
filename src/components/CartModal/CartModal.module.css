@@ -183,3 +183,23 @@
 .orderBtn:active {
     transform: scale(0.98);
 }
+
+
+/* Анимация фона */
+.fadeOut {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Анимация ухода окна вниз */
+.slideDown {
+  transform: translateY(100%) !important;
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+/* Для плавного возврата если не дотянули свайп */
+.modal {
+  /* ... твои существующие стили ... */
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: transform;
+}
