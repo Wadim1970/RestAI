@@ -156,6 +156,11 @@
     outline: none;          /* Убирает синюю рамку при нажатии */
 }
 
+.commentField:focus {
+    border-color: #304D22;
+    background: #fff;
+}
+
 .totalRow {
     display: flex; justify-content: space-between;
     font-size: 5vw; font-weight: 700;
