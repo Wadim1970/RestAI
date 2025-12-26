@@ -17,7 +17,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
     if (confirmedOrders.length > 0 && listRef.current) {
       setTimeout(() => {
         listRef.current.scrollTo({
-          top: listRef.current.scrollHeight,
+          top: 0, // Скроллим в самый верх, к кнопке "+ Добавить"
           behavior: 'smooth'
         });
       }, 100);
