@@ -1,15 +1,7 @@
-// src/components/CartModal.jsx
 import React, { useState } from 'react';
 import styles from './CartModal.module.css';
 
-const CartModal = ({ 
-  isOpen, 
-  onClose, 
-  cartItems, 
-  confirmedOrders, // Принимаем историю заказов
-  updateCart, 
-  onConfirmOrder    // Принимаем функцию отправки из App.js
-}) => {
+const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder }) => {
   const [comment, setComment] = useState('');
 
   if (!isOpen) return null;
@@ -17,20 +9,16 @@ const CartModal = ({
   const hasNewItems = cartItems.length > 0;
   const hasConfirmedItems = confirmedOrders.length > 0;
 
-  // Сумма за новые позиции
-// Внутри CartModal.jsx замени расчеты сумм на эти 3 строки:
-
-const newItemsSum = (cartItems || []).reduce((sum, item) => 
-    sum + (Number(item?.cost_rub || 0) * Number(item?.count || 0)), 0);
-
-const confirmedSum = (confirmedOrders || []).reduce((sum, item) => 
-    sum + (Number(item?.cost_rub || 0) * Number(item?.count || 0)), 0);
-
-const totalSum = newItemsSum + confirmedSum;
+  // Безопасный расчет сумм
+  const newItemsSum = cartItems.reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
+  const confirmedSum = confirmedOrders.reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
+  const totalSum = newItemsSum + confirmedSum;
 
   const handleOrderSubmit = () => {
-    onConfirmOrder(cartItems); // Передаем новые блюда в confirmedOrders через App.js
-    setComment(''); // Очищаем комментарий для следующего дозаказа
+    if (hasNewItems) {
+      onConfirmOrder(cartItems);
+      setComment('');
+    }
   };
 
   return (
@@ -44,39 +32,39 @@ const totalSum = newItemsSum + confirmedSum;
         </div>
 
         <div className={styles.itemList}>
-          {/* 1. Блок новых блюд */}
-          {hasNewItems ? (
-            cartItems.map(item => (
-              <div key={item.id} className={styles.cartItem}>
-                <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
-                <div className={styles.itemInfo}>
-                  <div className={styles.itemName}>{item.dish_name}</div>
-                  <div className={styles.itemPrice}>{item.cost_rub} ₽</div>
+          {/* НОВЫЕ БЛЮДА (с кнопками +/-) */}
+          {hasNewItems && (
+            <div className={styles.newItemsSection}>
+              {cartItems.map(item => (
+                <div key={`new-${item.id}`} className={styles.cartItem}>
+                  <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
+                  <div className={styles.itemInfo}>
+                    <div className={styles.itemName}>{item.dish_name}</div>
+                    <div className={styles.itemPrice}>{item.cost_rub} ₽</div>
+                  </div>
+                  <div className={styles.counter}>
+                    <button onClick={() => updateCart(item.id, -1)} className={styles.countBtn}>-</button>
+                    <span className={styles.countNumber}>{item.count}</span>
+                    <button onClick={() => updateCart(item.id, 1)} className={styles.countBtn}>+</button>
+                  </div>
                 </div>
-                <div className={styles.counter}>
-                  <button onClick={() => updateCart(item.id, -1)} className={styles.countBtn}>-</button>
-                  <span className={styles.countNumber}>{item.count}</span>
-                  <button onClick={() => updateCart(item.id, 1)} className={styles.countBtn}>+</button>
-                </div>
-              </div>
-            ))
-          ) : !hasConfirmedItems && (
-            <div className={styles.emptyText}>В корзине пока пусто</div>
+              ))}
+            </div>
           )}
 
-          {/* 2. Кнопка "Добавить к заказу" (закрывает модалку) */}
+          {/* КНОПКА ДОБАВИТЬ (только если есть подтвержденные) */}
           {hasConfirmedItems && (
             <button className={styles.addMoreBtn} onClick={onClose}>
               + Добавить к заказу
             </button>
           )}
 
-          {/* 3. Блок "Уже готовится" (статичный список) */}
+          {/* ПОДТВЕРЖДЕННЫЕ (без кнопок изменения) */}
           {hasConfirmedItems && (
             <div className={styles.confirmedSection}>
               <h3 className={styles.sectionDivider}>Уже готовится</h3>
               {confirmedOrders.map((item, index) => (
-                <div key={`${item.id}-${index}`} className={`${styles.cartItem} ${styles.confirmedItem}`}>
+                <div key={`conf-${item.id}-${index}`} className={`${styles.cartItem} ${styles.confirmedItem}`}>
                   <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
@@ -86,10 +74,11 @@ const totalSum = newItemsSum + confirmedSum;
               ))}
             </div>
           )}
+
+          {!hasNewItems && !hasConfirmedItems && <div className={styles.emptyText}>Корзина пуста</div>}
         </div>
 
         <div className={styles.footer}>
-          {/* Поле комментария только для новых заказов */}
           {hasNewItems && (
             <textarea 
               className={styles.commentField}
@@ -105,17 +94,9 @@ const totalSum = newItemsSum + confirmedSum;
           </div>
 
           {hasNewItems ? (
-            <button 
-              className={styles.orderBtn}
-              onClick={handleOrderSubmit}
-            >
-              Отправить заказ
-            </button>
+            <button className={styles.orderBtn} onClick={handleOrderSubmit}>Отправить заказ</button>
           ) : (
-            <button 
-              className={`${styles.orderBtn} ${styles.billBtn}`}
-              onClick={() => console.log("Запрос счета")}
-            >
+            <button className={`${styles.orderBtn} ${styles.billBtn}`} onClick={() => console.log("Счет")}>
               Принести счет
             </button>
           )}
