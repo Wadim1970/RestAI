@@ -18,9 +18,8 @@ const CartModal = ({
   const hasConfirmedItems = confirmedOrders.length > 0;
 
   // Сумма за новые позиции
-  const newItemsSum = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
-  // Сумма за уже заказанные позиции
-  const confirmedSum = confirmedOrders.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
+  const newItemsSum = (cartItems || []).reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
+  const confirmedSum = (confirmedOrders || []).reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
   const totalSum = newItemsSum + confirmedSum;
 
   const handleOrderSubmit = () => {
