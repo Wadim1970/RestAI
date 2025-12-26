@@ -6,7 +6,7 @@ import styles from './MenuPage.module.css';
 import MenuHeader from './MenuHeader/MenuHeader'; 
 import MenuFooter from './MenuFooter/MenuFooter'; 
 import DishModal from './DishModal/DishModal';
-import CartModal from './CartModal'; // Проверь путь! Если создал папку, добавь /CartModal/CartModal
+import CartModal from './CartModal/CartModal'; // Проверь путь! Если создал папку, добавь /CartModal/CartModal
 
 const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co'; 
 const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83'; 
