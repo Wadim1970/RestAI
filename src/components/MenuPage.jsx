@@ -158,9 +158,9 @@ export default function MenuPage({ cart, updateCart, confirmedOrders, onConfirmO
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 cartItems={cartItems}
-                confirmedOrders={confirmedOrders}
+                confirmedOrders={confirmedOrders || []} // Добавляем защиту || []
                 updateCart={updateCart}
-                onConfirmOrder={onConfirmOrder}
+                onConfirmOrder={onConfirmOrder} // Передаем правильную функцию
             />
         </>
     );
