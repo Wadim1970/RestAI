@@ -61,13 +61,13 @@ export default function MenuPage({ cart, updateCart }) {
 
     // НОВОЕ: Получаем массив объектов блюд, которые лежат в корзине
     const cartItems = [];
-    sections.forEach(sec => {
-        groupedMenu[sec].forEach(dish => {
-            if (cart[dish.id]) {
-                cartItems.push({ ...dish, count: cart[dish.id] });
-            }
-        });
+if (groupedMenu) {
+    Object.values(groupedMenu).flat().forEach(dish => {
+        if (cart && cart[dish.id]) {
+            cartItems.push({ ...dish, count: cart[dish.id] });
+        }
     });
+}
 
     const handleOpenModal = (dish) => {
         setSelectedDishForModal(dish);
