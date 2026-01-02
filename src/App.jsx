@@ -1,38 +1,38 @@
 // src/App.jsx
-// src/App.jsx
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import MainScreen from './components/MainScreen'; // Твой главный экран
-import MenuPage from './components/MenuPage'; // Твоя страница меню
-import AIChatModal from './components/AIChatModal/AIChatModal'; // Импорт нового чата
+import MainScreen from './components/MainScreen'; 
+import MenuPage from './components/MenuPage'; 
+import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function App() {
-  // 1. Текущий выбор (то, что с галочками и счетчиками прямо сейчас)
   const [cart, setCart] = useState({}); 
-
-  // 2. Уже заказанные блюда (то, что ушло на кухню после нажатия кнопки)
   const [confirmedOrders, setConfirmedOrders] = useState([]);
 
-  // --- НОВАЯ ЛОГИКА ДЛЯ ЧАТА ---
-  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние открытия чата
-  const [viewHistory, setViewHistory] = useState([]); // "Память" ИИ о просмотренных блюдах
+  // --- ЛОГИКА ДЛЯ ЧАТА ---
+  const [isChatOpen, setIsChatOpen] = useState(false); 
+  const [viewHistory, setViewHistory] = useState([]); 
 
-  // Функция для записи истории просмотров (вызывай её при открытии карточки блюда)
+  // НОВОЕ: Функция, которая реагирует на тумблер (onToggle)
+  const handleToggleChatMode = (mode) => {
+    if (mode === 'chat') {
+      setIsChatOpen(true);
+    } else {
+      setIsChatOpen(false);
+    }
+  };
+
   const trackDishView = (dishName) => {
     setViewHistory(prev => {
-      // Сохраняем только если это не то же самое блюдо, что и в прошлый раз
       if (prev[prev.length - 1] === dishName) return prev;
-      // Храним последние 10 просмотров
       return [...prev, dishName].slice(-10);
     });
   };
 
-  // Функция обновления текущей корзины
   const updateCart = (dishId, delta) => {
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
       const newCount = Math.max(0, currentCount + delta);
-      
       if (newCount === 0) {
         const { [dishId]: _, ...rest } = prev;
         return rest;
@@ -41,11 +41,8 @@ function App() {
     });
   };
 
-  // Функция переноса блюд из корзины в "подтвержденные" (на кухню)
   const handleConfirmOrder = (cartItems) => {
-    // Сохраняем то, что заказали, в историю
     setConfirmedOrders(prev => [...prev, ...cartItems]);
-    // Обнуляем текущую корзину (это автоматически снимет галочки в меню)
     setCart({});
   };
 
@@ -53,10 +50,14 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          {/* Твой начальный экран */}
-          <Route path="/" element={<MainScreen />} />
+          {/* ИЗМЕНЕНО: Передаем функцию переключения в MainScreen */}
+          <Route 
+            path="/" 
+            element={
+              <MainScreen onChatModeToggle={handleToggleChatMode} />
+            } 
+          />
           
-          {/* Страница меню с передачей всех нужных данных */}
           <Route 
             path="/menu" 
             element={
@@ -65,7 +66,6 @@ function App() {
                 updateCart={updateCart} 
                 confirmedOrders={confirmedOrders}
                 onConfirmOrder={handleConfirmOrder}
-                // Передаем функции управления чатом в MenuPage
                 onOpenChat={() => setIsChatOpen(true)}
                 trackDishView={trackDishView} 
               />
@@ -74,11 +74,12 @@ function App() {
         </Routes>
       </BrowserRouter>
 
-      {/* МОДАЛЬНОЕ ОКНО ЧАТА (всегда доступно поверх роутов) */}
+      {/* МОДАЛЬНОЕ ОКНО ЧАТА */}
       <AIChatModal 
         isOpen={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
         viewHistory={viewHistory}
+        onModeToggle={handleToggleChatMode} // Передаем тумблер и внутрь чата
       />
     </div>
   );
