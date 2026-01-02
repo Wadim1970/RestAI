@@ -8,32 +8,45 @@ import { useNavigate } from 'react-router-dom';
 const MainScreen = ({ onChatModeToggle }) => {
   const navigate = useNavigate();
   
-  // ТВОИ РОДНЫЕ ФУНКЦИИ И СОСТОЯНИЯ ВИДЕО
+  // Твои состояния видео, которые ты настраивал
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
   const handlePlayVideo = () => {
+    console.log("Video Play Clicked"); // Для проверки в консоли
     setIsPlaying(true);
     setIsMuted(false);
   };
 
   return (
-    <div className="main-screen">
-      {/* Твой VideoBackground с твоими пропсами */}
+    <div className="main-screen" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      
+      {/* 1. ВИДЕО (Z-INDEX: 1) */}
       <VideoBackground isPlaying={isPlaying} isMuted={isMuted} />
       
-      {/* ТВОЯ КНОПКА ЗАПУСКА ВИДЕО — РОДНАЯ ЛОГИКА */}
+      {/* 2. КНОПКА ЗАПУСКА (Z-INDEX: 20 — поднимаем выше всех) */}
       {!isPlaying && (
-        <button className="play-video-button" onClick={handlePlayVideo}>
-          <img src="/icons/play-icon.png" alt="Play Video" />
+        <button 
+          className="play-video-button" 
+          onClick={handlePlayVideo}
+          style={{ 
+            position: 'fixed', 
+            zIndex: 20, 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <img src="/icons/play-icon.png" alt="Play Video" style={{ width: '80px', height: '80px' }} />
         </button>
       )}
 
-      {/* ТВОЙ КОНТЕЙНЕР КНОПОК ИЗ styles.css */}
-      <div className="buttons-footer">
+      {/* 3. НИЖНИЕ КНОПКИ (Z-INDEX: 10) */}
+      <div className="buttons-footer" style={{ zIndex: 10 }}>
         <MenuButton onClick={() => navigate('/menu')} />
-        
-        {/* Добавляем ТОЛЬКО передачу функции для чата */}
         <ToggleChatButton onToggle={onChatModeToggle} />
       </div>
     </div>
