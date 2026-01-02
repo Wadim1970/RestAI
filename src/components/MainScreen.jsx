@@ -34,7 +34,19 @@ const MainScreen = ({ onChatModeToggle }) => {
   };
 
   return (
-    <div className="main-screen-wrapper" style={{ position: 'relative', width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>
+    <div 
+      className="main-screen-wrapper" 
+      style={{ 
+        position: 'fixed', // ИСПРАВЛЕНО: фиксируем, чтобы не поднималось клавиатурой
+        top: 0,
+        left: 0,
+        width: '100vw', 
+        height: '100vh', 
+        background: '#000', 
+        overflow: 'hidden',
+        zIndex: 1 
+      }}
+    >
 
       {/* 1. Видео всегда на фоне */}
       <VideoBackground />
