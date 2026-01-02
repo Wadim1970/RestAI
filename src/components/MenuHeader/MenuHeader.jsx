@@ -12,8 +12,7 @@ export default function MenuHeader({ sections, activeSection, onSectionClick }) 
         const container = scrollContainerRef.current;
 
         if (activeBtn && container) {
-            // Рассчитываем позицию: кнопка в 22px (1.375rem) от левого края
-            // Используем 22 вместо rem для точности расчета в пикселях
+            // Рассчитываем позицию: активная кнопка в 22px от левого края
             let targetScroll = activeBtn.offsetLeft - 22;
 
             // Максимально возможный скролл
@@ -32,10 +31,7 @@ export default function MenuHeader({ sections, activeSection, onSectionClick }) 
 
     return (
         <header className={styles.headerContainer}>
-            {/* Область логотипа */}
-            <div className={styles.logoArea}>
-                <img src="/icons/logo-rest.png" alt="Logo" className={styles.logoImage} />
-            </div>
+            {/* БЛОК ЛОГОТИПА УДАЛЕН */}
 
             {/* Слайдер разделов */}
             <nav 
@@ -56,7 +52,7 @@ export default function MenuHeader({ sections, activeSection, onSectionClick }) 
                 ))}
             </nav>
 
-            {/* Линия-разделитель */}
+            {/* Линия-разделитель в самом низу */}
             <div className={styles.divider}></div>
         </header>
     );
