@@ -25,13 +25,16 @@ body {
 
 /* 1. VideoBackground.css */
 .avatar-video {
-    position: fixed;
+    position: fixed; /* Оставляем fixed */
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100vh; /* Используем vh, а не % или dvh */
     object-fit: cover; 
-    z-index: 1; 
+    z-index: 1;
+    /* ГЛАВНОЕ: запрещаем браузеру двигать этот элемент при фокусе на инпутах */
+    transform: translateZ(0); 
+    will-change: transform;
 }
 
 /* === Контейнер для кнопок (Flexbox) === */
