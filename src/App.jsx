@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
@@ -13,7 +13,24 @@ function App() {
   const [isChatOpen, setIsChatOpen] = useState(false); 
   const [viewHistory, setViewHistory] = useState([]); 
 
-  // НОВОЕ: Функция, которая реагирует на тумблер (onToggle)
+  // НОВОЕ: Эффект для предотвращения прыжков экрана при открытии клавиатуры
+  useEffect(() => {
+    if (isChatOpen) {
+      // Когда чат открыт — фиксируем body намертво
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    } else {
+      // Когда чат закрыт — возвращаем стандартные настройки
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    }
+  }, [isChatOpen]);
+
+  // Функция, которая реагирует на тумблер (onToggle)
   const handleToggleChatMode = (mode) => {
     if (mode === 'chat') {
       setIsChatOpen(true);
@@ -50,7 +67,6 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          {/* ИЗМЕНЕНО: Передаем функцию переключения в MainScreen */}
           <Route 
             path="/" 
             element={
@@ -79,7 +95,7 @@ function App() {
         isOpen={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
         viewHistory={viewHistory}
-        onModeToggle={handleToggleChatMode} // Передаем тумблер и внутрь чата
+        onModeToggle={handleToggleChatMode} 
       />
     </div>
   );
