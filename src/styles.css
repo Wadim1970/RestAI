@@ -49,6 +49,27 @@ body {
     align-items: center;
 }
 
+/* src/styles.css */
+
+.buttons-footer-fixed {
+    position: fixed !important; /* Намертво к экрану */
+    /* Точные координаты с твоего главного экрана */
+    bottom: 6.62vh !important; 
+    left: 5.68vw !important; 
+    right: 5.68vw !important; 
+    width: 88.64vw !important;
+    
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100001; /* Выше чем стекло и поле ввода */
+    pointer-events: none; /* Чтобы можно было кликать "сквозь" контейнер в textarea если надо */
+}
+
+.buttons-footer-fixed > * {
+    pointer-events: auto; /* Но сами кнопки кликабельны */
+}
+
 /* 2. MenuButton.css */
 .menu-button {
     /* Ширина: 206px / 440px * 100 = 46.82vw */
