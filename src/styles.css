@@ -79,7 +79,7 @@ body {
     z-index: 999999 !important; 
     
     /* Запрет любых трансформаций от браузера */
-    transform: none !important;
+    transform: translateZ(0); /* Аппаратное ускорение */
     pointer-events: none;
 }
 
