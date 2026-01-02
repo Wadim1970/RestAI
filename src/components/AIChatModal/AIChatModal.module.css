@@ -1,42 +1,55 @@
 .overlay {
     position: fixed;
     inset: 0;
-    z-index: 9999; /* Поверх всего */
+    z-index: 99999; /* Поверх всех элементов сайта */
     display: flex;
-    align-items: flex-end; /* Прижимаем к низу смартфона */
-    padding: 6px; /* Тот самый отступ 6px от края экрана */
-    background: rgba(0, 0, 0, 0.2); /* Легкое затемнение фона */
+    align-items: flex-end; 
+    padding: 6px; /* Отступ 6px от краев экрана по ТЗ */
+    background: rgba(0, 0, 0, 0.2); 
+    /* Используем свойство для предотвращения сдвигов при открытии клавиатуры */
+    height: 100dvh; 
 }
 
 .glassContainer {
     width: 100%;
-    height: 90vh; /* Почти на весь экран */
+    /* Высота почти на весь экран, dvh динамически меняется при появлении клавиатуры */
+    height: 92dvh; 
     background: rgba(255, 255, 255, 0.3); /* Белый 30% */
     backdrop-filter: blur(30px); /* Блюр 30 */
-    border-radius: 27px; /* Скругление 27px */
+    -webkit-backdrop-filter: blur(30px); /* Поддержка iOS */
+    border-radius: 27px; /* Скругление 27px по ТЗ */
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 6px; /* Внутренний отступ до белого блока */
+    padding: 6px; /* Внутренний отступ 6px до белого блока */
     border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .chatHistory {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    /* Чтобы сообщения не перекрывались белым блоком внизу */
+    margin-bottom: 10px;
 }
 
 /* Белый блок для ввода */
 .inputBlock {
+    position: relative; /* Чтобы контролировать наложение */
     width: 100%;
-    height: 190px; /* Фиксированная высота 190px */
+    height: 190px; /* Фиксированная высота 190px по ТЗ */
     background: #FFFFFF;
-    border-radius: 24px; /* Скругление 24px */
+    border-radius: 24px; /* Скругление 24px по ТЗ */
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    padding: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
 }
 
 .textArea {
@@ -44,53 +57,42 @@
     border: none;
     outline: none;
     resize: none;
-    font-size: 16px;
+    font-size: 17px;
     font-family: inherit;
+    background: transparent;
+    /* Важно: отступ снизу, чтобы текст не заходил под кнопки .buttons-footer */
+    padding-bottom: 60px; 
 }
 
-/* Нижняя панель внутри белого блока */
-.inputActions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
+/* Стили для подложки сообщений (на твое усмотрение) */
+.botMessage {
+    background: rgba(255, 255, 255, 0.6);
+    padding: 12px 16px;
+    border-radius: 20px 20px 20px 5px;
+    max-width: 85%;
+    align-self: flex-start;
+    color: #1a1a1a;
+    font-size: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.menuBtn {
-    background: #304D22;
-    color: #fff;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
+.userMessage {
+    background: #48BF48;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 20px 20px 5px 20px;
+    max-width: 85%;
+    align-self: flex-end;
+    font-size: 15px;
 }
 
-.modeIcons {
-    display: flex;
-    gap: 8px;
-}
-
-.iconBtn {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: none;
-    background: #f0f0f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.activeIcon {
-    background: #48BF48; /* Зеленая кнопка как на референсе */
-}
-
-/* Эффект клавиатуры: при фокусе на textarea можно поднять блок (через JS или медиа-запросы) */
-@media screen and (max-height: 500px) {
+/* Адаптация под клавиатуру */
+@media screen and (max-height: 600px) {
     .glassContainer {
-        height: 95vh;
+        height: 98dvh;
+    }
+    .inputBlock {
+        /* При активной клавиатуре можно чуть уменьшить блок, если нужно больше места для истории */
+        height: 180px;
     }
 }
