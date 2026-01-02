@@ -23,27 +23,51 @@ body {
     height: auto;
 }
 
-/* 1. VideoBackground.css */
+/* src/styles.css */
+
+/* 1. ОБЕРТКА ЭКРАНА: создаем жесткий каркас */
+.main-screen-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100svh !important; /* svh — это КЛЮЧ. Оно не меняется, когда вылезает клавиатура */
+    overflow: hidden !important;
+    z-index: 1 !important; /* Базовый слой */
+    background: #000;
+}
+
+/* 2. ВИДЕО: оно внутри обертки, прибито к краям */
 .avatar-video {
-    position: fixed; /* Оставляем fixed */
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh; /* Используем vh, а не % или dvh */
+    position: fixed !important; /* Оставляем fixed, чтобы браузер не пытался его скроллить */
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100svh !important; /* Такая же высота, как у обертки */
     object-fit: cover; 
-    z-index: 1;
-    /* ГЛАВНОЕ: запрещаем браузеру двигать этот элемент при фокусе на инпутах */
+    z-index: 0 !important; /* Видео ВСЕГДА под кнопками и под оверлеем старта */
+    
+    /* Эти две строки — страховка, чтобы видеокарта телефона не дергала картинку */
     transform: translateZ(0); 
     will-change: transform;
 }
 
-.main-screen-wrapper {
-    position: fixed; /* Вместо relative */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+/* 3. КНОПКИ: они должны быть ВЫШЕ видео */
+.buttons-footer-fixed {
+    position: fixed !important;
+    bottom: 6.62vh !important; /* Твой оригинальный отступ */
+    left: 5.68vw !important;
+    right: 5.68vw !important;
+    width: 88.64vw !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 999999 !important; /* Кнопки ВСЕГДА сверху всех чатов и видео */
+    pointer-events: none;
+}
+
+.buttons-footer-fixed > * {
+    pointer-events: auto; /* Делаем сами кнопки кликабельными */
 }
 
 /* === Контейнер для кнопок (Flexbox) === */
