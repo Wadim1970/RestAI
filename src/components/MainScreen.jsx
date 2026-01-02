@@ -1,5 +1,5 @@
 // src/components/MainScreen.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import VideoBackground from './VideoBackground';
 import MenuButton from './MenuButton';
 import ToggleChatButton from './ToggleChatButton';
@@ -7,21 +7,33 @@ import { useNavigate } from 'react-router-dom';
 
 const MainScreen = ({ onChatModeToggle }) => {
   const navigate = useNavigate();
+  
+  // ТВОИ РОДНЫЕ ФУНКЦИИ И СОСТОЯНИЯ ВИДЕО
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const handlePlayVideo = () => {
+    setIsPlaying(true);
+    setIsMuted(false);
+  };
 
   return (
     <div className="main-screen">
-      <VideoBackground />
+      {/* Твой VideoBackground с твоими пропсами */}
+      <VideoBackground isPlaying={isPlaying} isMuted={isMuted} />
       
-      {/* КНОПКА ЗАПУСКА ВИДЕО (Возвращена на место) */}
-      <button className="play-video-button">
-        <img src="/icons/play-icon.png" alt="Play Video" />
-      </button>
+      {/* ТВОЯ КНОПКА ЗАПУСКА ВИДЕО — РОДНАЯ ЛОГИКА */}
+      {!isPlaying && (
+        <button className="play-video-button" onClick={handlePlayVideo}>
+          <img src="/icons/play-icon.png" alt="Play Video" />
+        </button>
+      )}
 
-      {/* ТВОЙ РОДНОЙ КОНТЕЙНЕР С КНОПКАМИ */}
+      {/* ТВОЙ КОНТЕЙНЕР КНОПОК ИЗ styles.css */}
       <div className="buttons-footer">
         <MenuButton onClick={() => navigate('/menu')} />
         
-        {/* СВЯЗКА: При клике открывает модалку чата */}
+        {/* Добавляем ТОЛЬКО передачу функции для чата */}
         <ToggleChatButton onToggle={onChatModeToggle} />
       </div>
     </div>
