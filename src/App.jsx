@@ -28,6 +28,9 @@ function AppContent() {
       document.body.style.height = '100%';
       document.body.style.top = '0';
       document.body.style.left = '0';
+      // ГЛАВНОЕ ДОПОЛНЕНИЕ: запрещаем браузеру любые попытки скролла
+      document.body.style.touchAction = 'none'; 
+      document.documentElement.style.overflow = 'hidden';
     } else {
       // В МЕНЮ всё сбрасываем, чтобы скролл работал свободно
       document.body.style.overflow = '';
@@ -36,6 +39,8 @@ function AppContent() {
       document.body.style.height = '';
       document.body.style.top = '';
       document.body.style.left = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
     }
   }, [isChatOpen, location.pathname]);
 
