@@ -48,17 +48,14 @@ body {
 
 /* === Контейнер для кнопок (Flexbox) === */
 .buttons-footer {
-    position: fixed; 
-    /* Вертикальный отступ: 57px / 861px * 100 = 6.62vh */
-    bottom: 6.62vh; 
-    /* Горизонтальный отступ: 25px / 440px * 100 = 5.68vw */
-    left: 5.68vw;  
-    right: 5.68vw; 
-    width: 88.64vw; /* 100vw - 2 * 5.68vw */
+    position: fixed !important;
+    bottom: 6.62vh;
+    left: 5.68vw;
+    right: 5.68vw;
     z-index: 10;
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
+    /* Это заставляет видеокарту телефона держать кнопки на месте */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 /* src/styles.css */
