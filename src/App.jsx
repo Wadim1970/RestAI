@@ -1,38 +1,30 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
-// Выносим содержимое App в отдельный компонент, чтобы использовать useLocation
 function AppContent() {
   const location = useLocation();
   const [cart, setCart] = useState({}); 
   const [confirmedOrders, setConfirmedOrders] = useState([]);
-
-  // --- ЛОГИКА ДЛЯ ЧАТА ---
   const [isChatOpen, setIsChatOpen] = useState(false); 
   const [viewHistory, setViewHistory] = useState([]); 
 
-  // УМНЫЙ ЭФФЕКТ: предотвращение прыжков только там, где нужно
+  // --- УМНЫЙ ЗАМОК: Блокирует сдвиг только на главной ---
   useEffect(() => {
-    // Бетонируем экран на Главной "/" ИЛИ когда открыт Чат
     const isMainPage = location.pathname === '/';
-    const shouldFix = isMainPage || isChatOpen;
-
-    if (shouldFix) {
+    // Если мы на главной ИЛИ открыт чат — фиксируем экран, чтобы видео не прыгало
+    if (isMainPage || isChatOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
       document.body.style.height = '100%';
       document.body.style.top = '0';
       document.body.style.left = '0';
-      // ГЛАВНОЕ ДОПОЛНЕНИЕ: запрещаем браузеру любые попытки скролла
-      document.body.style.touchAction = 'none'; 
-      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none'; // Запрет лишних жестов
     } else {
-      // В МЕНЮ всё сбрасываем, чтобы скролл работал свободно
+      // В МЕНЮ всё сбрасываем в ноль, чтобы работал обычный скролл списка блюд
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
@@ -40,7 +32,6 @@ function AppContent() {
       document.body.style.top = '';
       document.body.style.left = '';
       document.body.style.touchAction = '';
-      document.documentElement.style.overflow = '';
     }
   }, [isChatOpen, location.pathname]);
 
@@ -108,7 +99,6 @@ function AppContent() {
   );
 }
 
-// Обертка App теперь просто содержит Router
 function App() {
   return (
     <BrowserRouter>
