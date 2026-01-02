@@ -1,30 +1,27 @@
 .overlay {
     position: fixed;
     inset: 0;
-    z-index: 99999; /* Поверх всех элементов сайта */
-    display: flex;
-    align-items: flex-end; 
-    padding: 6px; /* Отступ 6px от краев экрана по ТЗ */
-    background: rgba(0, 0, 0, 0.2); 
-    /* Используем свойство для предотвращения сдвигов при открытии клавиатуры */
-    height: 100dvh; 
+    z-index: 99999;
+    /* Убираем padding у overlay, чтобы он не сжимал фиксированные элементы */
+    pointer-events: none;
 }
 
 .glassContainer {
-    width: 100%;
-    /* Высота почти на весь экран, dvh динамически меняется при появлении клавиатуры */
-    height: 92dvh; 
-    background: rgba(255, 255, 255, 0.3); /* Белый 30% */
-    backdrop-filter: blur(30px); /* Блюр 30 */
-    -webkit-backdrop-filter: blur(30px); /* Поддержка iOS */
-    border-radius: 27px; /* Скругление 27px по ТЗ */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px; /* Отступ стекла от краев экрана */
+    /* Используем dvh, чтобы стекло и textarea улетали вверх при появлении клавиатуры */
+    height: 100dvh; 
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 6px; /* Внутренний отступ 6px до белого блока */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-sizing: border-box;
-    overflow: hidden;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 27px;
 }
 
 .chatHistory {
@@ -40,28 +37,23 @@
 
 /* Белый блок для ввода */
 .inputBlock {
-    position: relative; /* Чтобы контролировать наложение */
     width: 100%;
-    height: 190px; /* Фиксированная высота 190px по ТЗ */
+    height: 190px;
     background: #FFFFFF;
-    border-radius: 24px; /* Скругление 24px по ТЗ */
-    display: flex;
-    flex-direction: column;
+    border-radius: 24px;
     padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
+    /* Резервируем место снизу внутри белого блока, чтобы текст не уходил под кнопки */
+    padding-bottom: 80px;
 }
 
 .textArea {
-    flex: 1;
+    width: 100%;
+    height: 100%;
     border: none;
     outline: none;
     resize: none;
     font-size: 17px;
-    font-family: inherit;
-    background: transparent;
-    /* Важно: отступ снизу, чтобы текст не заходил под кнопки .buttons-footer */
-    padding-bottom: 60px; 
 }
 
 /* Стили для подложки сообщений (на твое усмотрение) */
