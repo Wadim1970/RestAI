@@ -3,19 +3,17 @@
 import styles from './MenuFooter.module.css';
 
 // --- ИКОНКИ ---
-// Предполагаем, что файлы иконок находятся в public/icons
-
 const Avatar = () => (
     <img src="/icons/foto-avatar.png" alt="Аватар" className={styles.chatAvatar} />
 );
 
-// Иконка Корзины: меняет цвет на белый, если isActive = true
 const Basket = ({ isActive }) => (
       <img 
         src="/icons/free-icon-basket.png" 
         alt="Корзина" 
         className={styles.orderIcon} 
-            
+        /* Если нужно, чтобы иконка становилась белой при активации через CSS filter */
+        style={isActive ? { filter: 'brightness(0) invert(1)' } : {}}
      />
 );
 
@@ -23,14 +21,13 @@ const Bell = () => (
     <img src="/icons/free-icon-notification-bell.png" alt="Звонок" className={styles.callIcon} />
 );
 
-
 export default function MenuFooter({ orderActive = false, onChatClick, onOrderClick, onCallClick }) {
  
     return (
         <footer className={styles.footerContainer}>
             <div className={styles.buttonArea}>
 
-                {/* 1. Кнопка Чата */}
+                {/* 1. Кнопка Чата - теперь она связана с onOpenChat из App.js */}
                 <div className={styles.navItem}>
                     <button className={`${styles.navButton} ${styles.chatButton}`} onClick={onChatClick}>
                         <Avatar />
@@ -38,15 +35,13 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
                     <span className={styles.label}>Чат</span>
                 </div>
 
-                {/* 2. Кнопка Заказа (Корзина) - Управляется ТОЛЬКО классом .active */}
+                {/* 2. Кнопка Заказа (Корзина) */}
                 <div className={styles.navItem}>
                     <button 
-                        // Динамически добавляем/удаляем класс styles.active
                         className={`${styles.navButton} ${styles.orderButton} ${orderActive ? styles.active : ''}`} 
                         onClick={onOrderClick}
-                        
                     >
-                        <Basket />
+                        <Basket isActive={orderActive} />
                     </button>
                     <span className={styles.label}>Заказ</span>
                 </div>
