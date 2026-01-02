@@ -61,18 +61,25 @@ body {
 /* src/styles.css */
 
 .buttons-footer-fixed {
-    /* Меняем fixed на absolute */
-    position: absolute !important; 
-    /* bottom теперь считается от 100vh, которые не меняются клавиатурой */
-    bottom: 6.62vh !important; 
-    left: 5.68vw !important; 
-    right: 5.68vw !important; 
+    position: fixed !important;
+    /* Вместо bottom используем top: (100% высоты минус отступ) */
+    /* Твой отступ 6.62vh, значит от верха это 100 - 6.62 = 93.38vh */
+    top: 93.38vh !important; 
+    
+    /* Центрирование */
+    left: 5.68vw !important;
+    right: 5.68vw !important;
     width: 88.64vw !important;
     
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 100001;
+    
+    /* Сверх-высокий слой, чтобы кнопки были над чатом */
+    z-index: 999999 !important; 
+    
+    /* Запрет любых трансформаций от браузера */
+    transform: none !important;
     pointer-events: none;
 }
 
