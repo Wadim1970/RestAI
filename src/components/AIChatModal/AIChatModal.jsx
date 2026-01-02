@@ -1,3 +1,4 @@
+// src/components/AIChatModal/AIChatModal.jsx
 import React, { useState } from 'react';
 import styles from './AIChatModal.module.css';
 import ToggleChatButton from '../ToggleChatButton';
@@ -10,31 +11,32 @@ const AIChatModal = ({ isOpen, onClose, onModeToggle }) => {
 
   return (
     <div className={styles.overlay}>
-      {/* 1. Стеклянный фон (отступы по 6px реализованы в CSS через padding у overlay) */}
+      {/* 1. СТЕКЛО (отступ 6px от экрана) */}
       <div className={styles.glassContainer}>
         
-        {/* 2. История чата */}
+        {/* 2. ИСТОРИЯ ЧАТА */}
         <div className={styles.chatHistory}>
-          <div className={styles.botMessage}>Чем я могу помочь?</div>
+          <div className={styles.botMessage}>Я слушаю, напишите ваш вопрос...</div>
         </div>
 
-        {/* 3. Белый блок (высота 190px) */}
+        {/* 3. БЕЛЫЙ БЛОК (высота 190px, отступ 6px от стекла) */}
         <div className={styles.inputBlock}>
           <textarea 
             className={styles.textArea}
-            placeholder="Вам помочь с выбором блюд?"
+            placeholder="Вам помочь с выбором?"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             autoFocus
           />
-        </div>
-      </div>
 
-      {/* 4. ТВОИ КНОПКИ ПОВЕРХ ВСЕГО */}
-      {/* Используем тот же класс, что и на главном экране, чтобы они не сдвинулись ни на пиксель */}
-      <div className="buttons-footer" style={{ z-index: 100000 }}>
-        <MenuButton onClick={onClose} />
-        <ToggleChatButton onToggle={onModeToggle} />
+          {/* 4. ТВОИ РОДНЫЕ КНОПКИ ПОВЕРХ БЕЛОГО БЛОКА */}
+          {/* Мы используем className="buttons-footer" БЕЗ добавления стилей в CSS модули, 
+              чтобы подхватились твои глобальные стили из styles.css */}
+          <div className="buttons-footer" style={{ position: 'absolute', bottom: '25px', left: '20px', right: '20px', zIndex: 100 }}>
+             <MenuButton onClick={onClose} />
+             <ToggleChatButton onToggle={onModeToggle} />
+          </div>
+        </div>
       </div>
     </div>
   );
