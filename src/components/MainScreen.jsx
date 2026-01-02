@@ -85,7 +85,7 @@ const MainScreen = () => {
       {isStarted && (
         <div className="buttons-footer"> 
           <MenuButton onClick={handleOpenMenu} />
-          <ToggleChatButton onToggle={(m) => console.log(m)} />
+          <ToggleChatButton onToggle={props.onChatModeToggle} />
         </div>
       )}
     </div>
