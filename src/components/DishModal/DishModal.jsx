@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './DishModal.module.css';
 
-// Добавили пропсы currentCount и updateCart
-const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
+// ДОБАВИЛИ: пропс onOpenChat
+const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat }) => {
   const [isClosing, setIsClosing] = useState(false);
   
   const touchStart = useRef(null);
@@ -83,11 +83,9 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
 
         <div className={`${styles.content} ${isAlcohol ? styles.alcoholContent : ''}`}>
           
-          {/* --- ВЕРСТКА ДЛЯ АЛКОГОЛЯ --- */}
           {isAlcohol ? (
             <div className={styles.alcoholWrapper}>
               <h2 className={styles.alcoholTitle}>{dish.dish_name}</h2>
-              
               <div className={styles.specsContainer}>
                 {dish.nutritional_info && Object.entries(dish.nutritional_info).map(([key, value]) => (
                   key !== 'weight_value' && (
@@ -98,18 +96,14 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
                   )
                 ))}
               </div>
-
               <h3 className={styles.alcoholSectionLabel}>Вкус</h3>
               <p className={styles.alcoholText}>{dish.ingredients}</p>
-
               <h3 className={styles.alcoholSectionLabel}>Аромат</h3>
               <p className={styles.alcoholText}>{dish.specific_details}</p>
-
               <h3 className={styles.alcoholSectionLabel}>Рекомендации к употреблению:</h3>
               <p className={styles.alcoholText}>{dish.description}</p>
             </div>
           ) : (
-            /* --- ВЕРСТКА ДЛЯ ЕДЫ --- */
             <>
               <h3 className={styles.sectionTitle}>Описание:</h3>
               <p className={styles.descriptionText}>{dish.description}</p>
@@ -141,9 +135,9 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart }) => {
             </>
           )}
 
-          {/* Блок кнопок: теперь использует функцию updateCart */}
           <div className={styles.buttonActionGroup}>
-            <button className={styles.chatButton}>
+            {/* ИЗМЕНЕНО: Добавили onClick={onOpenChat} */}
+            <button className={styles.chatButton} onClick={onOpenChat}>
               <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
             </button>
 
