@@ -1,3 +1,4 @@
+// src/components/MenuPage.jsx
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import styles from './MenuPage.module.css';
@@ -14,7 +15,15 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
-export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], onConfirmOrder }) {
+// ДОБАВИЛИ: Принимаем onOpenChat и trackDishView из пропсов
+export default function MenuPage({ 
+    cart = {}, 
+    updateCart, 
+    confirmedOrders = [], 
+    onConfirmOrder,
+    onOpenChat,      // Функция открытия чата
+    trackDishView    // Функция записи истории просмотров
+}) {
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState(''); 
@@ -25,7 +34,6 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
     const [isCartOpen, setIsCartOpen] = useState(false);
 
     const sectionRefs = useRef({}); 
-    // Флаг, чтобы скролл не дергался, когда мы сами нажимаем на кнопку в хедере
     const isScrollingRef = useRef(false);
 
     useEffect(() => {
@@ -48,7 +56,6 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
                 }, {});
                 setGroupedMenu(grouped);
                 
-                // Устанавливаем первую секцию активной по умолчанию
                 const firstSection = Object.keys(grouped)[0];
                 if (firstSection) setActiveSection(firstSection);
 
@@ -61,20 +68,17 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
         fetchMenu();
     }, []);
 
-    // --- ЛОГИКА ОТСЛЕЖИВАНИЯ СКРОЛЛА ---
     useEffect(() => {
         if (loading || Object.keys(groupedMenu).length === 0) return;
 
         const options = {
             root: null,
-            rootMargin: '-160px 0px -70% 0px', // Отступ сверху под высоту хедера
+            rootMargin: '-160px 0px -70% 0px',
             threshold: 0
         };
 
         const observer = new IntersectionObserver((entries) => {
-            // Если мы сейчас программно скроллим (после клика), игнорируем события
             if (isScrollingRef.current) return;
-
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     setActiveSection(entry.target.getAttribute('data-section'));
@@ -82,7 +86,6 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
             });
         }, options);
 
-        // Начинаем следить за каждой секцией
         const sectionsElements = document.querySelectorAll(`section.${styles.menuSection}`);
         sectionsElements.forEach((section) => observer.observe(section));
 
@@ -90,24 +93,18 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
     }, [loading, groupedMenu]);
 
     const handleSectionClick = (sectionName) => {
-        isScrollingRef.current = true; // Блокируем observer
+        isScrollingRef.current = true;
         setActiveSection(sectionName); 
         
         const element = sectionRefs.current[sectionName];
         if (element) {
-            const yOffset = -150; // Смещение, чтобы заголовок не прятался под хедером
+            const yOffset = -150;
             const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-            
             window.scrollTo({ top: y, behavior: 'smooth' });
-
-            // Снимаем блокировку observer через секунду (когда скролл закончится)
-            setTimeout(() => {
-                isScrollingRef.current = false;
-            }, 1000);
+            setTimeout(() => { isScrollingRef.current = false; }, 1000);
         }
     };
 
-    // БЕЗОПАСНЫЙ СБОР ДАННЫХ ДЛЯ КОРЗИНЫ
     const cartItems = groupedMenu && Object.keys(groupedMenu).length > 0 
     ? Object.values(groupedMenu).flat().filter(dish => cart && cart[dish.id]).map(dish => ({
         ...dish,
@@ -118,7 +115,9 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
     const sections = Object.keys(groupedMenu || {}); 
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
+    // ОБНОВЛЕНО: Теперь при открытии модалки записываем просмотр для ИИ
     const handleOpenModal = (dish) => {
+        trackDishView(dish.dish_name); // Запоминаем, что пользователь смотрел это блюдо
         setSelectedDishForModal(dish);
         setIsModalOpen(true);
     };
@@ -180,19 +179,22 @@ export default function MenuPage({ cart = {}, updateCart, confirmedOrders = [], 
                 </div>
             </main>
 
+            {/* ОБНОВЛЕНО: Привязываем onChatClick к функции открытия чата */}
             <MenuFooter 
                 orderActive={isOrderActive} 
-                onChatClick={() => console.log("чат")}
+                onChatClick={onOpenChat} 
                 onOrderClick={() => setIsCartOpen(true)}
                 onCallClick={() => console.log("официант")}
             />
 
+            {/* ОБНОВЛЕНО: Прокидываем onOpenChat внутрь модалки блюда */}
             <DishModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 dish={selectedDishForModal}
                 currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
                 updateCart={updateCart}
+                onOpenChat={onOpenChat} 
             />
 
             <CartModal 
