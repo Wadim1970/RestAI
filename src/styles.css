@@ -62,11 +62,8 @@ body {
 
 .buttons-footer-fixed {
     position: fixed !important;
-    /* Вместо bottom используем top: (100% высоты минус отступ) */
-    /* Твой отступ 6.62vh, значит от верха это 100 - 6.62 = 93.38vh */
-    top: 93.38vh !important; 
-    
-    /* Центрирование */
+    /* Возвращаем привязку к низу, но увеличиваем приоритет */
+    bottom: 6.62vh !important; 
     left: 5.68vw !important;
     right: 5.68vw !important;
     width: 88.64vw !important;
@@ -75,11 +72,14 @@ body {
     justify-content: space-between;
     align-items: center;
     
-    /* Сверх-высокий слой, чтобы кнопки были над чатом */
+    /* Слой должен быть выше всего, чтобы кнопки не перекрывались */
     z-index: 999999 !important; 
     
-    /* Запрет любых трансформаций от браузера */
-    transform: translateZ(0); /* Аппаратное ускорение */
+    /* Запрещаем любые трансформации, которые может навязать клавиатура */
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    
+    /* Кнопки должны реагировать на нажатия */
     pointer-events: none;
 }
 
