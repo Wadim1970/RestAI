@@ -20,32 +20,14 @@ const ToggleChatButton = ({ onToggle }) => {
   };
 
   return (
-    <div className="toggle-chat-container">
-        <button className="toggle-chat-button" onClick={handleToggle}>
-            
-            {/* Переключатель (Зеленый круг) */}
-            <div 
-                // Класс 'voice' или 'chat' будет управлять CSS-анимацией
-                className={`mode-toggle-circle ${mode}`}
-            ></div>
-
-            {/* Иконка Голоса (Звуковая волна) */}
-            <img 
-                src={AudioIconSrc}
-                alt="Voice Mode"
-                className="icon audio-icon" 
-            />
-
-            {/* Иконка Чата (Пузырь чата) */}
-            <img 
-                src={ChatIconSrc}
-                alt="Chat Mode"
-                className="icon chat-icon" 
-            />
-
-        </button>
-    </div>
-  );
+  <button 
+    className={`toggle-chat-button ${isChat ? 'chat-mode' : 'voice-mode'}`} 
+    onClick={handleToggle}
+  >
+    <img src="/free-icon-chat.png" className="chat-icon-img" alt="Chat" />
+    <img src="/free-icon-audio.png" className="audio-icon-img" alt="Audio" />
+  </button>
+);
 };
 
 export default ToggleChatButton;
