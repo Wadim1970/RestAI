@@ -90,7 +90,7 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
               placeholder="Вам помочь с выбором?"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)} // Обновляем состояние при каждом нажатии клавиши
-              autoFocus // Автоматически ставим курсор в поле при открытии
+              
             />
           </div>
 
