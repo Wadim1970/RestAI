@@ -4,8 +4,8 @@ import React, { useState } from 'react';
  * Кнопка переключения режимов (Голос / ИИ-Чат)
  * Мы используем прямые пути к иконкам из папки public
  */
-const AudioIconSrc = '/free-icon-audio.png';
-const ChatIconSrc = '/free-icon-chat.png';
+const AudioIconSrc = '/icons/free-icon-audio.png';
+const ChatIconSrc = '/icons/free-icon-chat.png';
 
 const ToggleChatButton = ({ onToggle }) => {
   // Исходное состояние: 'voice' (показываем микрофон)
