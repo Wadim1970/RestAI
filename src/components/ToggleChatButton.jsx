@@ -1,60 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // Импортируем React и хук состояния
 
 /**
  * Кнопка переключения режимов (Голос / ИИ-Чат)
- * Мы используем прямые пути к иконкам из папки public
+ * Пути ведут в папку public/icons/ (проверь, что файлы именно там)
  */
-const AudioIconSrc = '/icons/free-icon-audio.png';
-const ChatIconSrc = '/icons/free-icon-chat.png';
+const AudioIconSrc = '/icons/free-icon-audio.png'; // Путь к иконке микрофона
+const ChatIconSrc = '/icons/free-icon-chat.png';   // Путь к иконке облачка чата
 
 const ToggleChatButton = ({ onToggle }) => {
-  // Исходное состояние: 'voice' (показываем микрофон)
+  // Исходное состояние: 'voice' (когда мы видим видео-аватара)
   const [mode, setMode] = useState('voice'); 
 
-  // Обработчик клика
+  // Функция, которая срабатывает при нажатии на кнопку
   const handleToggle = () => {
-    // Переключаем режим: если был голос, ставим чат и наоборот
+    // Если сейчас 'voice', меняем на 'chat', если 'chat' — на 'voice'
     const newMode = mode === 'voice' ? 'chat' : 'voice';
+    
+    // Обновляем внутреннее состояние кнопки
     setMode(newMode);
     
-    // Передаем новый режим в родительский компонент (App.jsx), чтобы открыть модалку
+    // Передаем команду "наверх" в App.jsx, чтобы открыть или закрыть модалку чата
     if (onToggle) {
       onToggle(newMode);
     }
   };
 
-  // Флаг для удобной проверки текущего режима в JSX
+  // Создаем вспомогательную переменную: true если мы в режиме чата, false если в голосе
   const isChat = mode === 'chat';
 
   return (
-    /* Контейнер toggle-chat-container больше не нужен, так как кнопка сама по себе круглая */
     <button 
-      /* Добавляем класс режима, чтобы CSS скрывал/показывал нужную иконку */
+      /* Динамически меняем класс: toggle-chat-button voice-mode ИЛИ toggle-chat-button chat-mode */
       className={`toggle-chat-button ${isChat ? 'chat-mode' : 'voice-mode'}`} 
-      onClick={handleToggle}
-      type="button"
-      aria-label="Переключить режим чата"
+      onClick={handleToggle} // Вешаем обработчик клика
+      type="button" // Указываем тип, чтобы избежать случайных отправок форм
+      aria-label="Переключить режим связи" // Описание для доступности
     >
-      {/* Иконка чата (отображается только в chat-mode). 
-        Размер 31x31px задан в CSS по классу .chat-icon-img 
-      */}
+      
+      {/* 1. ИКОНКА ЧАТА (Отображается в режиме Voice) */}
+      {/* Согласно твоей правке: когда мы в видео (voice), кнопка предлагает перейти в ЧАТ */}
       <img 
-        src={AudioIconSrc} 
-        className="audio-icon-img" 
-        alt="Голосовой режим" 
+        src={ChatIconSrc} 
+        className="chat-icon-img" // Класс для CSS (размер 31x31px)
+        alt="Перейти в текстовый чат" 
       />
       
-      {/* Иконка аудио (отображается только в voice-mode). 
-        Размер 40x35px задан в CSS по классу .audio-icon-img 
-      */}
-       <img 
-        src={ChatIconSrc} 
-        className="chat-icon-img" 
-        alt="Текстовый чат" 
+      {/* 2. ИКОНКА АУДИО (Отображается в режиме Chat) */}
+      {/* Когда мы уже в чате (chat), кнопка предлагает вернуться в ГОЛОС (видео) */}
+      <img 
+        src={AudioIconSrc} 
+        className="audio-icon-img" // Класс для CSS (размер 40x35px)
+        alt="Вернуться в видео-режим" 
       />
       
     </button>
   );
 };
 
-export default ToggleChatButton;
+export default ToggleChatButton; // Экспортируем компонент для использования в MainScreen
