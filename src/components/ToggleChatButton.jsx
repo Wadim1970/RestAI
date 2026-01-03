@@ -39,19 +39,20 @@ const ToggleChatButton = ({ onToggle }) => {
         Размер 31x31px задан в CSS по классу .chat-icon-img 
       */}
       <img 
-        src={ChatIconSrc} 
-        className="chat-icon-img" 
-        alt="Текстовый чат" 
+        src={AudioIconSrc} 
+        className="audio-icon-img" 
+        alt="Голосовой режим" 
       />
       
       {/* Иконка аудио (отображается только в voice-mode). 
         Размер 40x35px задан в CSS по классу .audio-icon-img 
       */}
-      <img 
-        src={AudioIconSrc} 
-        className="audio-icon-img" 
-        alt="Голосовой режим" 
+       <img 
+        src={ChatIconSrc} 
+        className="chat-icon-img" 
+        alt="Текстовый чат" 
       />
+      
     </button>
   );
 };
