@@ -51,7 +51,7 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
             
             {/* Иконка меню внутри поля слева */}
             <img 
-              src="/icons/menu-icon.png" 
+              src="/icons/free-icon-main-menu-2.png" 
               className={styles['modal-menuInInput']} 
               alt="Меню"
               onClick={() => navigate('/menu')} // При клике закрываем чат и уходим на страницу меню
