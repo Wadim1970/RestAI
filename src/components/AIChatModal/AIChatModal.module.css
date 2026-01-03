@@ -1,94 +1,117 @@
+/* Основной оверлей на весь экран */
 .overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
-    /* Используем vh вместо dvh, чтобы высота не менялась при открытии клавиатуры */
-    height: 100vh; 
-    z-index: 99999;
-    pointer-events: none;
+    height: 100vh;
+    z-index: 999999; /* Поверх всего */
     overflow: hidden;
 }
 
+/* Стеклянный контейнер с блюром */
 .glassContainer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    /* А вот здесь используем dvh, чтобы стекло и поле ввода ПОДНИМАЛИСЬ */
-    height: 100dvh; 
+    width: 100%;
+    height: 100dvh; /* Динамическая высота под клавиатуру */
+    background: rgba(255, 255, 255, 0.3); /* Белый 30% */
+    backdrop-filter: blur(30px); /* Блюр 30 */
+    -webkit-backdrop-filter: blur(30px);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    pointer-events: auto;
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    padding: 6px;
-    box-sizing: border-box;
 }
 
+/* Блок истории чата */
 .chatHistory {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    /* Чтобы сообщения не перекрывались белым блоком внизу */
-    margin-bottom: 10px;
+    gap: 12px;
 }
 
-/* Белый блок для ввода */
-.inputBlock {
-   width: 100%;
-    height: 190px;
+/* Нижняя область с кнопками */
+.footerControls {
+    display: flex;
+    align-items: center;
+    padding: 0 12px; /* Отступы от краев экрана по 12px */
+    margin-bottom: 58px; /* Расстояние от низа 58px */
+    gap: 6px; /* Расстояние между полем и кнопкой 6px */
+}
+
+/* Обертка текстового поля */
+.inputWrapper {
+    position: relative;
+    flex: 1; /* Занимает всё свободное место (адаптивная ширина) */
+    height: 58px; /* Высота 58px */
     background: #FFFFFF;
-    border-radius: 24px;
-    padding: 20px;
-    box-sizing: border-box;
-    /* Делаем отступ, чтобы текст внутри не перекрывался кнопками, когда клавиатура закрыта */
-    padding-bottom: 90px;
+    /* Скругления: ПВ:31, ПН:31, ЛВ:28, ЛН:15 */
+    border-radius: 28px 31px 31px 15px;
+    display: flex;
+    align-items: center;
 }
 
+/* Иконка меню внутри поля слева */
+.menuInInput {
+    width: 7.05vw; /* 31px */
+    height: 7.05vw; /* 31px */
+    position: absolute;
+    left: 12px; /* 12px от левого края поля */
+    top: 14px;  /* 14px от верхнего края поля */
+    cursor: pointer;
+    filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%); /* Цвет #304D22 */
+}
+
+/* Текстовое поле */
 .textArea {
     width: 100%;
     height: 100%;
+    background: transparent;
     border: none;
     outline: none;
     resize: none;
-    font-size: 17px;
+    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы текст не шел на иконку меню */
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
 }
 
-/* Стили для подложки сообщений (на твое усмотрение) */
+/* Правая круглая кнопка */
+.actionButton {
+    width: 13.18vw; /* 58px */
+    height: 13.18vw; /* 58px */
+    background-color: #48BF48;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0; /* Чтобы кнопка не сжималась */
+    box-shadow: inset 0 0 0 0.23vw #E5E0D4; /* Внутренняя обводка 1px */
+}
+
+/* Иконка аудио (пустое поле) */
+.iconAudio {
+    width: 9.09vw; /* 40px */
+    height: 7.95vw; /* 35px */
+    filter: brightness(0) invert(1);
+}
+
+/* Иконка стрелки (текст введен) */
+.iconSend {
+    width: 5.45vw; /* 24px */
+    height: 6.36vw; /* 28px */
+    filter: brightness(0) invert(1);
+}
+
+/* Стили сообщений */
 .botMessage {
-    background: rgba(255, 255, 255, 0.6);
+    background: white;
     padding: 12px 16px;
-    border-radius: 20px 20px 20px 5px;
-    max-width: 85%;
+    border-radius: 12px 12px 12px 0;
     align-self: flex-start;
-    color: #1a1a1a;
-    font-size: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.userMessage {
-    background: #48BF48;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 20px 20px 5px 20px;
-    max-width: 85%;
-    align-self: flex-end;
-    font-size: 15px;
-}
-
-/* Адаптация под клавиатуру */
-@media screen and (max-height: 600px) {
-    .glassContainer {
-        height: 98dvh;
-    }
-    .inputBlock {
-        /* При активной клавиатуре можно чуть уменьшить блок, если нужно больше места для истории */
-        height: 180px;
-    }
+    max-width: 80%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
