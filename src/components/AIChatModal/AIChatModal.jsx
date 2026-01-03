@@ -1,79 +1,79 @@
-import React, { useState } from 'react'; // Подключаем React и хук для управления текстом в поле
-import { useNavigate } from 'react-router-dom'; // Хук для навигации между страницами (нужен для перехода в меню)
-import styles from './AIChatModal.module.css'; // Импортируем изолированные стили модуля
+// src/components/AIChatModal/AIChatModal.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Для перехода на страницу меню
+import styles from './AIChatModal.module.css';
 
 const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
-  // inputValue хранит то, что пользователь печатает в поле ввода
-  const [inputValue, setInputValue] = useState(''); 
-  const navigate = useNavigate(); // Инициализируем навигацию
+  const [inputValue, setInputValue] = useState(''); // Состояние текста в поле
+  const navigate = useNavigate(); // Хук для навигации
 
-  // Если пропс isOpen равен false, компонент ничего не отрисовывает (модалка скрыта)
-  if (!isOpen) return null; 
+  // Если модалка закрыта, ничего не рендерим
+  if (!isOpen) return null;
 
-  // Функция, которая вызывается при нажатии на круглую зеленую кнопку справа
+  // Функция обработки кнопки справа
   const handleAction = () => {
-    // Проверяем: если в поле введено хотя бы одно слово (не считая пробелов)
     if (inputValue.trim().length > 0) {
-      // Здесь будет логика отправки сообщения боту
-      console.log("Сообщение отправлено:", inputValue);
-      // Очищаем поле после отправки (иконка в кнопке сама сменится обратно на аудио)
-      setInputValue(''); 
+      // ЕСЛИ ЕСТЬ ТЕКСТ: Логика отправки
+      console.log("Отправка сообщения:", inputValue);
+      setInputValue(''); // Очищаем поле после отправки
     } else {
-      // Если поле пустое, кнопка работает как "Назад" и закрывает чат, возвращая видео
+      // ЕСЛИ ТЕКСТА НЕТ: Закрываем чат (возврат к видео)
       onClose();
     }
   };
 
+  // Функция перехода в меню
+  const goToMenu = () => {
+    onClose(); // Закрываем модалку
+    navigate('/menu'); // Переходим по адресу /menu
+  };
+
   return (
-    // modal-overlay: затемнение и блокировка основного экрана
-    <div className={styles['modal-overlay']}>
-      
-      {/* modal-glassContainer: эффект матового стекла на весь экран */}
-      <div className={styles['modal-glassContainer']}>
+    <div className={styles.overlay}>
+      <div className={styles.glassContainer}>
         
-        {/* modal-chatHistory: область, где бегут сообщения чата */}
-        <div className={styles['modal-chatHistory']}>
-          <div className={styles['modal-botMessage']}>Вам помочь с выбором?</div>
-          
-          {/* Если есть история просмотров (контекст), выводим её мелким шрифтом для справки */}
+        {/* Блок истории сообщений */}
+        <div className={styles.chatHistory}>
+          <div className={styles.botMessage}>Вам помочь с выбором блюд и напитков?</div>
+          {/* Вывод контекста страниц, которые посетил юзер */}
           {viewHistory && viewHistory.length > 0 && (
-            <div style={{fontSize: '10px', opacity: 0.5, marginTop: '10px'}}>
-              Контекст: {viewHistory.join(', ')}
-            </div>
+            <div className={styles.systemInfo}>Контекст: {viewHistory.join(', ')}</div>
           )}
         </div>
 
-        {/* modal-footerControls: контейнер для поля ввода и кнопки (отступы 12px от краев) */}
-        <div className={styles['modal-footerControls']}>
+        {/* Нижняя панель с кнопками и вводом */}
+        <div className={styles.footerControls}>
           
-          {/* modal-inputWrapper: обертка текстового поля с белым фоном и радиусами */}
-          <div className={styles['modal-inputWrapper']}>
-            
-            {/* Иконка меню внутри поля слева */}
+          {/* Контейнер текстового поля */}
+          <div className={styles.inputWrapper}>
+            {/* Иконка Меню (Слева внутри поля) */}
             <img 
-              src="/icons/menu-icon.png" 
-              className={styles['modal-menuInInput']} 
-              alt="Меню"
-              onClick={() => navigate('/menu')} // При клике закрываем чат и уходим на страницу меню
+              src="/icons/menu-icon.png" // Замени на свое имя файла иконки меню
+              className={styles.menuInInput} 
+              onClick={goToMenu} 
+              alt="Menu" 
             />
-            
-            {/* Само поле ввода текста */}
+            {/* Сама область ввода */}
             <textarea 
-              className={styles['modal-textArea']}
+              className={styles.textArea}
               placeholder="Вам помочь с выбором?"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)} // Обновляем состояние при каждом нажатии клавиши
-              autoFocus // Автоматически ставим курсор в поле при открытии
+              onChange={(e) => setInputValue(e.target.value)}
+              autoFocus
             />
           </div>
 
-          {/* modal-actionButton: круглая зеленая кнопка (58px) */}
-          <button className={styles['modal-actionButton']} onClick={handleAction}>
-            {/* УСЛОВИЕ: Если текст есть — рисуем стрелку, если нет — микрофон */}
+          {/* Правая круглая кнопка (Динамическая) */}
+          <button 
+            className={styles.actionButton} 
+            onClick={handleAction}
+          >
             {inputValue.trim().length > 0 ? (
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Отправить" />
+              /* Иконка отправки, если текст введен (24x28px) */
+              <img src="/icons/free-icon-start.png" className={styles.iconSend} alt="Send" />
             ) : (
-              <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="Голос" />
+              /* Иконка аудио, если поле пустое (40x35px) */
+              <img src="/icons/free-icon-audio.png" className={styles.iconAudio} alt="Audio" />
             )}
           </button>
         </div>
