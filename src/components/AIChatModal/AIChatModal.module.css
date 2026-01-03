@@ -1,108 +1,117 @@
-/* modal-overlay: фиксируем контейнер на весь экран поверх всего остального */
-.modal-overlay {
+/* Основной оверлей на весь экран */
+.overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 999999; /* Максимальный приоритет слоя */
-    overflow: hidden; /* Отключаем скролл страницы под модалкой */
+    z-index: 999999; /* Поверх всего */
+    overflow: hidden;
 }
 
-/* modal-glassContainer: задаем фон и размытие как в твоем хедере/футере */
-.modal-glassContainer {
+/* Стеклянный контейнер с блюром */
+.glassContainer {
     width: 100%;
-    height: 100dvh; /* Используем dvh, чтобы высота подстраивалась под клавиатуру */
-    background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность 0.2 */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Твой блюр и насыщенность */
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
-    perspective: 1000px; /* Для стабильности отрисовки на мобильных устройствах */
-    -webkit-backface-visibility: hidden;
+    height: 100dvh; /* Динамическая высота под клавиатуру */
+    background: rgba(255, 255, 255, 0.3); /* Белый 30% */
+    backdrop-filter: blur(30px); /* Блюр 30 */
+    -webkit-backdrop-filter: blur(30px);
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Все элементы ввода прижимаем к низу экрана */
+    justify-content: flex-end;
 }
 
-/* Область для сообщений, которая занимает всё свободное место сверху */
-.modal-chatHistory {
-    flex: 1; 
+/* Блок истории чата */
+.chatHistory {
+    flex: 1;
     padding: 20px;
-    overflow-y: auto; /* Разрешаем скролл внутри списка сообщений */
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* Контейнер для поля ввода и кнопки */
-.modal-footerControls {
+/* Нижняя область с кнопками */
+.footerControls {
     display: flex;
     align-items: center;
-    padding: 0 12px; /* Фиксированный отступ от краев экрана 12px */
-    margin-bottom: 58px; /* Расстояние от нижнего края экрана 58px */
-    gap: 6px; /* Расстояние между полем ввода и зеленой кнопкой 6px */
+    padding: 0 12px; /* Отступы от краев экрана по 12px */
+    margin-bottom: 58px; /* Расстояние от низа 58px */
+    gap: 6px; /* Расстояние между полем и кнопкой 6px */
 }
 
-/* modal-inputWrapper: белое поле ввода с твоей специфической формой */
-.modal-inputWrapper {
-    position: relative; /* Чтобы иконка меню внутри позиционировалась абсолютно */
-    flex: 1; /* Поле занимает всю ширину, которая осталась (адаптивность) */
-    height: 58px; /* Высота поля 58px */
+/* Обертка текстового поля */
+.inputWrapper {
+    position: relative;
+    flex: 1; /* Занимает всё свободное место (адаптивная ширина) */
+    height: 58px; /* Высота 58px */
     background: #FFFFFF;
-    /* Твои радиусы: ЛВ:28px, ПВ:31px, ПН:31px, ЛН:15px */
+    /* Скругления: ПВ:31, ПН:31, ЛВ:28, ЛН:15 */
     border-radius: 28px 31px 31px 15px;
+    display: flex;
+    align-items: center;
 }
 
-/* Иконка меню внутри поля (31x31px) */
-.modal-menuInInput {
+/* Иконка меню внутри поля слева */
+.menuInInput {
+    width: 7.05vw; /* 31px */
+    height: 7.05vw; /* 31px */
     position: absolute;
     left: 12px; /* 12px от левого края поля */
     top: 14px;  /* 14px от верхнего края поля */
-    width: 31px;
-    height: 31px;
     cursor: pointer;
-    /* Покраска любой иконки в цвет #304D22 через фильтры */
-    filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%);
+    filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%); /* Цвет #304D22 */
 }
 
-/* modal-textArea: само место для печати текста */
-.modal-textArea {
+/* Текстовое поле */
+.textArea {
     width: 100%;
     height: 100%;
     background: transparent;
     border: none;
     outline: none;
-    resize: none; /* Убираем возможность растягивать поле пальцем */
-    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы текст не наезжал на иконку меню */
+    resize: none;
+    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы текст не шел на иконку меню */
     font-size: 16px;
-    box-sizing: border-box; /* Чтобы паддинги не увеличивали размер поля */
     font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
 }
 
-/* modal-actionButton: круглая кнопка справа */
-.modal-actionButton {
-    width: 58px; /* Ширина 58px (13.18vw) */
-    height: 58px; /* Высота 58px */
+/* Правая круглая кнопка */
+.actionButton {
+    width: 13.18vw; /* 58px */
+    height: 13.18vw; /* 58px */
     background-color: #48BF48;
-    border-radius: 50%; /* Круглая форма */
+    border-radius: 50%;
     border: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-shrink: 0; /* Запрещаем кнопке сжиматься, если поле ввода станет широким */
     cursor: pointer;
-    box-shadow: inset 0 0 0 1px #E5E0D4; /* Внутренняя обводка 1px */
+    flex-shrink: 0; /* Чтобы кнопка не сжималась */
+    box-shadow: inset 0 0 0 0.23vw #E5E0D4; /* Внутренняя обводка 1px */
 }
 
-/* Стили для иконок внутри зеленой кнопки */
-.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
-.modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
+/* Иконка аудио (пустое поле) */
+.iconAudio {
+    width: 9.09vw; /* 40px */
+    height: 7.95vw; /* 35px */
+    filter: brightness(0) invert(1);
+}
 
-/* Пузырек сообщения от бота */
-.modal-botMessage {
+/* Иконка стрелки (текст введен) */
+.iconSend {
+    width: 5.45vw; /* 24px */
+    height: 6.36vw; /* 28px */
+    filter: brightness(0) invert(1);
+}
+
+/* Стили сообщений */
+.botMessage {
     background: white;
     padding: 12px 16px;
     border-radius: 12px 12px 12px 0;
     align-self: flex-start;
-    max-width: 85%;
+    max-width: 80%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
