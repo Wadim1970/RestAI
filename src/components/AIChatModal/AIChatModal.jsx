@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Подключаем React и хук для управления текстом в поле
+import React, { useState, useRef } from 'react'; // Добавили useRef для фиксации координат свайпа
 import { useNavigate } from 'react-router-dom'; // Хук для навигации между страницами (нужен для перехода в меню)
 import styles from './AIChatModal.module.css'; // Импортируем изолированные стили модуля
 
@@ -6,6 +6,27 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
   // inputValue хранит то, что пользователь печатает в поле ввода
   const [inputValue, setInputValue] = useState(''); 
   const navigate = useNavigate(); // Инициализируем навигацию
+
+  // --- ЛОГИКА СВАЙПА (Начало) ---
+  const touchStartY = useRef(0); // Переменная для хранения координаты начала касания
+  const touchEndY = useRef(0);   // Переменная для хранения координаты конца касания
+
+  const onTouchStart = (e) => {
+    touchEndY.current = 0; // Сбрасываем конец касания
+    touchStartY.current = e.targetTouches[0].clientY; // Записываем точку старта пальца по вертикали
+  };
+
+  const onTouchMove = (e) => {
+    touchEndY.current = e.targetTouches[0].clientY; // Постоянно обновляем текущую позицию пальца
+  };
+
+  const onTouchEnd = () => {
+    // Если палец прошел вниз более 100 пикселей — закрываем окно
+    if (touchStartY.current - touchEndY.current < -100 && touchEndY.current !== 0) {
+      onClose();
+    }
+  };
+  // --- ЛОГИКА СВАЙПА (Конец) ---
 
   // Если пропс isOpen равен false, компонент ничего не отрисовывает (модалка скрыта)
   if (!isOpen) return null; 
@@ -29,7 +50,13 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
     <div className={styles['modal-overlay']}>
       
       {/* modal-glassContainer: эффект матового стекла на весь экран */}
-      <div className={styles['modal-glassContainer']}>
+      {/* Добавляем события Touch сюда, чтобы свайп работал по всей площади стекла */}
+      <div 
+        className={styles['modal-glassContainer']}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         
         {/* modal-chatHistory: область, где бегут сообщения чата */}
         <div className={styles['modal-chatHistory']}>
