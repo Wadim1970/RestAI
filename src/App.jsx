@@ -1,60 +1,51 @@
-import React, { useState, useEffect } from 'react'; // Подключаем ядро React и хуки для управления состоянием и жизненным циклом
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; // Подключаем роутинг для навигации без перезагрузки страниц
-import MainScreen from './components/MainScreen'; // Компонент главного экрана (видео-заставка)
-import MenuPage from './components/MenuPage'; // Компонент страницы меню с блюдами
-// Импортируем наш новый "мозг" системы — контроллер, который умеет показывать и чат, и видео-аватара
-import AIControlCenter from './components/AIControlCenter/AIControlCenter'; 
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import MainScreen from './components/MainScreen'; 
+import MenuPage from './components/MenuPage'; 
+import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function AppContent() {
-  const location = useLocation(); // Хук для отслеживания текущего пути (например, '/' или '/menu')
+  const location = useLocation();
 
   // --- ЛОГИКА ХРАНИЛИЩА (localStorage) ---
 
-  // Инициализация корзины: пытаемся прочитать сохраненные данные из памяти браузера при первой загрузке
+  // 1. Инициализируем корзину: пробуем взять из памяти, если там пусто — берем пустой объект {}
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem('restaurant_cart');
-    return savedCart ? JSON.parse(savedCart) : {}; // Если данных нет, создаем пустой объект
+    return savedCart ? JSON.parse(savedCart) : {};
   });
 
-  // Инициализация истории заказов: сохраняем то, что гость уже отправил на кухню
+  // 2. Инициализируем заказы: пробуем взять из памяти, если пусто — пустой массив []
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
     const savedOrders = localStorage.getItem('restaurant_orders');
-    return savedOrders ? JSON.parse(savedOrders) : []; // Если пусто, создаем пустой массив
+    return savedOrders ? JSON.parse(savedOrders) : [];
   });
 
-  // НОВОЕ СОСТОЯНИЕ: Теперь это объект, который управляет и открытием окна, и тем, что внутри (текст или видео)
-  const [aiConfig, setAiConfig] = useState({
-    isOpen: false, // Закрыто ли окно ИИ по умолчанию
-    mode: 'text'   // Режим по умолчанию — текстовый чат
-  });
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [viewHistory, setViewHistory] = useState([]);
 
-  const [viewHistory, setViewHistory] = useState([]); // Массив для хранения последних просмотренных блюд (контекст для ИИ)
-
-  // Эффект: при любом изменении корзины автоматически записываем её в localStorage (в виде строки JSON)
+  // Эффект: каждый раз, когда корзина меняется, записываем её в память браузера
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Эффект: при любом изменении списка заказов дублируем его в память браузера
+  // Эффект: каждый раз, когда заказы меняются, записываем их в память браузера
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
 
-  // --- УМНЫЙ ЗАМОК: Блокировка прокрутки и системных жестов (свайп вниз для обновления на Android) ---
+  // --- УМНЫЙ ЗАМОК (твой код блокировки скролла) ---
   useEffect(() => {
-    const isMainPage = location.pathname === '/'; // Проверяем, на главной мы странице или нет
-    
-    // Блокируем скролл, если мы на главной ИЛИ если открыто любое из окон ИИ (текст или видео)
-    if (isMainPage || aiConfig.isOpen) {
-      document.body.style.overflow = 'hidden'; // Убираем полосу прокрутки
-      document.body.style.position = 'fixed'; // Фиксируем положение экрана
+    const isMainPage = location.pathname === '/';
+    if (isMainPage || isChatOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
       document.body.style.width = '100%';
       document.body.style.height = '100%';
       document.body.style.top = '0';
       document.body.style.left = '0';
-      document.body.style.touchAction = 'none'; // Запрещаем жесты (чтобы видео на фоне не прыгало)
+      document.body.style.touchAction = 'none';
     } else {
-      // Если мы в меню и чат закрыт — возвращаем стандартный скролл для списка блюд
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
@@ -63,41 +54,37 @@ function AppContent() {
       document.body.style.left = '';
       document.body.style.touchAction = '';
     }
-  }, [aiConfig.isOpen, location.pathname]); // Следим за состоянием окна ИИ и текущим адресом страницы
+  }, [isChatOpen, location.pathname]);
 
-  // Универсальная функция открытия ИИ-центра: принимает режим ('text' или 'video')
-  const handleAiToggle = (mode = 'text') => {
-    setAiConfig({ isOpen: true, mode: mode }); // Открываем модалку в нужном нам режиме
+  const handleToggleChatMode = (mode) => {
+    setIsChatOpen(mode === 'chat');
   };
 
-  // Функция для записи истории: запоминаем название блюда, которое открыл пользователь
   const trackDishView = (dishName) => {
     setViewHistory(prev => {
-      if (prev[prev.length - 1] === dishName) return prev; // Если открыли то же самое — не добавляем повторно
-      return [...prev, dishName].slice(-10); // Оставляем только последние 10 записей для бота
+      if (prev[prev.length - 1] === dishName) return prev;
+      return [...prev, dishName].slice(-10);
     });
   };
 
-  // Функция управления количеством товара в корзине (добавление/удаление)
   const updateCart = (dishId, delta) => {
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
-      const newCount = Math.max(0, currentCount + delta); // Не даем количеству стать меньше нуля
+      const newCount = Math.max(0, currentCount + delta);
       if (newCount === 0) {
-        const { [dishId]: _, ...rest } = prev; // Если 0 — полностью удаляем товар из объекта
+        const { [dishId]: _, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [dishId]: newCount }; // Обновляем количество товара
+      return { ...prev, [dishId]: newCount };
     });
   };
 
-  // Функция подтверждения заказа: переносит содержимое корзины в историю заказов (чек)
   const handleConfirmOrder = (cartItems) => {
     setConfirmedOrders(prev => [...prev, ...cartItems]);
-    setCart({}); // Очищаем корзину для следующего выбора
+    setCart({}); // Очищаем корзину, но история (confirmedOrders) сохранится в localStorage
   };
 
-  // Функция полной очистки: сброс всего при закрытии счета или уходе гостя
+  // Метод для полной очистки сессии (например, при оплате счета)
   const handleClearSession = () => {
     setCart({});
     setConfirmedOrders([]);
@@ -107,15 +94,8 @@ function AppContent() {
 
   return (
     <div className="App">
-      {/* Контейнер для маршрутов страниц */}
       <Routes>
-        {/* Главная страница: передаем флаг isOpen, чтобы видео на фоне знало, когда встать на паузу */}
-        <Route 
-          path="/" 
-          element={<MainScreen onChatModeToggle={handleAiToggle} isChatOpen={aiConfig.isOpen} />} 
-        />
-        
-        {/* Страница меню со всеми пропсами для корзины и истории */}
+        <Route path="/" element={<MainScreen onChatModeToggle={handleToggleChatMode} />} />
         <Route 
           path="/menu" 
           element={
@@ -124,29 +104,23 @@ function AppContent() {
               updateCart={updateCart} 
               confirmedOrders={confirmedOrders}
               onConfirmOrder={handleConfirmOrder}
-              // При нажатии на чат в меню — открываем текстовый режим по умолчанию
-              onOpenChat={() => handleAiToggle('text')}
+              onOpenChat={() => setIsChatOpen(true)}
               trackDishView={trackDishView} 
             />
           } 
         />
       </Routes>
 
-      {/* НОВЫЙ ЕДИНЫЙ КОНТРОЛЛЕР ИИ (вместо старой модалки чата) */}
-      <AIControlCenter 
-        isOpen={aiConfig.isOpen} // Передаем статус (открыто/закрыто)
-        mode={aiConfig.mode}     // Передаем текущий режим (текст/видео)
-        // Функция закрытия: меняем только флаг isOpen, сохраняя текущий режим
-        onClose={() => setAiConfig(prev => ({ ...prev, isOpen: false }))}
-        // Функция переключения режима внутри модалки (из текста в видео и обратно)
-        onModeChange={(newMode) => setAiConfig(prev => ({ ...prev, mode: newMode }))}
-        viewHistory={viewHistory} // Передаем историю просмотров блюд для контекста ИИ
+      <AIChatModal 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        viewHistory={viewHistory}
+        onModeToggle={handleToggleChatMode} 
       />
     </div>
   );
 }
 
-// Корневой компонент для инициализации HashRouter (нужен для корректной работы на GitHub Pages)
 function App() {
   return (
     <HashRouter>
@@ -155,4 +129,4 @@ function App() {
   );
 }
 
-export default App; // Экспорт приложения для index.js
+export default App;
