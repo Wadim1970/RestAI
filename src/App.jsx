@@ -1,111 +1,107 @@
-import React, { useState, useEffect } from 'react'; // Подключаем React и стандартные хуки (состояние и побочные эффекты)
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; // Подключаем роутинг: хэш-роутер, контейнеры путей и хук определения текущего адреса
-import MainScreen from './components/MainScreen'; // Импортируем компонент главного экрана с аватаром
-import MenuPage from './components/MenuPage'; // Импортируем компонент страницы меню
-import AIChatModal from './components/AIChatModal/AIChatModal'; // Импортируем модальное окно чата с ИИ
+import React, { useState, useEffect } from 'react'; 
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; 
+import MainScreen from './components/MainScreen'; 
+import MenuPage from './components/MenuPage'; 
+import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function AppContent() {
-  const location = useLocation(); // Инициализируем хук, который следит за тем, на какой странице (URL) находится пользователь
+  const location = useLocation(); // Следим за текущим URL (главная или меню)
 
-  // --- ЛОГИКА ХРАНИЛИЩА (localStorage) ---
-
-  // 1. Создаем состояние корзины. В скобках функция, которая один раз при загрузке берет данные из памяти браузера
+  // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    const savedCart = localStorage.getItem('restaurant_cart'); // Пробуем достать строку с корзиной из localStorage
-    return savedCart ? JSON.parse(savedCart) : {}; // Если нашли — превращаем строку в объект, если нет — создаем пустую корзину {}
+    // Пытаемся достать данные из памяти браузера при первой загрузке
+    const savedCart = localStorage.getItem('restaurant_cart'); 
+    return savedCart ? JSON.parse(savedCart) : {}; // Если есть — парсим JSON, если нет — пустой объект
   });
 
-  // 2. Создаем состояние уже подтвержденных заказов (история чека)
+  // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    const savedOrders = localStorage.getItem('restaurant_orders'); // Пробуем достать историю заказов
-    return savedOrders ? JSON.parse(savedOrders) : []; // Если нашли — преобразуем в массив, иначе создаем пустой массив []
+    const savedOrders = localStorage.getItem('restaurant_orders');
+    return savedOrders ? JSON.parse(savedOrders) : []; // Если есть — массив заказов, если нет — пустой массив
   });
 
-  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыто ли сейчас модальное окно чата (true/false)
-  const [viewHistory, setViewHistory] = useState([]); // Состояние: список последних просмотренных блюд для контекста бота
+  // --- СОСТОЯНИЕ МОДАЛКИ И ИСТОРИИ ---
+  const [isChatOpen, setIsChatOpen] = useState(false); // Флаг: открыто окно чата или нет
+  const [viewHistory, setViewHistory] = useState([]); // Массив строк с названиями блюд, которые смотрел юзер
 
-  // Эффект автоматического сохранения: срабатывает при каждом изменении объекта cart
+  // Эффект: сохраняем корзину в localStorage каждый раз, когда она меняется
   useEffect(() => {
-    localStorage.setItem('restaurant_cart', JSON.stringify(cart)); // Превращаем объект корзины в строку и кладем в память браузера
-  }, [cart]); // Зависимость [cart] означает "запускай это, когда корзина изменилась"
+    localStorage.setItem('restaurant_cart', JSON.stringify(cart));
+  }, [cart]);
 
-  // Эффект автоматического сохранения заказов: срабатывает при каждом подтверждении блюд
+  // Эффект: сохраняем заказы в localStorage каждый раз, когда они подтверждаются
   useEffect(() => {
-    localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders)); // Сохраняем массив заказов в память
-  }, [confirmedOrders]); // Зависимость [confirmedOrders]
+    localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
+  }, [confirmedOrders]);
 
-  // --- УМНЫЙ ЗАМОК: Блокировка системного скролла и жестов перезагрузки ---
+  // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
   useEffect(() => {
-    const isMainPage = location.pathname === '/'; // Проверяем, находится ли пользователь на главной странице
-    // Если пользователь на главной ИЛИ у него открыт чат — блокируем всё лишнее
+    const isMainPage = location.pathname === '/'; // Проверка: мы на главной?
+    
+    // МЕЛОЧЬ №1: Я упростил условия блокировки. Теперь, если чат открыт — скролл выключен ВЕЗДЕ.
     if (isMainPage || isChatOpen) {
-      document.body.style.overflow = 'hidden'; // Запрещаем прокрутку страницы
-      document.body.style.position = 'fixed'; // Фиксируем экран, чтобы он не дергался
-      document.body.style.width = '100%'; // Растягиваем фиксацию на всю ширину
-      document.body.style.height = '100%'; // Растягиваем фиксацию на всю высоту
-      document.body.style.top = '0'; // Прижимаем к верху
-      document.body.style.left = '0'; // Прижимаем к левому краю
-      document.body.style.touchAction = 'none'; // Отключаем все системные жесты (включая свайп-перезагрузку Android)
+      document.body.style.overflow = 'hidden'; 
+      document.body.style.position = 'fixed'; // Фиксируем, чтобы iOS не дергала экран
+      document.body.style.width = '100%'; 
+      document.body.style.height = '100%'; 
+      document.body.style.touchAction = 'none'; // МЕЛОЧЬ №2: Отключаем pull-to-refresh (свайп вниз для обновления)
     } else {
-      // Если мы перешли в меню — сбрасываем все стили, чтобы пользователь мог свободно скроллить список блюд
+      // Если мы в меню и чат закрыт — возвращаем стандартное поведение браузера
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
       document.body.style.height = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
       document.body.style.touchAction = '';
     }
-  }, [isChatOpen, location.pathname]); // Перезапускаем логику при открытии чата или смене страницы
+  }, [isChatOpen, location.pathname]); // Срабатывает при смене страницы или открытии чата
 
-  // Функция переключения режима чата. Вызывается из MainScreen или модалки
- const handleToggleChatMode = (mode) => {
-    // Если пришел сигнал 'chat' — только тогда открываем.
-    // Мы убираем автоматическое закрытие (setIsChatOpen(false)), 
-    // чтобы другие режимы не захлопывали окно.
+  // --- ОБРАБОТЧИКИ ---
+
+  // МЕЛОЧЬ №3: Логика открытия чата. 
+  // Я убрал «else { setIsChatOpen(false) }», чтобы случайный вызов функции с другим параметром не закрыл модалку.
+  const handleToggleChatMode = (mode) => {
     if (mode === 'chat') {
       setIsChatOpen(true);
     }
   };
 
-  // Функция обновления количества товара в корзине
-  const updateCart = (dishId, delta) => {
-    setCart(prev => {
-      const currentCount = prev[dishId] || 0; // Берем текущее количество или 0
-      const newCount = Math.max(0, currentCount + delta); // Считаем новое, но не даем уйти в минус
-      if (newCount === 0) {
-        const { [dishId]: _, ...rest } = prev; // Если 0 — удаляем этот ключ из объекта корзины
-        return rest;
-      }
-      return { ...prev, [dishId]: newCount }; // Возвращаем обновленный объект корзины
+  // МЕЛОЧЬ №4: Я ВЕРНУЛ ЭТУ ФУНКЦИЮ. 
+  // В прошлом твоем коде её не было, а MenuPage её требовал. Это и вызывало белый экран (ReferenceError).
+  const trackDishView = (dishName) => {
+    setViewHistory(prev => {
+      if (prev[prev.length - 1] === dishName) return prev; // Не дублируем одно и то же блюдо подряд
+      return [...prev, dishName].slice(-10); // Оставляем только 10 последних просмотров для экономии памяти
     });
   };
 
-  // Функция переноса товаров из корзины в историю заказов
-  const handleConfirmOrder = (cartItems) => {
-    setConfirmedOrders(prev => [...prev, ...cartItems]); // Объединяем старые заказы с новыми из корзины
-    setCart({}); // Полностью очищаем корзину после заказа
+  // Обновление количества товара
+  const updateCart = (dishId, delta) => {
+    setCart(prev => {
+      const currentCount = prev[dishId] || 0;
+      const newCount = Math.max(0, currentCount + delta); // Не уходим в минус
+      if (newCount === 0) {
+        const { [dishId]: _, ...rest } = prev; // Удаляем товар из объекта, если его стало 0
+        return rest;
+      }
+      return { ...prev, [dishId]: newCount };
+    });
   };
 
-  // Функция полной очистки данных пользователя (вызывается при "закрытии счета")
-  const handleClearSession = () => {
-    setCart({}); // Чистим стейт корзины
-    setConfirmedOrders([]); // Чистим стейт заказов
-    localStorage.removeItem('restaurant_cart'); // Удаляем корзину из памяти браузера
-    localStorage.removeItem('restaurant_orders'); // Удаляем заказы из памяти браузера
+  // Перенос из корзины в историю чека
+  const handleConfirmOrder = (cartItems) => {
+    setConfirmedOrders(prev => [...prev, ...cartItems]);
+    setCart({}); // Чистим корзину
   };
 
   return (
     <div className="App">
-      {/* Контейнер для маршрутов */}
       <Routes>
-        {/* Главная страница: теперь мы передаем параметр isChatOpen, чтобы MainScreen знал, когда ставить видео на паузу */}
+        {/* Главный экран: передаем функцию открытия чата и статус (открыт/закрыт) */}
         <Route 
           path="/" 
           element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
         />
-        
-        {/* Страница Меню: передаем все функции управления корзиной и историей */}
+        {/* Страница меню: передаем всё для работы корзины и трекинга блюд */}
         <Route 
           path="/menu" 
           element={
@@ -121,25 +117,26 @@ function AppContent() {
         />
       </Routes>
 
-      {/* Модальное окно чата: рендерится всегда "поверх", но показывается только если isOpen={true} */}
+      {/* МЕЛОЧЬ №5: Я убрал отсюда пропс onModeToggle={handleToggleChatMode}.
+         Почему? Потому что модалка теперь сама переключает режимы «текст/видео» внутри себя.
+         Ей больше не нужно сообщать об этом в App.js. Это делает код чище и быстрее.
+      */}
       <AIChatModal 
         isOpen={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
         viewHistory={viewHistory}
-        onModeToggle={handleToggleChatMode} 
       />
     </div>
   );
 }
 
-// Корневой компонент приложения
+// Стартовая точка приложения
 function App() {
   return (
-    // Оборачиваем всё в HashRouter для корректной работы ссылок на GitHub Pages (без 404 при обновлении)
     <HashRouter>
       <AppContent />
     </HashRouter>
   );
 }
 
-export default App; // Экспортируем приложение
+export default App;
