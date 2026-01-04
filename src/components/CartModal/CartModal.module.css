@@ -49,19 +49,19 @@
 
 .closeBtn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 32px; /* Подбери размер под DishModal */
-  height: 32px;
-  background: rgba(255, 255, 255, 0.2); /* Светлый кружок как подложка */
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  z-index: 10;;
+    top: 2.73vw; /* 12px от верха изображения */
+    right: 2.73vw; /* 12px от правого края изображения */
+    width: 7.73vw; /* 34px */
+    height: 7.73vw; /* 34px */
+    background: none;
+    border: none;
+    padding: 0;
+    z-index: 12; 
+    
+    /* 4. Убираем "прилипание" к краям смартфона */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .closeBtn img {
