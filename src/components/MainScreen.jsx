@@ -1,19 +1,45 @@
 // src/components/MainScreen.jsx
-import React, { useState, useRef } from 'react';
+// src/components/MainScreen.jsx
+import React, { useState, useEffect } from 'react'; // Добавили useEffect для слежения за состоянием чата
 import { useNavigate } from 'react-router-dom';
 import VideoBackground from './VideoBackground.jsx';
 import MenuButton from './MenuButton.jsx';
 import ToggleChatButton from './ToggleChatButton.jsx';
 
-const MainScreen = ({ onChatModeToggle }) => {
+// Добавляем пропс isChatOpen, который приходит из App.js через Routes
+const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
   const navigate = useNavigate();
   const [isStarted, setIsStarted] = useState(false);
 
+  /**
+   * ЭФФЕКТ УПРАВЛЕНИЯ ПАУЗОЙ
+   * Этот хук срабатывает каждый раз, когда меняется статус isChatOpen (открыт/закрыт чат)
+   */
+  useEffect(() => {
+    // Находим элемент видео в DOM
+    const video = document.querySelector('video');
+    
+    // Если видео найдено и пользователь уже нажал кнопку "Войти" (isStarted)
+    if (video && isStarted) {
+      if (isChatOpen) {
+        // Если чат открылся — ставим видео на паузу
+        video.pause();
+      } else {
+        // Если чат закрылся — продолжаем воспроизведение
+        video.play().catch(error => {
+          // Игнорируем возможные ошибки автоплея при возврате из чата
+          console.error("Ошибка при возобновлении видео:", error);
+        });
+      }
+    }
+  }, [isChatOpen, isStarted]); // Следим за этими двумя переменными
+
   const handleStart = () => {
     setIsStarted(true);
+    // Находим видео при первом клике ("Нажмите, чтобы войти")
     const video = document.querySelector('video');
     if (video) {
-      video.muted = false; 
+      video.muted = false; // Включаем звук, так как был клик пользователя
       video.play().catch(error => {
         console.error("Ошибка автоплея:", error);
       });
@@ -26,7 +52,7 @@ const MainScreen = ({ onChatModeToggle }) => {
 
   const handleModeToggle = (newMode) => {
     if (onChatModeToggle) {
-        onChatModeToggle(newMode);
+      onChatModeToggle(newMode);
     }
   };
 
@@ -38,14 +64,16 @@ const MainScreen = ({ onChatModeToggle }) => {
         top: 0,
         left: 0,
         width: '100vw', 
-        height: '100svh', // Статичная высота, не реагирует на клавиатуру
+        height: '100svh', // Статичная высота (Small Viewport Height)
         background: '#000', 
         overflow: 'hidden',
         zIndex: 1 
       }}
     >
+      {/* Компонент с самим тегом <video> */}
       <VideoBackground />
 
+      {/* ЭКРАН СТАРТА (Затемнение и кнопка Play) */}
       {!isStarted && (
         <div 
           onClick={handleStart} 
@@ -64,6 +92,7 @@ const MainScreen = ({ onChatModeToggle }) => {
             cursor: 'pointer'
           }}
         >
+          {/* Круг со стрелкой */}
           <div style={{
             width: '80px',
             height: '80px',
@@ -97,9 +126,11 @@ const MainScreen = ({ onChatModeToggle }) => {
         </div>
       )}
 
+      {/* НИЖНИЕ КНОПКИ (Меню и Чат) - появляются только после handleStart */}
       {isStarted && (
         <div className="buttons-footer-fixed"> 
           <MenuButton onClick={handleOpenMenu} />
+          {/* Кнопка открытия чата */}
           <ToggleChatButton onToggle={handleModeToggle} />
         </div>
       )}
