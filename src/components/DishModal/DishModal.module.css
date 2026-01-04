@@ -1,5 +1,5 @@
 .overlay {
-  position: fixed;
+ position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -9,13 +9,25 @@
     
     display: flex;
     flex-direction: column;
-    /* justify-content: flex-end НЕ используем, он ломает скролл длинных окон */
     
+    /* Разрешаем вертикальный скролл, если контент модалки длинный */
     overflow-y: auto;
+    
+    /* Плавный скролл для iOS */
     -webkit-overflow-scrolling: touch;
     
-    /* Тот самый зазор 30px сверху */
+    /* Зазор 30px сверху */
     padding-top: 30px;
+
+    /* --- НОВЫЕ СТРОЧКИ ДЛЯ БЛОКИРОВКИ ПЕРЕЗАГРУЗКИ --- */
+    
+    /* 1. Запрещает браузеру вызывать обновление страницы (Pull-to-refresh) 
+       и "резиновый" эффект прокрутки на Android/iOS */
+    overscroll-behavior-y: none; 
+
+    /* 2. Сообщает браузеру, что мы сами обрабатываем касания. 
+       pan-y позволяет прокрутку по вертикали, но запрещает системные жесты браузера */
+    touch-action: pan-y;
 }
 
 .overlay::before {
