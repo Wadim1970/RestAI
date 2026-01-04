@@ -8,9 +8,13 @@ const AIControlCenter = ({ isOpen, mode, onClose, onModeChange, viewHistory }) =
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.modalContainer}>
-        {/* Общая кнопка закрытия для всех режимов */}
-        <button className={styles.closeBtn} onClick={onClose}>
+      {/* ВНИМАНИЕ: Здесь была ошибка! 
+          Заменяем modalContainer на твой modal-glassContainer 
+      */}
+      <div className={styles['modal-glassContainer']}>
+        
+        {/* Заменяем closeBtn на твой modal-closeBtn */}
+        <button className={styles['modal-closeBtn']} onClick={onClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
