@@ -23,54 +23,36 @@ const ToggleChatButton = ({ onToggle }) => {
    * РЕНДЕР КНОПКИ
    * Здесь решается, какая иконка будет внутри в зависимости от mode
    */
-  return (
+ return (
     <button 
-      className="toggle-chat-button" // Класс для внешних стилей из styles.css
-      onClick={handleToggle}         // Привязываем функцию handleToggle к событию клика
-      type="button"                  // Явно указываем тип кнопки (чтобы не сработал submit в формах)
+      className="toggle-chat-button" // Класс для внешних стилей
+      onClick={handleClick}          // При клике открываем чат
+      type="button"                  // Стандарт для кнопок
       style={{
-        display: 'flex',             // Включаем гибкую верстку для центрирования
-        justifyContent: 'center',    // Центрируем содержимое по горизонтали
-        alignItems: 'center',        // Центрируем содержимое по вертикали
-        padding: 0,                  // Убираем внутренние отступы, чтобы не ломать размеры
-        backgroundColor: '#48BF48',  // Твой фирменный зеленый цвет фона
-        borderRadius: '50%',         // Делаем кнопку идеально круглой
-        border: 'none',              // Убираем стандартную рамку браузера
-        cursor: 'pointer'            // Меняем курсор на "руку" при наведении
+        display: 'flex',             // Центрирование иконки
+        justifyContent: 'center',    
+        alignItems: 'center',        
+        padding: 0,                  
+        backgroundColor: '#48BF48',  // Твой зеленый цвет
+        borderRadius: '50%',         // Круглая форма
+        border: 'none',              
+        cursor: 'pointer',           
+        width: '13.18vw',            // Добавим фиксированный размер самой кнопки (около 58px)
+        height: '13.18vw'            // Чтобы она была пропорциональна иконке
       }}
     >
-      {/* ПРОВЕРКА УСЛОВИЯ: Если режим 'voice' (смотрим видео) */}
-      {mode === 'voice' ? (
-        
-        /* 1. ВАРИАНТ ПРИ СТАРТЕ: Рисуем иконку ЧАТА, чтобы войти в него */
-        <img 
-          src={ChatIconSrc}          // Источник: иконка облачка чата
-          key="chat-img"             // Уникальный ключ для React, чтобы смена иконок была плавной
-          className="chat-icon-img"  // Класс для возможной доп. стилизации
-          alt="Switch to Chat"       // Текст для экранных читалок (доступность)
-          style={{ 
-            width: '7.05vw',         // Твой размер 31px (в расчете на экран 440px)
-            height: '7.05vw',        // Квадратная форма иконки
-            objectFit: 'contain',    // Вписываем картинку в границы без искажений
-            filter: 'brightness(0) invert(1)' // Фокус: превращаем темную иконку в БЕЛУЮ
-          }} 
-        />
-      ) : (
-        
-        /* 2. ВАРИАНТ, КОГДА ЧАТ ОТКРЫТ: Рисуем иконку АУДИО, чтобы вернуться */
-        <img 
-          src={AudioIconSrc}         // Источник: иконка микрофона
-          key="audio-img"            // Ключ для смены элемента
-          className="audio-icon-img" // Класс для иконки аудио
-          alt="Switch to Voice"      // Описание
-          style={{ 
-            width: '9.09vw',         // Твой размер 40px по ширине
-            height: '7.95vw',        // Твой размер 35px по высоте
-            objectFit: 'contain',    // Вписываем в размеры
-            filter: 'brightness(0) invert(1)' // Также делаем иконку БЕЛОЙ
-          }}
-        />
-      )}
+      {/* Всегда отображаем иконку ЧАТА */}
+      <img 
+        src={ChatIconSrc}            // Источник: иконка облачка
+        className="chat-icon-img"    
+        alt="Open AI Chat"           
+        style={{ 
+          width: '7.05vw',           // Твой размер 31px
+          height: '7.05vw',          
+          objectFit: 'contain',      
+          filter: 'brightness(0) invert(1)' // Делаем иконку БЕЛОЙ
+        }} 
+      />
     </button>
   );
 };
