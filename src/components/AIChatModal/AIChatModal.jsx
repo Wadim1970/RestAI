@@ -1,32 +1,34 @@
-import React, { useState } from 'react'; // Подключаем React и хук состояния для текста в поле ввода
-import { useNavigate } from 'react-router-dom'; // Хук для смены страниц (навигации)
-import styles from './AIChatModal.module.css'; // Стили модального окна
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Импортируем хук навигации
+import styles from './AIChatModal.module.css';
 
-const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
-  const [inputValue, setInputValue] = useState(''); // Состояние для хранения текста, который пишет пользователь
-  const navigate = useNavigate(); // Создаем функцию-штурман для перехода между страницами
+const AIChatModal = ({ isOpen, onClose, onModeToggle }) => {
+  const [inputValue, setInputValue] = useState('');
+  const navigate = useNavigate(); // Инициализируем навигацию
 
-  // Если модалка закрыта, ничего не рисуем
-  if (!isOpen) return null; 
+  if (!isOpen) return null;
 
   /**
-   * НОВАЯ ЛОГИКА ПЕРЕХОДА К ВИДЕО-ЧАТУ
-   * Эта функция срабатывает при нажатии на кнопку переключения режима (например, аватарку)
+   * ГЛАВНАЯ ФУНКЦИЯ КНОПКИ ДЕЙСТВИЯ (Зеленая кнопка справа)
    */
-  const handleSwitchToVideo = () => {
-    onClose(); // Сначала закрываем модальное окно чата
-    navigate('/'); // ВСЕГДА переходим на главную страницу, где находится видео-аватар
-  };
-
-  // Функция для кнопки "Отправить" или "Голос" (справа от текстового поля)
-  const handleAction = () => {
+  const handleActionClick = () => {
+    // ПРОВЕРКА: Если пользователь ввел текст
     if (inputValue.trim().length > 0) {
-      // Если текст есть — имитируем отправку
-      console.log("Отправлено:", inputValue);
+      // Логика отправки сообщения
+      console.log("Отправка сообщения:", inputValue);
       setInputValue(''); 
     } else {
-      // Если текста нет — кнопка работает как "Назад"
-      onClose(); 
+      // ЕСЛИ ПОЛЕ ПУСТОЕ: Переключаем режим на видео-чат
+      
+      // 1. Закрываем модальное окно (через функцию из App.js)
+      if (onModeToggle) {
+        onModeToggle('voice'); // Передаем режим 'voice', что сделает isChatOpen(false)
+      } else {
+        onClose();
+      }
+
+      // 2. ВСЕГДА перенаправляем пользователя на главную страницу к видео
+      navigate('/'); 
     }
   };
 
@@ -34,25 +36,24 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
     <div className={styles['modal-overlay']}>
       <div className={styles['modal-glassContainer']}>
         
-        {/* Кнопка-крестик: просто закрывает окно, оставляя пользователя на текущей странице */}
+        {/* Кнопка закрытия (крестик) — просто закрывает чат, не меняя страницу */}
         <button className={styles['modal-closeBtn']} onClick={onClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
         <div className={styles['modal-chatHistory']}>
-          <div className={styles['modal-botMessage']}>Вам помочь с выбором?</div>
+          <div className={styles['modal-botMessage']}>
+            Чем я могу вам помочь?
+          </div>
         </div>
 
         <div className={styles['modal-footerControls']}>
           <div className={styles['modal-inputWrapper']}>
-            
-            {/* ИКОНКА ПЕРЕХОДА К ВИДЕО (Аватар или иконка режима) */}
-            {/* Теперь при клике мы вызываем handleSwitchToVideo, которая отправит нас на '/' */}
+            {/* Иконка меню внутри поля (оставляем как декоративную или для других целей) */}
             <img 
               src="/icons/free-icon-main-menu-2.png" 
               className={styles['modal-menuInInput']} 
-              alt="К видео-чату"
-              onClick={handleSwitchToVideo} 
+              alt="Меню" 
             />
             
             <textarea 
@@ -63,12 +64,17 @@ const AIChatModal = ({ isOpen, onClose, viewHistory }) => {
             />
           </div>
 
-          {/* Зеленая кнопка (Голос / Отправить) */}
-          <button className={styles['modal-actionButton']} onClick={handleAction}>
+          {/* ТА САМАЯ ЗЕЛЕНАЯ КНОПКА */}
+          <button 
+            className={styles['modal-actionButton']} 
+            onClick={handleActionClick} // Привязываем новую логику
+          >
             {inputValue.trim().length > 0 ? (
+              /* Иконка отправки, если текст есть */
               <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Отправить" />
             ) : (
-              <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="Голос" />
+              /* Иконка аудио, если текста нет — ТЕПЕРЬ ОНА ВЕДЕТ НА ГЛАВНУЮ */
+              <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="К видео-аватару" />
             )}
           </button>
         </div>
