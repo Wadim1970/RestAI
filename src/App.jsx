@@ -59,16 +59,13 @@ function AppContent() {
   }, [isChatOpen, location.pathname]); // Перезапускаем логику при открытии чата или смене страницы
 
   // Функция переключения режима чата. Вызывается из MainScreen или модалки
-  const handleToggleChatMode = (mode) => {
-    setIsChatOpen(mode === 'chat'); // Если режим 'chat' — открываем окно, иначе закрываем
-  };
-
-  // Функция записи истории просмотров (чтобы бот знал, о чем говорит пользователь)
-  const trackDishView = (dishName) => {
-    setViewHistory(prev => {
-      if (prev[prev.length - 1] === dishName) return prev; // Если это то же самое блюдо подряд — не дублируем
-      return [...prev, dishName].slice(-10); // Добавляем новое и храним только последние 10 записей
-    });
+ const handleToggleChatMode = (mode) => {
+    // Если пришел сигнал 'chat' — только тогда открываем.
+    // Мы убираем автоматическое закрытие (setIsChatOpen(false)), 
+    // чтобы другие режимы не захлопывали окно.
+    if (mode === 'chat') {
+      setIsChatOpen(true);
+    }
   };
 
   // Функция обновления количества товара в корзине
