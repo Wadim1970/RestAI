@@ -48,11 +48,26 @@
 .title { font-size: 6vw; font-weight: 700; margin: 0; }
 
 .closeBtn {
-    background: none;
-    border: none;
-    font-size: 8vw;
-    color: #333;
-    line-height: 1;
+    position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px; /* Подбери размер под DishModal */
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2); /* Светлый кружок как подложка */
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;;
+}
+
+.closeBtn img {
+  width: 16px; /* Размер самого крестика внутри кнопки */
+  height: 16px;
+  object-fit: contain;
 }
 
 .itemList {
