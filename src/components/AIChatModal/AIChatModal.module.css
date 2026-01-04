@@ -1,112 +1,130 @@
-/* modal-overlay: фиксируем контейнер на весь экран поверх всего остального */
+/* Фиксированный фон на весь экран */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 999999; /* Максимальный приоритет слоя */
-    overflow: hidden; /* Отключаем скролл страницы под модалкой */
-    pointer-events: auto; /* Оверлей должен ловить касания */
-    touch-action: none;   /* Запрещаем браузеру тянуть страницу за собой */
+    z-index: 999999; /* Самый высокий слой поверх всего */
+    overflow: hidden; /* Чтобы под окном ничего не скроллилось */
 }
 
-/* modal-glassContainer: задаем фон и размытие как в твоем хедере/футере */
+/* Стеклянный контейнер с размытием */
 .modal-glassContainer {
     width: 100%;
-    height: 100dvh; /* Используем dvh, чтобы высота подстраивалась под клавиатуру */
+    height: 100dvh; /* Высота подстраивается под экран смартфона с учетом браузерных панелей */
     background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность 0.2 */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Твой блюр и насыщенность */
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Фирменный эффект стекла */
     backdrop-filter: blur(20px) saturate(150%) contrast(100%);
-    perspective: 1000px; /* Для стабильности отрисовки на мобильных устройствах */
-    -webkit-backface-visibility: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Все элементы ввода прижимаем к низу экрана */
+    justify-content: flex-end; /* Все элементы ввода прижимаем к низу */
+    position: relative; /* Чтобы крестик позиционировался относительно этого окна */
 }
 
-/* Область для сообщений, которая занимает всё свободное место сверху */
+/* Стили для кнопки-крестика в верхнем углу */
+.modal-closeBtn {
+    position: absolute;
+    top: 20px; /* Отступ 20px от верха */
+    right: 20px; /* Отступ 20px от правого края */
+    width: 34px;
+    height: 34px;
+    background: rgba(0, 0, 0, 0.1); /* Легкая тень под кнопкой */
+    border: none;
+    border-radius: 50%; /* Круглая кнопка */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* Иконка внутри крестика */
+.modal-closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Область сообщений чата */
 .modal-chatHistory {
-    flex: 1; 
-    padding: 20px;
-    overflow-y: auto; /* Разрешаем скролл внутри списка сообщений */
+    flex: 1; /* Занимает всё свободное место */
+    padding: 70px 20px 20px 20px; /* Верхний отступ 70px, чтобы текст не залез под крестик */
+    overflow-y: auto; /* Разрешаем скролл сообщений */
     display: flex;
     flex-direction: column;
     gap: 12px;
-    touch-action: pan-y;  /* Разрешаем внутренний скролл сообщений */
-    pointer-events: auto;
 }
 
-/* Контейнер для поля ввода и кнопки */
+/* Контейнер для нижних элементов управления */
 .modal-footerControls {
     display: flex;
     align-items: center;
-    padding: 0 12px; /* Фиксированный отступ от краев экрана 12px */
-    margin-bottom: 58px; /* Расстояние от нижнего края экрана 58px */
-    gap: 6px; /* Расстояние между полем ввода и зеленой кнопкой 6px */
+    padding: 0 12px; /* По 12px от краев экрана */
+    margin-bottom: 58px; /* Расстояние 58px от низа (как ты просил) */
+    gap: 6px; /* Расстояние между вводом и кнопкой */
 }
 
-/* modal-inputWrapper: белое поле ввода с твоей специфической формой */
+/* Оболочка поля ввода с белым фоном */
 .modal-inputWrapper {
-    position: relative; /* Чтобы иконка меню внутри позиционировалась абсолютно */
-    flex: 1; /* Поле занимает всю ширину, которая осталась (адаптивность) */
-    height: 58px; /* Высота поля 58px */
+    position: relative;
+    flex: 1; /* Растягивается на всю ширину */
+    height: 58px;
     background: #FFFFFF;
-    /* Твои радиусы: ЛВ:28px, ПВ:31px, ПН:31px, ЛН:15px */
+    /* Твои специфические радиусы скругления */
     border-radius: 28px 31px 31px 15px;
 }
 
-/* Иконка меню внутри поля (31x31px) */
+/* Иконка меню внутри текстового поля */
 .modal-menuInInput {
     position: absolute;
-    left: 12px; /* 12px от левого края поля */
-    top: 14px;  /* 14px от верхнего края поля */
+    left: 12px;
+    top: 14px;
     width: 31px;
     height: 31px;
     cursor: pointer;
-    /* Покраска любой иконки в цвет #304D22 через фильтры */
+    /* Перекрашиваем иконку в темно-зеленый цвет через фильтры */
     filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%);
 }
 
-/* modal-textArea: само место для печати текста */
+/* Сама область ввода текста */
 .modal-textArea {
     width: 100%;
     height: 100%;
     background: transparent;
     border: none;
     outline: none;
-    resize: none; /* Убираем возможность растягивать поле пальцем */
-    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы текст не наезжал на иконку меню */
+    resize: none; /* Запрещаем растягивать поле вручную */
+    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы не перекрывать иконку меню */
     font-size: 16px;
-    box-sizing: border-box; /* Чтобы паддинги не увеличивали размер поля */
+    box-sizing: border-box;
     font-family: 'Inter', sans-serif;
 }
 
-/* modal-actionButton: круглая кнопка справа */
+/* Зеленая круглая кнопка действия */
 .modal-actionButton {
-    width: 58px; /* Ширина 58px (13.18vw) */
-    height: 58px; /* Высота 58px */
+    width: 58px;
+    height: 58px;
     background-color: #48BF48;
-    border-radius: 50%; /* Круглая форма */
+    border-radius: 50%;
     border: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-shrink: 0; /* Запрещаем кнопке сжиматься, если поле ввода станет широким */
-    cursor: pointer;
-    box-shadow: inset 0 0 0 1px #E5E0D4; /* Внутренняя обводка 1px */
+    flex-shrink: 0; /* Чтобы кнопка не сжималась при длинном тексте */
+    box-shadow: inset 0 0 0 1px #E5E0D4; /* Легкая внутренняя обводка */
 }
 
-/* Стили для иконок внутри зеленой кнопки */
+/* Размеры иконок внутри зеленой кнопки */
 .modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
 .modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
 
-/* Пузырек сообщения от бота */
+/* Стиль пузырька ответа бота */
 .modal-botMessage {
     background: white;
     padding: 12px 16px;
     border-radius: 12px 12px 12px 0;
-    align-self: flex-start;
+    align-self: flex-start; /* Прижимаем к левому краю */
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
