@@ -4,6 +4,11 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 100000;
     display: flex;
+    /* Отключает системную перезагрузку страницы при свайпе вниз */
+    overscroll-behavior-y: contain; 
+    
+    /* В дополнение к этому, touch-action говорит браузеру не обрабатывать жесты самому */
+    touch-action: none;
     flex-direction: column;
     justify-content: flex-end;
 }
