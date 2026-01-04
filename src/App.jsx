@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal'; 
