@@ -7,6 +7,8 @@
     height: 100vh;
     z-index: 999999; /* Максимальный приоритет слоя */
     overflow: hidden; /* Отключаем скролл страницы под модалкой */
+    pointer-events: auto; /* Оверлей должен ловить касания */
+    touch-action: none;   /* Запрещаем браузеру тянуть страницу за собой */
 }
 
 /* modal-glassContainer: задаем фон и размытие как в твоем хедере/футере */
@@ -31,7 +33,8 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    touch-action: pan-y;
+    touch-action: pan-y;  /* Разрешаем внутренний скролл сообщений */
+    pointer-events: auto;
 }
 
 /* Контейнер для поля ввода и кнопки */
