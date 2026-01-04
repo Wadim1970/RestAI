@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styles from './AIControlCenter.module.css';
+import { useChatApi } from './useChatApi'; // Импортируем логику n8n
 
 const TextView = ({ onSwitchToVideo }) => {
   const [inputValue, setInputValue] = useState('');
