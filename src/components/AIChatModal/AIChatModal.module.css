@@ -1,1 +1,130 @@
+/* Фиксированный фон на весь экран */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999999; /* Самый высокий слой поверх всего */
+    overflow: hidden; /* Чтобы под окном ничего не скроллилось */
+}
 
+/* Стеклянный контейнер с размытием */
+.modal-glassContainer {
+    width: 100%;
+    height: 100dvh; /* Высота подстраивается под экран смартфона с учетом браузерных панелей */
+    background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность 0.2 */
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Фирменный эффект стекла */
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Все элементы ввода прижимаем к низу */
+    position: relative; /* Чтобы крестик позиционировался относительно этого окна */
+}
+
+/* Стили для кнопки-крестика в верхнем углу */
+.modal-closeBtn {
+    position: absolute;
+    top: 20px; /* Отступ 20px от верха */
+    right: 20px; /* Отступ 20px от правого края */
+    width: 34px;
+    height: 34px;
+    background: rgba(0, 0, 0, 0.1); /* Легкая тень под кнопкой */
+    border: none;
+    border-radius: 50%; /* Круглая кнопка */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* Иконка внутри крестика */
+.modal-closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Область сообщений чата */
+.modal-chatHistory {
+    flex: 1; /* Занимает всё свободное место */
+    padding: 70px 20px 20px 20px; /* Верхний отступ 70px, чтобы текст не залез под крестик */
+    overflow-y: auto; /* Разрешаем скролл сообщений */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Контейнер для нижних элементов управления */
+.modal-footerControls {
+    display: flex;
+    align-items: center;
+    padding: 0 12px; /* По 12px от краев экрана */
+    margin-bottom: 58px; /* Расстояние 58px от низа (как ты просил) */
+    gap: 6px; /* Расстояние между вводом и кнопкой */
+}
+
+/* Оболочка поля ввода с белым фоном */
+.modal-inputWrapper {
+    position: relative;
+    flex: 1; /* Растягивается на всю ширину */
+    height: 58px;
+    background: #FFFFFF;
+    /* Твои специфические радиусы скругления */
+    border-radius: 28px 31px 31px 15px;
+}
+
+/* Иконка меню внутри текстового поля */
+.modal-menuInInput {
+    position: absolute;
+    left: 12px;
+    top: 14px;
+    width: 31px;
+    height: 31px;
+    cursor: pointer;
+    /* Перекрашиваем иконку в темно-зеленый цвет через фильтры */
+    filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%);
+}
+
+/* Сама область ввода текста */
+.modal-textArea {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none; /* Запрещаем растягивать поле вручную */
+    padding: 18px 15px 0 50px; /* Отступ слева 50px, чтобы не перекрывать иконку меню */
+    font-size: 16px;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Зеленая круглая кнопка действия */
+.modal-actionButton {
+    width: 58px;
+    height: 58px;
+    background-color: #48BF48;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0; /* Чтобы кнопка не сжималась при длинном тексте */
+    box-shadow: inset 0 0 0 1px #E5E0D4; /* Легкая внутренняя обводка */
+}
+
+/* Размеры иконок внутри зеленой кнопки */
+.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
+.modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
+
+/* Стиль пузырька ответа бота */
+.modal-botMessage {
+    background: white;
+    padding: 12px 16px;
+    border-radius: 12px 12px 12px 0;
+    align-self: flex-start; /* Прижимаем к левому краю */
+    max-width: 85%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
