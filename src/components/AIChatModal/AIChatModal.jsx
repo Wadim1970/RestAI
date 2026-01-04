@@ -7,6 +7,7 @@ const AIChatModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+ 
   const handleActionClick = () => {
     if (inputValue.trim().length > 0) {
       // Здесь будет sendMessage(inputValue)
