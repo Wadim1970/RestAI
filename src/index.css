@@ -33,6 +33,7 @@ html, body {
 body {
   display: block; 
   background-color: #ffffff;
+  overscroll-behavior-y: none;
 }
 
 button, input, select, textarea {
