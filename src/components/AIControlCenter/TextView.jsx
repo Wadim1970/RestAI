@@ -1,32 +1,58 @@
 import React, { useState } from 'react';
-import styles from './AIControlCenter.module.css'; // Используем те же классы
+import { useChatApi } from './useChatApi'; // Твоя логика связи с n8n
+import styles from './AIControlCenter.module.css'; // Твой восстановленный CSS
 
 const TextView = ({ onSwitchToVideo, viewHistory }) => {
   const [inputValue, setInputValue] = useState('');
+  
+  // Подключаем функционал из твоего useChatApi
+  // Предполагаем, что он возвращает массив сообщений и функцию отправки
+  const { messages, sendMessage, isLoading } = useChatApi(viewHistory);
 
-  // Логика кнопки справа (Голос / Отправить)
-  const handleAction = () => {
+  /**
+   * ГЛАВНАЯ ЛОГИКА ТВОЕЙ ЗЕЛЕНОЙ КНОПКИ
+   */
+  const handleActionClick = () => {
     if (inputValue.trim().length > 0) {
-      // Если текст есть — имитируем отправку (сюда потом подключим useChatApi)
-      console.log("Отправлено:", inputValue);
-      setInputValue(''); 
+      // 1. Если текст есть — отправляем через n8n
+      if (sendMessage) {
+        sendMessage(inputValue);
+      }
+      setInputValue(''); // Очищаем поле после отправки
     } else {
-      // Если текста нет — переключаем на видео-режим (как ты и просил)
-      onSwitchToVideo(); 
+      // 2. Если поле ПУСТОЕ — переключаем на видео-аватара (как ты просил)
+      onSwitchToVideo();
     }
   };
 
   return (
     <div className={styles['modal-glassContainer']}>
-      {/* История чата */}
+      
+      {/* ИСТОРИЯ ЧАТА (ТВОЙ ОРИГИНАЛЬНЫЙ БЛОК) */}
       <div className={styles['modal-chatHistory']}>
-        <div className={styles['modal-botMessage']}>Вам помочь с выбором?</div>
+        {/* Сообщение-приветствие по умолчанию */}
+        <div className={styles['modal-botMessage']}>
+          Чем я могу вам помочь?
+        </div>
+
+        {/* Рендер сообщений из API n8n (если они есть) */}
+        {messages && messages.map((msg, index) => (
+          <div 
+            key={index} 
+            className={msg.role === 'assistant' ? styles['modal-botMessage'] : styles['modal-userMessage']}
+          >
+            {msg.content}
+          </div>
+        ))}
+
+        {/* Индикатор загрузки ответа */}
+        {isLoading && <div className={styles['modal-botMessage']}>...</div>}
       </div>
 
-      {/* Футер с вводом текста */}
+      {/* ФУТЕР (ТВОЯ ОРИГИНАЛЬНАЯ ПАНЕЛЬ ВВОДА) */}
       <div className={styles['modal-footerControls']}>
         <div className={styles['modal-inputWrapper']}>
-          {/* Твоя иконка меню слева в инпуте */}
+          {/* Иконка меню внутри текстового поля */}
           <img 
             src="/icons/free-icon-main-menu-2.png" 
             className={styles['modal-menuInInput']} 
@@ -41,12 +67,17 @@ const TextView = ({ onSwitchToVideo, viewHistory }) => {
           />
         </div>
 
-        {/* Твоя кнопка действия (Зеленая, справа от инпута) */}
-        <button className={styles['modal-actionButton']} onClick={handleAction}>
+        {/* ТВОЯ ЗЕЛЕНАЯ КНОПКА (СПРАВА) */}
+        <button 
+          className={styles['modal-actionButton']} 
+          onClick={handleActionClick}
+        >
           {inputValue.trim().length > 0 ? (
+            /* Иконка отправки (стрелочка), если текст набран */
             <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Отправить" />
           ) : (
-            <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="Голос" />
+            /* Иконка аудио (микрофон), если поле пустое — ведет в Видео-режим */
+            <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="К видео-аватару" />
           )}
         </button>
       </div>
