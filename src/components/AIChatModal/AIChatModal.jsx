@@ -1,34 +1,20 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Импортируем хук навигации
 import styles from './AIChatModal.module.css';
 
-const AIChatModal = ({ isOpen, onClose, onModeToggle }) => {
+const AIChatModal = ({ isOpen, onClose }) => {
   const [inputValue, setInputValue] = useState('');
-  const navigate = useNavigate(); // Инициализируем навигацию
+  const [viewMode, setViewMode] = useState('text'); // 'text' или 'video'
 
   if (!isOpen) return null;
 
-  /**
-   * ГЛАВНАЯ ФУНКЦИЯ КНОПКИ ДЕЙСТВИЯ (Зеленая кнопка справа)
-   */
   const handleActionClick = () => {
-    // ПРОВЕРКА: Если пользователь ввел текст
     if (inputValue.trim().length > 0) {
-      // Логика отправки сообщения
-      console.log("Отправка сообщения:", inputValue);
+      // Здесь будет sendMessage(inputValue)
+      console.log("Отправка:", inputValue);
       setInputValue(''); 
     } else {
-      // ЕСЛИ ПОЛЕ ПУСТОЕ: Переключаем режим на видео-чат
-      
-      // 1. Закрываем модальное окно (через функцию из App.js)
-      if (onModeToggle) {
-        onModeToggle('voice'); // Передаем режим 'voice', что сделает isChatOpen(false)
-      } else {
-        onClose();
-      }
-
-      // 2. ВСЕГДА перенаправляем пользователя на главную страницу к видео
-      navigate('/'); 
+      // ПЕРЕКЛЮЧЕНИЕ: если пусто, меняем режим
+      setViewMode(prev => prev === 'text' ? 'video' : 'text');
     }
   };
 
@@ -36,45 +22,63 @@ const AIChatModal = ({ isOpen, onClose, onModeToggle }) => {
     <div className={styles['modal-overlay']}>
       <div className={styles['modal-glassContainer']}>
         
-        {/* Кнопка закрытия (крестик) — просто закрывает чат, не меняя страницу */}
+        {/* КРЕСТИК */}
         <button className={styles['modal-closeBtn']} onClick={onClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
+        {/* --- КОНТЕНТНАЯ ОБЛАСТЬ --- */}
         <div className={styles['modal-chatHistory']}>
-          <div className={styles['modal-botMessage']}>
-            Чем я могу вам помочь?
-          </div>
+          {viewMode === 'text' ? (
+            // 1. ТЕКСТОВЫЙ ЧАТ
+            <div className={styles['modal-botMessage']}>
+              Чем я могу вам помочь?
+            </div>
+          ) : (
+            // 2. ЗАГЛУШКА ПОД ВИДЕО-АВАТАР
+            <div 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                background: '#000', // Черный фон под видео
+                borderRadius: '20px', 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <span style={{ color: '#48BF48', fontSize: '14px', opacity: 0.6 }}>
+                [ ПОДКЛЮЧЕНИЕ ВИДЕО-АВАТАРА... ]
+              </span>
+              {/* Позже сюда вставим <video id="avatar-video" /> */}
+            </div>
+          )}
         </div>
 
+        {/* --- ПАНЕЛЬ ВВОДА --- */}
         <div className={styles['modal-footerControls']}>
           <div className={styles['modal-inputWrapper']}>
-            {/* Иконка меню внутри поля (оставляем как декоративную или для других целей) */}
-            <img 
-              src="/icons/free-icon-main-menu-2.png" 
-              className={styles['modal-menuInInput']} 
-              alt="Меню" 
-            />
-            
+            <img src="/icons/free-icon-main-menu-2.png" className={styles['modal-menuInInput']} alt="Menu" />
             <textarea 
               className={styles['modal-textArea']}
-              placeholder="Напишите сообщение..."
+              placeholder={viewMode === 'text' ? "Напишите сообщение..." : "Слушаю вас..."}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
             />
           </div>
 
-          {/* ТА САМАЯ ЗЕЛЕНАЯ КНОПКА */}
-          <button 
-            className={styles['modal-actionButton']} 
-            onClick={handleActionClick} // Привязываем новую логику
-          >
+          <button className={styles['modal-actionButton']} onClick={handleActionClick}>
             {inputValue.trim().length > 0 ? (
-              /* Иконка отправки, если текст есть */
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Отправить" />
+              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
             ) : (
-              /* Иконка аудио, если текста нет — ТЕПЕРЬ ОНА ВЕДЕТ НА ГЛАВНУЮ */
-              <img src="/icons/free-icon-audio.png" className={styles['modal-iconAudio']} alt="К видео-аватару" />
+              // Динамическая смена иконки: если в видео — иконка чата, если в чате — микрофон
+              <img 
+                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
+                className={styles['modal-iconAudio']} 
+                alt="Switch" 
+              />
             )}
           </button>
         </div>
