@@ -1,41 +1,160 @@
+/* --- ОСНОВНОЙ КОНТЕЙНЕР (ОВЕРЛЕЙ) --- */
 .overlay {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(15px);
-  z-index: 999999;
-  display: flex; align-items: center; justify-content: center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6); /* Затемнение фона вокруг модалки */
+  backdrop-filter: blur(10px);    /* Размытие того, что за модалкой (эффект матового стекла) */
+  z-index: 200000;                /* Поверх всех элементов сайта */
+  display: flex;
+  justify-content: center;        /* Центрируем модалку по горизонтали */
+  align-items: center;            /* Центрируем модалку по вертикали */
 }
 
-.modalContainer {
-  width: 90%; max-width: 400px; height: 85vh;
+/* --- СТЕКЛЯННЫЙ КОНТЕЙНЕР (МОДАЛКА) --- */
+.modal-glassContainer {
+  width: 90%;                     /* Ширина на мобильных */
+  max-width: 440px;               /* Максимальная ширина для планшетов/ПК */
+  height: 80vh;                   /* Высота модалки — 80% от высоты экрана */
+  background: rgba(255, 255, 255, 0.1); /* Прозрачный белый фон (стекло) */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Тонкая светлая граница */
+  border-radius: 30px;            /* Сильно скругленные углы */
+  position: relative;
+  display: flex;
+  flex-direction: column;         /* Элементы внутри (чат, футер) идут сверху вниз */
+  overflow: hidden;               /* Чтобы контент не вылезал за скругленные углы */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Тень для объема */
+}
+
+/* --- КНОПКА ЗАКРЫТИЯ (КРЕСТИК) --- */
+.modal-closeBtn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 10;                    /* Всегда поверх сообщений */
+  padding: 5px;
+}
+
+.modal-closeBtn img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+/* --- ИСТОРИЯ ЧАТА (ОБЛАСТЬ СООБЩЕНИЙ) --- */
+.modal-chatHistory {
+  flex: 1;                        /* Занимает всё свободное место сверху до футера */
+  padding: 25px;
+  overflow-y: auto;               /* Прокрутка сообщений, если их много */
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* --- СТИЛЬ СООБЩЕНИЯ ОТ БОТА --- */
+.modal-botMessage {
+  align-self: flex-start;         /* Прижато к левому краю */
+  background: rgba(255, 255, 255, 0.15); /* Фон сообщения чуть светлее основного стекла */
+  padding: 12px 18px;
+  border-radius: 18px 18px 18px 5px; /* Скругление (левый нижний угол острее) */
+  color: white;
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px;
+  max-width: 85%;                 /* Чтобы текст не растягивался на всю ширину */
+  line-height: 1.4;
+}
+
+/* --- НИЖНЯЯ ПАНЕЛЬ (ФУТЕР) --- */
+.modal-footerControls {
+  padding: 20px;
+  display: flex;
+  align-items: flex-end;          /* Выравниваем элементы по нижней линии */
+  gap: 12px;                      /* Расстояние между полем ввода и зеленой кнопкой */
+  background: rgba(0, 0, 0, 0.1); /* Слегка подсвеченная область ввода */
+}
+
+/* --- ОБЕРТКА ПОЛЯ ВВОДА --- */
+.modal-inputWrapper {
+  flex: 1;                        /* Поле ввода занимает всю ширину кроме кнопки */
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 40px;
-  position: relative; overflow: hidden;
-  display: flex; flex-direction: column;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;            /* Центрируем иконку меню и текст по вертикали */
+  padding: 8px 15px;
+  min-height: 50px;
 }
 
-.contentWrapper, .videoWrapper {
-  flex: 1; display: flex; flex-direction: column; padding: 20px;
+/* ИКОНКА МЕНЮ ВНУТРИ ИНПУТА */
+.modal-menuInInput {
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+  cursor: pointer;
+  opacity: 0.8;
 }
 
-.videoCircle {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.2); border-radius: 30px; margin-bottom: 20px;
+/* ТЕКСТОВАЯ ОБЛАСТЬ (INPUT) */
+.modal-textArea {
+  flex: 1;
+  background: none;
+  border: none;
+  color: white;
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  resize: none;                   /* Запрещаем пользователю менять размер вручную */
+  outline: none;                  /* Убираем синюю рамку при фокусе */
+  max-height: 100px;              /* Чтобы поле не выросло на пол-экрана */
+  padding: 5px 0;
 }
 
-.inputArea {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 20px;
+.modal-textArea::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* Цвет подсказки */
 }
 
-.inputArea textarea {
-  flex: 1; background: none; border: none; color: white; outline: none; resize: none;
+/* --- ЗЕЛЕНАЯ КНОПКА ДЕЙСТВИЯ (СПРАВА) --- */
+.modal-actionButton {
+  width: 50px;
+  height: 50px;
+  background-color: #48BF48;      /* Твой фирменный зеленый */
+  border-radius: 15px;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;                 /* Кнопка не должна сжиматься */
+  transition: transform 0.2s;     /* Анимация при нажатии */
 }
 
-.actionBtn, .micBtn, .backBtn, .closeBtn {
-  background: none; border: none; cursor: pointer; transition: transform 0.2s;
+.modal-actionButton:active {
+  transform: scale(0.95);         /* Эффект нажатия (уменьшение) */
 }
 
-.actionBtn img, .micBtn img, .backBtn img { width: 40px; height: 40px; }
+/* ИКОНКИ ВНУТРИ ЗЕЛЕНОЙ КНОПКИ */
+.modal-iconAudio, .modal-iconSend {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Делаем иконки белыми */
+}
+
+/* --- СТИЛИ ДЛЯ РЕЖИМА ВИДЕО-АВАТАРА (VideoView) --- */
+.videoContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.avatarVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;             /* Видео заполняет весь контейнер */
+}
