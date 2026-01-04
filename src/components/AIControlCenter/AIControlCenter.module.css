@@ -1,34 +1,33 @@
-/* --- ОСНОВНОЙ КОНТЕЙНЕР (ОВЕРЛЕЙ) --- */
+/* --- ЗАТЕМНЕНИЕ ФОНА (ОВЕРЛЕЙ) --- */
 .overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6); /* Затемнение фона вокруг модалки */
-  backdrop-filter: blur(10px);    /* Размытие того, что за модалкой (эффект матового стекла) */
-  z-index: 200000;                /* Поверх всех элементов сайта */
+  background: rgba(0, 0, 0, 0.6); /* Твое стандартное затемнение */
+  backdrop-filter: blur(10px);    /* Размытие заднего плана */
+  z-index: 200000;
   display: flex;
-  justify-content: center;        /* Центрируем модалку по горизонтали */
-  align-items: center;            /* Центрируем модалку по вертикали */
+  justify-content: center;
+  align-items: center;
 }
 
-/* --- СТЕКЛЯННЫЙ КОНТЕЙНЕР (МОДАЛКА) --- */
+/* --- ТВОЙ ОРИГИНАЛЬНЫЙ СТЕКЛЯННЫЙ КОНТЕЙНЕР --- */
 .modal-glassContainer {
-  width: 90%;                     /* Ширина на мобильных */
-  max-width: 440px;               /* Максимальная ширина для планшетов/ПК */
-  height: 80vh;                   /* Высота модалки — 80% от высоты экрана */
-  background: rgba(255, 255, 255, 0.1); /* Прозрачный белый фон (стекло) */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Тонкая светлая граница */
-  border-radius: 30px;            /* Сильно скругленные углы */
+  width: 90%;
+  max-width: 440px;
+  height: 80vh;
+  background: rgba(255, 255, 255, 0.1); /* Эффект стекла */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
   position: relative;
   display: flex;
-  flex-direction: column;         /* Элементы внутри (чат, футер) идут сверху вниз */
-  overflow: hidden;               /* Чтобы контент не вылезал за скругленные углы */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Тень для объема */
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* --- КНОПКА ЗАКРЫТИЯ (КРЕСТИК) --- */
+/* КНОПКА ЗАКРЫТИЯ (КРЕСТИК) */
 .modal-closeBtn {
   position: absolute;
   top: 20px;
@@ -36,55 +35,53 @@
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 10;                    /* Всегда поверх сообщений */
-  padding: 5px;
+  z-index: 10;
 }
 
 .modal-closeBtn img {
   width: 30px;
   height: 30px;
-  object-fit: contain;
 }
 
-/* --- ИСТОРИЯ ЧАТА (ОБЛАСТЬ СООБЩЕНИЙ) --- */
+/* ИСТОРИЯ ЧАТА */
 .modal-chatHistory {
-  flex: 1;                        /* Занимает всё свободное место сверху до футера */
+  flex: 1;
   padding: 25px;
-  overflow-y: auto;               /* Прокрутка сообщений, если их много */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-/* --- СТИЛЬ СООБЩЕНИЯ ОТ БОТА --- */
+/* СООБЩЕНИЕ БОТА */
 .modal-botMessage {
-  align-self: flex-start;         /* Прижато к левому краю */
-  background: rgba(255, 255, 255, 0.15); /* Фон сообщения чуть светлее основного стекла */
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.15);
   padding: 12px 18px;
-  border-radius: 18px 18px 18px 5px; /* Скругление (левый нижний угол острее) */
+  border-radius: 18px 18px 18px 5px;
   color: white;
   font-family: 'Manrope', sans-serif;
   font-size: 16px;
-  max-width: 85%;                 /* Чтобы текст не растягивался на всю ширину */
+  max-width: 85%;
   line-height: 1.4;
 }
 
-/* --- НИЖНЯЯ ПАНЕЛЬ (ФУТЕР) --- */
+/* --- ТВОЙ ОРИГИНАЛЬНЫЙ ФУТЕР (ПАНЕЛЬ ВВОДА) --- */
 .modal-footerControls {
   padding: 20px;
   display: flex;
-  align-items: flex-end;          /* Выравниваем элементы по нижней линии */
-  gap: 12px;                      /* Расстояние между полем ввода и зеленой кнопкой */
-  background: rgba(0, 0, 0, 0.1); /* Слегка подсвеченная область ввода */
+  align-items: flex-end; /* Выравнивание по нижней линии */
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.1);
 }
 
-/* --- ОБЕРТКА ПОЛЯ ВВОДА --- */
+/* ОБЕРТКА ПОЛЯ ВВОДА */
 .modal-inputWrapper {
-  flex: 1;                        /* Поле ввода занимает всю ширину кроме кнопки */
+  flex: 1;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   display: flex;
-  align-items: center;            /* Центрируем иконку меню и текст по вертикали */
+  align-items: center;
   padding: 8px 15px;
   min-height: 50px;
 }
@@ -95,10 +92,9 @@
   height: 24px;
   margin-right: 12px;
   cursor: pointer;
-  opacity: 0.8;
 }
 
-/* ТЕКСТОВАЯ ОБЛАСТЬ (INPUT) */
+/* ТЕКСТОВАЯ ОБЛАСТЬ */
 .modal-textArea {
   flex: 1;
   background: none;
@@ -106,55 +102,49 @@
   color: white;
   font-family: 'Manrope', sans-serif;
   font-size: 15px;
-  resize: none;                   /* Запрещаем пользователю менять размер вручную */
-  outline: none;                  /* Убираем синюю рамку при фокусе */
-  max-height: 100px;              /* Чтобы поле не выросло на пол-экрана */
+  resize: none;
+  outline: none;
   padding: 5px 0;
 }
 
 .modal-textArea::placeholder {
-  color: rgba(255, 255, 255, 0.5); /* Цвет подсказки */
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* --- ЗЕЛЕНАЯ КНОПКА ДЕЙСТВИЯ (СПРАВА) --- */
+/* --- ТВОЯ ЗЕЛЕНАЯ КНОПКА (СПРАВА) --- */
 .modal-actionButton {
   width: 50px;
   height: 50px;
-  background-color: #48BF48;      /* Твой фирменный зеленый */
+  background-color: #48BF48; /* Твой фирменный зеленый */
   border-radius: 15px;
   border: none;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  flex-shrink: 0;                 /* Кнопка не должна сжиматься */
-  transition: transform 0.2s;     /* Анимация при нажатии */
+  flex-shrink: 0;
 }
 
-.modal-actionButton:active {
-  transform: scale(0.95);         /* Эффект нажатия (уменьшение) */
-}
-
-/* ИКОНКИ ВНУТРИ ЗЕЛЕНОЙ КНОПКИ */
+/* ИКОНКИ ВНУТРИ КНОПКИ */
 .modal-iconAudio, .modal-iconSend {
   width: 25px;
   height: 25px;
-  object-fit: contain;
   filter: brightness(0) invert(1); /* Делаем иконки белыми */
 }
 
-/* --- СТИЛИ ДЛЯ РЕЖИМА ВИДЕО-АВАТАРА (VideoView) --- */
+/* --- СЕКЦИЯ ДЛЯ ВИДЕО-РЕЖИМА (БУДУЩЕГО) --- */
 .videoContainer {
   flex: 1;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
   position: relative;
+  background: #000; /* Черный фон для видео */
 }
 
 .avatarVideo {
   width: 100%;
   height: 100%;
-  object-fit: cover;             /* Видео заполняет весь контейнер */
+  object-fit: cover;
 }
