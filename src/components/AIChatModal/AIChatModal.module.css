@@ -24,19 +24,20 @@
 
 /* Стили для кнопки-крестика в верхнем углу */
 .modal-closeBtn {
-    position: absolute;
-    top: 20px; /* Отступ 20px от верха */
-    right: 20px; /* Отступ 20px от правого края */
-    width: 34px;
-    height: 34px;
-    background: rgba(0, 0, 0, 0.1); /* Легкая тень под кнопкой */
+     position: absolute;
+    top: 2.73vw; /* 12px от верха изображения */
+    right: 2.73vw; /* 12px от правого края изображения */
+    width: 4.73vw; /* 34px */
+    height: 4.73vw; /* 34px */
+    background: none;
     border: none;
-    border-radius: 50%; /* Круглая кнопка */
+    padding: 0;
+    z-index: 12; 
+    
+    /* 4. Убираем "прилипание" к краям смартфона */
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    z-index: 10;
 }
 
 /* Иконка внутри крестика */
