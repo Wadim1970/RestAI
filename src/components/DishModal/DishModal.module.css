@@ -1,407 +1,362 @@
+/* Основной фон-подложка, затемняющий всё за модальным окном */
 .overlay {
- position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 99999;
-    
-    display: flex;
-    flex-direction: column;
-    
-    /* Разрешаем вертикальный скролл, если контент модалки длинный */
-    overflow-y: auto;
-    
-    /* Плавный скролл для iOS */
-    -webkit-overflow-scrolling: touch;
-    
-    /* Зазор 30px сверху */
-    padding-top: 30px;
-
-    /* --- НОВЫЕ СТРОЧКИ ДЛЯ БЛОКИРОВКИ ПЕРЕЗАГРУЗКИ --- */
-    
-    /* 1. Запрещает браузеру вызывать обновление страницы (Pull-to-refresh) 
-       и "резиновый" эффект прокрутки на Android/iOS */
-    overscroll-behavior-y: none; 
-
-    /* 2. Сообщает браузеру, что мы сами обрабатываем касания. 
-       pan-y позволяет прокрутку по вертикали, но запрещает системные жесты браузера */
-    touch-action: pan-y;
+    position: fixed; /* Фиксируем на экране */
+    top: 0; /* Прижимаем к верху */
+    left: 0; /* Прижимаем к левому краю */
+    width: 100%; /* Растягиваем на всю ширину */
+    height: 100%; /* Растягиваем на всю высоту */
+    background: rgba(0, 0, 0, 0.7); /* Черный цвет с прозрачностью 70% */
+    z-index: 99999; /* Выводим на самый передний план */
+    display: flex; /* Используем флексбокс для выравнивания содержимого */
+    flex-direction: column; /* Элементы внутри идут вертикально */
+    overflow-y: auto; /* Разрешаем прокрутку, если контент длинный */
+    -webkit-overflow-scrolling: touch; /* Плавный скролл для iOS устройств */
+    padding-top: 30px; /* Отступ 30px сверху, чтобы модалка не липла к краям */
+    overscroll-behavior-y: none; /* Запрещаем обновление страницы потянув вниз (Pull-to-refresh) */
+    touch-action: pan-y; /* Разрешаем только вертикальную прокрутку пальцем */
 }
 
+/* Псевдоэлемент для правильного прижатия контента к низу */
 .overlay::before {
-    content: "";
-    display: inline-block;
-    height: 100%;
-    vertical-align: bottom;
+    content: ""; /* Пустой контент */
+    display: inline-block; /* Строчно-блочный тип */
+    height: 100%; /* Высота на весь родитель */
+    vertical-align: bottom; /* Выравнивание по нижней границе */
 }
 
+/* Белое окно самой модалки */
 .modal {
-   width: calc(100% - 20px); 
-    max-width: 420px; 
-    background-color: #FBFBF9;
-    border-radius: 4.54vw 4.54vw 0 0;
-    position: relative;
-
-    margin-left: auto;
-    margin-right: auto;
-
-    /* МАГИЯ ЗДЕСЬ: margin-top: auto прижимает модалку к низу оверлея, 
-       но позволяет скроллить вверх, если она длинная */
-    margin-top: auto; 
-
-    height: auto; 
-    flex-shrink: 0; 
-
-    padding-bottom: 50px; 
-    /* "Хвост" фона вниз */
-    box-shadow: 0 500px 0 0 #FBFBF9; 
-
-    /* Анимация выезда ровно снизу экрана */
-    animation: slideUp 0.3s ease-out;
-    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    width: calc(100% - 20px); /* Ширина: весь экран минус 20px отступов */
+    max-width: 420px; /* Максимальная ширина для больших экранов */
+    background-color: #FBFBF9; /* Твой основной фоновый цвет слоновой кости */
+    border-radius: 4.54vw 4.54vw 0 0; /* Скругление верхних углов (20px при 440px ширины) */
+    position: relative; /* База для позиционирования элементов внутри */
+    margin-left: auto; /* Центрирование по горизонтали */
+    margin-right: auto; /* Центрирование по горизонтали */
+    margin-top: auto; /* Прижимает модалку к самому низу оверлея */
+    height: auto; /* Высота зависит от контента */
+    flex-shrink: 0; /* Запрещаем сжатие элемента внутри флекс-контейнера */
+    padding-bottom: 50px; /* Отступ снизу для текста */
+    box-shadow: 0 500px 0 0 #FBFBF9; /* Декоративная тень вниз, создающая бесконечный фон */
+    animation: slideUp 0.3s ease-out; /* Анимация выезда снизу вверх */
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); /* Плавный переход для закрытия */
 }
 
+/* Определение анимации появления */
 @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+    from { transform: translateY(100%); } /* Начало: полностью за нижним краем */
+    to { transform: translateY(0); } /* Конец: на своем месте */
 }
 
+/* Класс для анимации закрытия (уезда вниз) */
 .slideDown {
-    transform: translateY(100%) !important;
-    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    transform: translateY(100%) !important; /* Сдвиг вниз */
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* Плавность */
 }
 
+/* Класс для плавного исчезновения фона при закрытии */
 .fadeOut {
-    background: rgba(0, 0, 0, 0) !important;
-    transition: background 0.3s ease !important;
+    background: rgba(0, 0, 0, 0) !important; /* Делаем фон полностью прозрачным */
+    transition: background 0.3s ease !important; /* Плавность затемнения */
 }
 
+/* Контейнер для главного изображения блюда */
 .imageContainer {
-    position: relative;
-    /* 396px -> 90vw */
-    width: 90vw !important; 
-    height: 90vw !important;
-    
-    /* Отступы 12px сверху и центрирование */
-    margin: 2.73vw auto 0 auto !important; 
-    
-    /* Скругление 10px */
-    border-radius: 2.27vw !important;
-    
-    /* КРИТИЧНО: Чтобы картинка не вываливалась */
-    overflow: hidden !important;
-    
-    /* Как на главной: гарантируем квадрат через aspect-ratio */
-    aspect-ratio: 1 / 1;
-    
-    /* Защита от флекс-сжатия */
-    flex-shrink: 0;
-    background-color: transparent;
+    position: relative; /* Для позиционирования крестика и ценника внутри */
+    width: 90vw !important; /* Ширина 90% от ширины экрана */
+    height: 90vw !important; /* Высота равна ширине для идеального квадрата */
+    margin: 2.73vw auto 0 auto !important; /* 12px сверху и центрирование */
+    border-radius: 2.27vw !important; /* Скругление углов 10px */
+    overflow: hidden !important; /* Скрываем края картинки, выходящие за скругления */
+    aspect-ratio: 1 / 1; /* Соотношение сторон 1 к 1 */
+    flex-shrink: 0; /* Защита от деформации */
+    background-color: transparent; /* Прозрачный фон под картинкой */
 }
 
+/* Сама картинка блюда */
 .mainImage {
-   /* Точно как на главной странице */
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100%;
-    max-height: 100%;
-    display: block;
-    
-    /* ИЗМЕНЕНО: Используем contain, чтобы картинка вписалась в 396x396 */
-    /* Если хочешь, чтобы еда была на весь квадрат без полей — ставь cover */
-    object-fit: contain; 
-    
-    /* Убираем влияние на скролл и клики */
-    pointer-events: none;
+    width: 100% !important; /* Растягиваем на всю ширину контейнера */
+    height: 100% !important; /* Растягиваем на всю высоту контейнера */
+    max-width: 100%; /* Ограничение по ширине */
+    max-height: 100%; /* Ограничение по высоте */
+    display: block; /* Убираем нижний зазор строчного элемента */
+    object-fit: contain; /* Картинка полностью вписывается без обрезки */
+    pointer-events: none; /* Запрещаем клики по самой картинке (для свайпов) */
 }
 
+/* Серая полоска (индикатор) вверху картинки */
 .dragLine {
-    position: absolute;
-    top: 6.4vw; /* 24px от верха изображения */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 23.09vw; /* не 150px другой размер */
-    height: 0.91vw; /* 4px */
-    background-color: #E5E0D4;
-    border-radius: 0.45vw;
-    z-index: 11
+    position: absolute; /* Абсолютное положение поверх картинки */
+    top: 6.4vw; /* 28px от верхнего края изображения */
+    left: 50%; /* Ставим в центр по горизонтали */
+    transform: translateX(-50%); /* Точная центровка по оси X */
+    width: 23.09vw; /* Ширина полоски (примерно 100px) */
+    height: 0.91vw; /* Высота полоски 4px */
+    background-color: #E5E0D4; /* Бежевый цвет полоски */
+    border-radius: 0.45vw; /* Закругление концов полоски 2px */
+    z-index: 11; /* Слой выше изображения */
 }
 
+/* Кнопка закрытия (крестик) на картинке */
 .closeBtn {
-    position: absolute;
-    top: 2.73vw; /* 12px от верха изображения */
-    right: 2.73vw; /* 12px от правого края изображения */
-    width: 24px; /* 34px */
-    height: 24px; /* 34px */
-    background: none;
-    border: none;
-    padding: 0;
-    z-index: 12; 
-    
-    /* 4. Убираем "прилипание" к краям смартфона */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute; /* Абсолютное положение */
+    top: 2.73vw; /* 12px от верха картинки */
+    right: 2.73vw; /* 12px от правого края картинки */
+    width: 24px; /* Фиксированная ширина */
+    height: 24px; /* Фиксированная высота */
+    background: none; /* Без фона */
+    border: none; /* Без рамок */
+    padding: 0; /* Без внутренних отступов */
+    z-index: 12; /* Слой выше всех элементов на картинке */
+    display: flex; /* Для центровки иконки внутри */
+    align-items: center; /* Центровка по вертикали */
+    justify-content: center; /* Центровка по горизонтали */
 }
 
+/* Иконка крестика */
 .closeBtn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    width: 100%; /* На всю ширину кнопки */
+    height: 100%; /* На всю высоту кнопки */
+    object-fit: contain; /* Сохраняем пропорции иконки */
 }
 
+/* Плашка с ценой на картинке */
 .priceTag {
-    position: absolute;
-    /* 6px -> 1.36vw */
-    left: 1.36vw;
-    bottom: 1.36vw;
-    /* 140px -> 31.82vw, 56px -> 12.73vw */
-    width: 31.82vw;
-    height: 12.73vw;
-    background-color: #E5E0D4;
-    border-radius: 1.82vw;
-    display: flex;
+    position: absolute; /* Поверх изображения */
+    left: 1.36vw; /* 6px от левого края */
+    bottom: 1.36vw; /* 6px от нижнего края */
+    width: 31.82vw; /* Ширина плашки ~140px */
+    height: 12.73vw; /* Высота плашки ~56px */
+    background-color: #E5E0D4; /* Цвет плашки бежевый */
+    border-radius: 1.82vw; /* Скругление 8px */
+    display: flex; /* Контент внутри в колонку */
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: center; /* Центровка текста */
+    justify-content: center; /* Центровка текста */
 }
 
+/* Текст цены */
 .priceText {
-    /* 24px -> 5.45vw */
-    font-size: 5.45vw;
-    font-weight: bold;
-    color: #304D22;
-    margin-top: 1.13vw; /* Отступ 5px */
+    font-size: 5.45vw; /* Размер текста 24px */
+    font-weight: bold; /* Жирный шрифт */
+    color: #304D22; /* Темно-зеленый цвет */
+    margin-top: 1.13vw; /* Отступ 5px сверху */
 }
 
+/* Текст веса/объема */
 .weightText {
-    /* 16px -> 3.64vw */
-    font-size: 3.64vw;
-    font-weight: 400;
-    color: #304D22;
+    font-size: 3.64vw; /* Размер текста 16px */
+    font-weight: 400; /* Обычная толщина */
+    color: #304D22; /* Темно-зеленый цвет */
 }
 
+/* Контейнер для текстовой информации */
 .content {
-    text-align: center;
-    /* 12px -> 2.73vw */
-    padding: 0 2.73vw;
+    text-align: center; /* Выравнивание всего текста по центру */
+    padding: 0 2.73vw; /* 12px отступы по бокам */
 }
 
+/* Заголовки секций (Описание, Состав и т.д.) */
 .sectionTitle {
-    /* 20px -> 4.55vw */
-    font-size: 4.55vw;
-    font-weight: bold;
-    color: black;
-    /* 18px -> 4.09vw */
-    margin-top: 4.09vw;
-    /* 8px -> 1.82vw */
-    margin-bottom: 1.82vw;
+    font-size: 4.55vw; /* Размер 20px */
+    font-weight: bold; /* Жирный */
+    color: black; /* Черный цвет */
+    margin-top: 4.09vw; /* 18px отступ сверху */
+    margin-bottom: 1.82vw; /* 8px отступ снизу */
 }
 
+/* Основной текст описания и состава */
 .descriptionText, .ingredientsText {
-    /* 18px -> 4.09vw */
-    font-size: 4.09vw;
-    font-weight: 400;
-    /*межстрочный интервал*/
-    line-height: 1.4;
-    color: black;
-    margin: 0;
+    font-size: 4.09vw; /* Размер 18px */
+    font-weight: 400; /* Обычный */
+    line-height: 1.4; /* Межстрочный интервал для читабельности */
+    color: black; /* Черный */
+    margin: 0; /* Убираем стандартные отступы */
 }
 
+/* Сетка для пищевой ценности (КБЖУ) */
 .nutritionalGrid {
-    display: flex;
-    justify-content: space-between;
-    /* 45px -> 10.23vw */
-    padding: 0.91vw 10.23vw;
+    display: flex; /* В одну строку */
+    justify-content: space-between; /* Распределяем равномерно */
+    padding: 0.91vw 10.23vw; /* 4px сверху/снизу, 45px по бокам */
 }
 
+/* Отдельный элемент КБЖУ (цифра + подпись) */
 .nutriItem {
-    display: flex;
+    display: flex; /* В колонку */
     flex-direction: column;
-    align-items: center;
+    align-items: center; /* Центрируем */
 }
 
+/* Значение (цифра) КБЖУ */
 .nutriValue {
-    /* 20px -> 4.55vw */
-    font-size: 4.55vw;
-    font-weight: bold;
+    font-size: 4.55vw; /* 20px */
+    font-weight: bold; /* Жирный */
 }
 
+/* Подпись (белки, жиры и т.д.) */
 .nutriLabel {
-    /* 16px -> 3.64vw */
-    font-size: 3.64vwvw;
-    font-weight: 300;
-    /* 4px -> 0.91vw */
-    margin-top: 0.91vw;
-}
-
-/* --- Кнопки --- */
-.buttonActionGroup {
-   display: flex;
-    align-items: center;
-    /* 12px -> 2.73vw отступ от краев группы кнопок */
-    padding: 5.91vw 2.73vw 0 2.73vw;
-    width: 100%;
-    box-sizing: border-box;
-}
-/*кнопки из этого кода*/
-.chatButton {
-    position: relative;
-    /* Кнопка чуть больше аватара */
-    width: 27.27vw;  /* ~120px */
-    height: 13.64vw;  /* ~60px */
-    background-color: #304D22;
-    
-    /* Скругления (твои параметры) */
-    border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; 
-    border: none;
-    margin-right: 2.73vw;
-    padding: 0;
-    flex-shrink: 0;
-    cursor: pointer;
-    
-    /* Гарантируем, что аватар будет центрирован */
-    display: block;
-    /* Возможно прийдется удалить: */
-    align-items: center;
-    justify-content: center;
-}
-
-.chatAvatar {
-    /* Аватар на 2-4 пикселя меньше кнопки, чтобы была видна зеленая рамка */
-    width: 12.73vw;  /* ~56px (было 12.73) */
-    height: 12.73vw; /* ~56px (было 12.73) */
-    
-    /* Скругления аватара (твои параметры) */
-    border-radius: 6.82vw 8.41vw 8.41vw 3.41vw; 
-    
-    object-fit: cover;
-    display: block;
-    
-    /* Убираем absolute, так как используем flex родителя для центровки */
-    position: relative;
-    left: 0.23vw;
-    top: 0;
-}
-
-.buttonActionGroup {
-    display: flex;
-    align-items: center;
-    /* 12px -> 2.73vw отступ от краев группы кнопок */
-    padding: 5.91vw 2.73vw 0 2.73vw;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.addToCartBtn, .counterBtn {
-    margin-left: auto; 
-    width: 50vw;      /* Твои 220px */
-    height: 13.64vw;  /* СТАЛО: 60px (было 12.27) */
-    
-    border-radius: 6.82vw;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box; 
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.addToCartBtn {
-    background-color: #48BF48;
-    color: white;
-    border: 0.68vw solid #48BF48; /* Добавляем прозрачную или цветную рамку той же толщины */
-    font-weight: bold;
     font-size: 3.64vw; /* 16px */
-    padding: 0;
+    font-weight: 300; /* Тонкий шрифт */
+    margin-top: 0.91vw; /* 4px отступ от цифры */
 }
 
-.counterBtn {
-    background-color: white;
-    /* Та же толщина рамки, что и у кнопки выше (0.68vw ~ 3px) */
-    border: 0.68vw solid #304D22; 
-    justify-content: space-between;
-    padding: 0 3.41vw; /* Внутренние отступы для иконок */
+/* Группа кнопок внизу модалки */
+.buttonActionGroup {
+    display: flex; /* В одну строку */
+    align-items: center; /* Выравнивание по центру по вертикали */
+    padding: 5.91vw 2.73vw 0 2.73vw; /* 26px сверху, 12px по бокам */
+    width: 100%; /* На всю ширину модалки */
+    box-sizing: border-box; /* Учитываем паддинги в ширине */
 }
+
+/* Кнопка вызова чата (зеленая с аватаром) */
+.chatButton {
+    position: relative; /* Для позиционирования аватара внутри */
+    width: 27.27vw; /* Ширина ~120px */
+    height: 13.64vw; /* Высота ~60px */
+    background-color: #304D22; /* Темно-зеленый фон */
+    border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; /* Уникальное скругление */
+    border: none; /* Без рамок */
+    margin-right: 2.73vw; /* 12px отступ до кнопки заказа */
+    padding: 0; /* Без внутренних отступов */
+    flex-shrink: 0; /* Запрещаем сжатие */
+    cursor: pointer; /* Курсор при наведении */
+    display: block; /* Блочный элемент */
+}
+
+/* Аватар нейросети внутри кнопки */
+.chatAvatar {
+    width: 12.73vw; /* Размер ~56px */
+    height: 12.73vw; /* Размер ~56px */
+    border-radius: 6.82vw 8.41vw 8.41vw 3.41vw; /* Скругления аватара */
+    object-fit: cover; /* Заполнение области картинкой */
+    display: block; /* Убираем зазоры */
+    position: relative; /* Позиция */
+    left: 0.23vw; /* Сдвиг 1px для идеальной центровки */
+    top: 0; /* По вертикали */
+}
+
+/* Общие стили для кнопок "Добавить" и "Счетчик" */
+.addToCartBtn, .counterBtn {
+    margin-left: auto; /* Прижимаем к правому краю группы */
+    width: 50vw; /* Ширина 220px */
+    height: 13.64vw; /* Высота 60px */
+    border-radius: 6.82vw; /* Круглые края */
+    display: flex; /* Для центровки содержимого */
+    align-items: center; /* Центровка по вертикали */
+    justify-content: center; /* Центровка по горизонтали */
+    box-sizing: border-box; /* Учет рамки в размере */
+    transition: all 0.2s ease; /* Плавность эффектов */
+    flex-shrink: 0; /* Защита от сжатия */
+}
+
+/* Кнопка "Добавить в заказ" с правкой окантовки */
+.addToCartBtn {
+    background-color: #48BF48; /* Ярко-зеленый фон */
+    color: white; /* Белый текст */
+    border: 1px solid #304D22; /* Твоя правка: внутренняя окантовка 1px темно-зеленого цвета */
+    font-weight: bold; /* Жирный текст */
+    font-size: 3.64vw; /* Размер 16px */
+    padding: 0; /* Убираем отступы */
+}
+
+/* Кнопка-счетчик (когда товар уже добавлен) */
+.counterBtn {
+    background-color: white; /* Белый фон */
+    border: 0.68vw solid #304D22; /* Толстая темно-зеленая рамка 3px */
+    justify-content: space-between; /* Элементы по краям (+ и -) */
+    padding: 0 3.41vw; /* 15px отступы внутри для иконок */
+}
+
+/* Число порций в счетчике */
 .countNumber {
     font-size: 4.09vw; /* 18px */
-    font-weight: bold;
-    color: #304D22;
-    min-width: 5.68vw;
-    text-align: center;
+    font-weight: bold; /* Жирный */
+    color: #304D22; /* Темно-зеленый */
+    min-width: 5.68vw; /* Мин. ширина, чтобы не прыгало при смене цифр */
+    text-align: center; /* По центру */
 }
-/* Стили для иконок внутри кнопок */
+
+/* Иконки плюс и минус */
 .controlIcon {
     width: 4.77vw; /* 21px */
-    height: 4.77vw;
-    object-fit: contain;
+    height: 4.77vw; /* 21px */
+    object-fit: contain; /* Сохранение пропорций */
 }
 
+/* Прозрачные обертки для иконок управления */
 .minusBtn, .plusBtn {
-    background: none;
-    border: none;
-    padding: 0;
-    display: flex;
+    background: none; /* Прозрачно */
+    border: none; /* Без границ */
+    padding: 0; /* Без отступов */
+    display: flex; /* Центровка иконки */
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    cursor: pointer; /* Курсор */
 }
 
-/* Алкогольная специфика */
+/* Стили для алкогольной продукции */
 .alcoholContent {
-    text-align: left !important;
-    padding: 0 !important;
+    text-align: left !important; /* Выравнивание влево */
+    padding: 0 !important; /* Убираем отступы */
 }
 
+/* Контейнер алкогольного описания */
 .alcoholWrapper {
-    padding-top: 9.09vw; /* 40px от картинки */
+    padding-top: 9.09vw; /* 40px отступ от изображения */
 }
 
+/* Название алкоголя */
 .alcoholTitle {
     font-size: 5.45vw; /* 24px */
-    font-weight: 600;
-    margin-left: 5vw; /* 22px */
-    width: 87.5vw; /* 385px */
-    line-height: 1.2;
-    margin-bottom: 4.55vw; /* 20px до характеристик */
+    font-weight: 600; /* Полужирный */
+    margin-left: 5vw; /* 22px отступ слева */
+    width: 87.5vw; /* Ограничение ширины текста */
+    line-height: 1.2; /* Интервал */
+    margin-bottom: 4.55vw; /* 20px до начала характеристик */
 }
 
+/* Блок с характеристиками (Страна, Виноград и т.д.) */
 .specsContainer {
-    margin-bottom: 4.55vw;
+    margin-bottom: 4.55vw; /* 20px отступ снизу */
 }
 
+/* Строка характеристики */
 .specRow {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 5vw; /* 22px отступы */
+    display: flex; /* В одну линию */
+    justify-content: space-between; /* Ключ слева, значение справа */
+    padding: 0 5vw; /* 22px отступы по краям */
     margin-bottom: 1.82vw; /* 8px между строками */
 }
 
+/* Название характеристики (например, "Страна") */
 .specKey {
     font-size: 3.64vw; /* 16px */
-    font-weight: 500;
+    font-weight: 500; /* Средний вес */
 }
 
+/* Значение характеристики (например, "Франция") */
 .specValue {
     font-size: 3.64vw; /* 16px */
-    font-weight: 400;
-    text-align: right;
+    font-weight: 400; /* Обычный */
+    text-align: right; /* По правому краю */
 }
 
+/* Подзаголовки в алкоголе (Описание, Гастрономия) */
 .alcoholSectionLabel {
     font-size: 3.64vw; /* 16px */
-    font-weight: 700;
-    margin-left: 5vw; /* 22px */
-    margin-top: 4.55vw; /* 20px от верхнего текста */
-    margin-bottom: 1.82vw; /* 8px до текста под ним */
+    font-weight: 700; /* Жирный */
+    margin-left: 5vw; /* 22px отступ */
+    margin-top: 4.55vw; /* 20px сверху */
+    margin-bottom: 1.82vw; /* 8px снизу */
 }
 
+/* Текстовые блоки алкоголя */
 .alcoholText {
     font-size: 3.64vw; /* 16px */
-    font-weight: 300;
-    margin-left: 5vw; /* 22px */
-    width: 88.64vw; /* 390px */
-    line-height: 1.4;
+    font-weight: 300; /* Тонкий */
+    margin-left: 5vw; /* 22px отступ */
+    width: 88.64vw; /* Ширина блока текста */
+    line-height: 1.4; /* Интервал */
 }
