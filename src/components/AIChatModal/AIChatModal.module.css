@@ -58,48 +58,49 @@
 }
 
 /* Контейнер для нижних элементов управления */
+/* Контейнер всей нижней панели */
 .modal-footerControls {
-   display: flex;
-  align-items: flex-end; /* Все элементы внутри (поле и кнопка) прижаты к низу */
-  gap: 10px;
-  padding: 15px;
+    display: flex;
+    /* ИЗМЕНЕНО: прижимаем к низу, чтобы при увеличении высоты поле росло ВВЕРХ */
+    align-items: flex-end; 
+    padding: 0 12px;
+    margin-bottom: 58px;
+    gap: 6px;
 }
 
 /* Оболочка поля ввода с белым фоном */
 .modal-inputWrapper {
-   flex: 1;
-  display: flex;
-  align-items: flex-end; /* Само поле внутри обертки тоже прижато к низу */
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 8px 12px;
+    position: relative;
+    flex: 1;
+    /* ИЗМЕНЕНО: меняем height на min-height, чтобы поле могло растягиваться */
+    min-height: 58px; 
+    background: #FFFFFF;
+    /* Твои специфические радиусы скругления СОХРАНЕНЫ */
+    border-radius: 28px 31px 31px 15px;
+    display: flex;
+    align-items: flex-end;
 }
 
-/* Иконка меню внутри текстового поля */
-.modal-menuInInput {
-    position: absolute;
-    left: 12px;
-    top: 14px;
-    width: 31px;
-    height: 31px;
-    cursor: pointer;
-    /* Перекрашиваем иконку в темно-зеленый цвет через фильтры */
-    filter: brightness(0) saturate(100%) invert(23%) sepia(16%) saturate(1324%) hue-rotate(58deg) brightness(96%) contrast(89%);
-}
+/* .modal-menuInInput УДАЛЕН ОТСЮДА ПО ТВОЕМУ ЗАПРОСУ */
 
 /* Сама область ввода текста */
 .modal-textArea {
-   flex: 1;
-  background: transparent;
-  border: none;
-  color: white;
-  resize: none; /* Запрещаем пользователю вручную дергать за угол поля */
-  outline: none;
-  font-family: inherit;
-  font-size: 16px;
-  line-height: 1.4;
-  max-height: 150px; /* Ограничиваем рост, чтобы не вылезло за пределы */
-  overflow-y: auto; /* Если текста больше 150px, появится внутренняя прокрутка */
+    width: 100%;
+    /* ИЗМЕНЕНО: убираем фиксированные 100%, чтобы JS мог управлять высотой */
+    height: auto; 
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    /* ИЗМЕНЕНО: убрали отступ слева 50px (так как иконки больше нет) и сделали симметричные отступы */
+    padding: 18px 15px; 
+    font-size: 16px;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+    /* ДОБАВЛЕНО: ограничиваем максимальный рост, чтобы не перекрыть весь экран */
+    max-height: 150px; 
+    overflow-y: auto;
+    line-height: 1.4;
 }
 
 /* Зеленая круглая кнопка действия */
