@@ -122,7 +122,7 @@
     top: 6.4vw; /* 24px от верха изображения */
     left: 50%;
     transform: translateX(-50%);
-    width: 34.09vw; /* 150px */
+    width: 23.09vw; /* не 150px другой размер */
     height: 0.91vw; /* 4px */
     background-color: #E5E0D4;
     border-radius: 0.45vw;
