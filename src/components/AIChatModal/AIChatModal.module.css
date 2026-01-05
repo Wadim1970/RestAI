@@ -5,36 +5,34 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 999999; /* Самый высокий слой поверх всего */
-    overflow: hidden; /* Чтобы под окном ничего не скроллилось */
+    z-index: 999999; 
+    overflow: hidden; 
 }
 
 /* Стеклянный контейнер с размытием */
 .modal-glassContainer {
     width: 100%;
-    height: 100dvh; /* Высота подстраивается под экран смартфона с учетом браузерных панелей */
-    background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность 0.2 */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Фирменный эффект стекла */
+    height: 100dvh; 
+    background-color: rgba(255, 255, 255, 0.2); 
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); 
     backdrop-filter: blur(20px) saturate(150%) contrast(100%);
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Все элементы ввода прижимаем к низу */
-    position: relative; /* Чтобы крестик позиционировался относительно этого окна */
+    justify-content: flex-end; 
+    position: relative; 
 }
 
 /* Стили для кнопки-крестика в верхнем углу */
 .modal-closeBtn {
-     position: absolute;
-    top: 5.45vw; /* 12px от верха изображения */
-    right: 5.45vw; /* 12px от правого края изображения */
-    width: 4.73vw; /* 34px */
-    height: 4.73vw; /* 34px */
+    position: absolute;
+    top: 5.45vw; 
+    right: 5.45vw; 
+    width: 7.73vw; /* Немного увеличил для удобства нажатия, было 4.73 */
+    height: 7.73vw; 
     background: none;
     border: none;
     padding: 0;
-    z-index: 12; 
-    
-    /* 4. Убираем "прилипание" к краям смартфона */
+    z-index: 100; /* Поднял z-index, чтобы был выше видео */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -47,57 +45,99 @@
     object-fit: contain;
 }
 
+/* --- НОВЫЙ БЛОК: Кнопка переключения на текст (Зеленая, слева) --- */
+.modal-switchToTextBtn {
+    position: absolute;
+    top: 5.45vw;
+    left: 5.45vw;
+    width: 11vw; /* Примерно 48px на экране 440px */
+    height: 11vw;
+    background-color: #48BF48;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100; /* Поверх видео */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.modal-switchToTextBtn img {
+    width: 50%;
+    height: 50%;
+    filter: brightness(0) invert(1); /* Делаем иконку белой */
+}
+
 /* Область сообщений чата */
 .modal-chatHistory {
-    flex: 1; /* Занимает всё свободное место */
-    padding: 70px 20px 20px 20px; /* Верхний отступ 70px, чтобы текст не залез под крестик */
-    overflow-y: auto; /* Разрешаем скролл сообщений */
+    flex: 1; 
+    padding: 70px 20px 20px 20px; 
+    overflow-y: auto; 
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative; /* Для позиционирования видео внутри */
 }
 
-/* Контейнер для нижних элементов управления */
+/* --- НОВЫЙ БЛОК: Контейнер для видео-аватара --- */
+.videoWrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000; /* Черный фон пока нет видео */
+    z-index: 50; /* Ниже кнопок управления, но выше чата */
+}
+
+.videoPlaceholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.statusText {
+    color: #48BF48;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    opacity: 0.7;
+}
+
 /* Контейнер всей нижней панели */
 .modal-footerControls {
     display: flex;
-    /* ИЗМЕНЕНО: прижимаем к низу, чтобы при увеличении высоты поле росло ВВЕРХ */
     align-items: flex-end; 
     padding: 0 12px;
     margin-bottom: 58px;
     gap: 6px;
+    z-index: 60; /* Чтобы панель была поверх видео, если решишь её оставить */
 }
 
 /* Оболочка поля ввода с белым фоном */
 .modal-inputWrapper {
     position: relative;
     flex: 1;
-    /* ИЗМЕНЕНО: меняем height на min-height, чтобы поле могло растягиваться */
     min-height: 58px; 
     background: #FFFFFF;
-    /* Твои специфические радиусы скругления СОХРАНЕНЫ */
     border-radius: 28px 31px 31px 15px;
     display: flex;
     align-items: flex-end;
 }
 
-/* .modal-menuInInput УДАЛЕН ОТСЮДА ПО ТВОЕМУ ЗАПРОСУ */
-
 /* Сама область ввода текста */
 .modal-textArea {
     width: 100%;
-    /* ИЗМЕНЕНО: убираем фиксированные 100%, чтобы JS мог управлять высотой */
     height: auto; 
     background: transparent;
     border: none;
     outline: none;
     resize: none;
-    /* ИЗМЕНЕНО: убрали отступ слева 50px (так как иконки больше нет) и сделали симметричные отступы */
     padding: 18px 15px; 
     font-size: 16px;
     box-sizing: border-box;
     font-family: 'Inter', sans-serif;
-    /* ДОБАВЛЕНО: ограничиваем максимальный рост, чтобы не перекрыть весь экран */
     max-height: 150px; 
     overflow-y: auto;
     line-height: 1.4;
@@ -113,8 +153,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-shrink: 0; /* Чтобы кнопка не сжималась при длинном тексте */
-    box-shadow: inset 0 0 0 1px #E5E0D4; /* Легкая внутренняя обводка */
+    flex-shrink: 0; 
+    box-shadow: inset 0 0 0 1px #E5E0D4; 
+    z-index: 60;
 }
 
 /* Размеры иконок внутри зеленой кнопки */
@@ -126,7 +167,7 @@
     background: white;
     padding: 12px 16px;
     border-radius: 12px 12px 12px 0;
-    align-self: flex-start; /* Прижимаем к левому краю */
+    align-self: flex-start; 
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
