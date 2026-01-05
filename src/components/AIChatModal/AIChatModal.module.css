@@ -1,57 +1,57 @@
-/* Фиксированный фон на весь экран */
 /* Черный прозрачный фон за модальным окном */
 .modal-overlay {
-    position: fixed; /* Фиксируем на экране */
+    position: fixed; /* Фиксируем поверх всего сайта */
     top: 0; left: 0;
-    width: 100vw; height: 100vh; /* Растягиваем на всю ширину и высоту вьюпорта */
-    z-index: 999999; /* Выводим на самый передний план */
-    overflow: hidden; /* Запрещаем прокрутку страницы под модалкой */
+    width: 100vw; height: 100vh; /* На всю ширину и высоту экрана */
+    z-index: 999999; /* Максимальный слой */
+    overflow: hidden; /* Запрещаем скролл сайта под модалкой */
 }
 
-/* Стеклянный контейнер (сама модалка) */
+/* Основной контейнер модалки с эффектом стекла */
 .modal-glassContainer {
     width: 100%;
-    height: 100dvh; /* Высота под мобильные браузеры (с учетом панелей навигации) */
-    background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие заднего фона (iOS) */
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие заднего фона (остальные) */
+    height: 100dvh; /* Высота под мобилки с учетом строк поиска в браузере */
+    background-color: rgba(255, 255, 255, 0.2); /* Прозрачность фона */
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие (Safari) */
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
     display: flex;
-    flex-direction: column; /* Элементы идут сверху вниз */
-    justify-content: flex-end; /* Прижимаем содержимое к нижней части экрана */
-    position: relative; /* База для абсолютного позиционирования крестика и видео */
+    flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
+    justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
+    position: relative; /* Чтобы крестик и видео позиционировались внутри */
 }
 
-/* Кнопка закрытия окна */
+/* ПЕРВАЯ КНОПКА: Крестик закрытия */
 .modal-closeBtn {
-    position: absolute; /* Позиционируем точно по координатам */
-    top: 5.45vw; /* Отступ сверху в vw для адаптивности под 440px */
-    right: 5.45vw; /* Отступ справа */
+    position: absolute; /* Ставим в конкретную точку */
+    top: 5.45vw; /* Адаптивный отступ сверху */
+    right: 5.45vw; /* Адаптивный отступ справа */
     width: 7.73vw; height: 7.73vw; /* Размер кнопки */
     background: none; border: none; padding: 0;
-    z-index: 100; /* Ставим выше, чем слой с видео */
+    z-index: 200; /* ВЫШЕ ЧЕМ ВИДЕО (слой 200 против 10) */
     display: flex; align-items: center; justify-content: center;
 }
 
 .modal-closeBtn img {
-    width: 100%; height: 100%; object-fit: contain; /* Картинка вписывается в кнопку */
+    width: 100%; height: 100%; object-fit: contain;
 }
 
-/* Область, где живет чат или видео */
+/* Область текстовых сообщений */
 .modal-chatHistory {
-    flex: 1; /* Занимает всё доступное место между верхом и панелью ввода */
-    padding: 70px 20px 20px 20px; /* Отступы, чтобы текст не упирался в края */
-    overflow-y: auto; /* Если сообщений много — включаем прокрутку */
-    display: flex; flex-direction: column; gap: 12px; /* Расстояние между пузырьками */
-    position: relative; /* Чтобы видео внутри растягивалось относительно этого блока */
+    flex: 1; /* Занимает всё свободное место в центре */
+    padding: 70px 20px 20px 20px; /* Отступ сверху, чтобы текст не был под крестиком */
+    overflow-y: auto; /* Скролл для сообщений */
+    display: flex; flex-direction: column; gap: 12px;
+    z-index: 20; /* Над видео, но под верхними кнопками */
 }
 
-/* Слой с видео (полный экран) */
+/* ВИДЕО НА ВЕСЬ ЭКРАН (БЕЗ СКРУГЛЕНИЙ И ОБРУБКОВ) */
 .videoWrapper {
-    position: absolute; /* Вырываем из потока и растягиваем по родительскому chatHistory */
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; /* Фон, пока видео не загрузилось */
-    z-index: 10; /* Слой ниже кнопок, но выше текстового чата */
-    border-radius: 20px;
+    position: absolute; /* Вырываем из потока и кладем фоном */
+    top: 0; left: 0; 
+    width: 100%; height: 100%; /* Растягиваем на ВСЁ окно модалки */
+    background: #000; /* Черный фон пока видео грузится */
+    z-index: 10; /* Самый нижний слой (под всеми кнопками) */
+    border-radius: 0; /* НИКАКИХ СКРУГЛЕНИЙ (удалил твои 20px) */
     overflow: hidden;
 }
 
@@ -61,66 +61,65 @@
 }
 
 .statusText {
-    color: #48BF48; font-size: 12px; opacity: 0.7; /* Текст ожидания аватара */
+    color: #48BF48; font-size: 14px; opacity: 0.8;
 }
 
-/* Панель управления внизу (инпут + кнопка) */
+/* Панель управления внизу (белое поле + зеленая кнопка) */
 .modal-footerControls {
     display: flex;
-    align-items: flex-end; /* Все элементы растут ВВЕРХ, оставаясь прижатыми к низу */
+    align-items: flex-end; /* Текст и кнопка растут вверх */
     padding: 0 12px;
-    margin-bottom: 58px; /* Твой отступ от низа экрана */
-    gap: 6px; /* Расстояние между белым полем и зеленой кнопкой */
+    margin-bottom: 58px; /* Твой обязательный отступ от низа */
+    gap: 6px; /* Расстояние между полем и кнопкой */
     position: relative;
-    z-index: 110; /* Этот блок всегда должен быть поверх видео */
+    z-index: 200; /* ВТОРАЯ КНОПКА ПОВЕРХ ВИДЕО (слой 200) */
 }
 
-/* Белая оболочка инпута */
+/* Белая оболочка поля ввода */
 .modal-inputWrapper {
     position: relative;
-    flex: 1; /* Растягивается максимально по ширине */
-    min-height: 58px; /* Твоя стартовая высота */
+    flex: 1; /* Растягивается на всю ширину */
+    min-height: 58px; 
     background: #FFFFFF;
-    border-radius: 28px 31px 31px 15px; /* Твои уникальные скругления */
-    display: flex;
-    align-items: flex-end; /* Текст внутри тоже прижат к низу */
+    border-radius: 28px 31px 31px 15px; /* Твои уникальные радиусы инпута */
+    display: flex; align-items: flex-end;
 }
 
 /* Само текстовое поле */
 .modal-textArea {
-    width: 100%; height: auto; /* Высота управляется через JS (ref) */
+    width: 100%; height: auto;
     background: transparent; border: none; outline: none;
-    resize: none; /* Запрещаем пользователю тянуть за угол поля */
-    padding: 18px 15px; /* Внутренние отступы текста */
+    resize: none; /* Запрет растягивать руками */
+    padding: 18px 15px;
     font-size: 16px;
-    box-sizing: border-box; /* Чтобы паддинги не увеличивали ширину */
+    box-sizing: border-box;
     font-family: 'Inter', sans-serif;
-    max-height: 150px; /* Максимальный рост поля, дальше появится скролл */
+    max-height: 150px; /* Поле растет до 150px, потом скролл */
     overflow-y: auto;
     line-height: 1.4;
 }
 
-/* Твоя зеленая круглая кнопка */
+/* ВТОРАЯ КНОПКА: Зеленая круглая кнопка действия */
 .modal-actionButton {
-    width: 58px; height: 58px; /* Фиксированный размер */
-    background-color: #48BF48; /* Твой зеленый цвет */
-    border-radius: 50%; /* Делаем круг */
+    width: 58px; height: 58px;
+    background-color: #48BF48; /* Твой фирменный зеленый */
+    border-radius: 50%; /* Круглая */
     border: none;
     display: flex; justify-content: center; align-items: center;
-    flex-shrink: 0; /* Запрещаем кнопке сжиматься, если инпут станет слишком широким */
-    box-shadow: inset 0 0 0 1px #E5E0D4; /* Твоя внутренняя обводка */
+    flex-shrink: 0; /* Не сжимается */
+    box-shadow: inset 0 0 0 1px #E5E0D4; /* Внутренняя обводка */
 }
 
-/* Стили иконок внутри зеленой кнопки */
-.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); } /* Белый цвет через инверсию */
+/* Иконки внутри кнопки */
+.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
 .modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
 
-/* Пузырек ответа бота */
+/* Сообщение бота (текстовое) */
 .modal-botMessage {
     background: white;
     padding: 12px 16px;
-    border-radius: 12px 12px 12px 0; /* Стиль мессенджера */
-    align-self: flex-start; /* Прижимаем влево */
+    border-radius: 12px 12px 12px 0;
+    align-self: flex-start;
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
