@@ -264,7 +264,7 @@
 /* Кнопка-счетчик (когда товар уже добавлен) */
 .counterBtn {
     background-color: white; /* Белый фон */
-    border: 0.68vw solid #304D22; /* Толстая темно-зеленая рамка 3px */
+    border: 0.23vw solid #304D22; /* Толстая темно-зеленая рамка 1px */
     justify-content: space-between; /* Элементы по краям (+ и -) */
     padding: 0 3.41vw; /* 15px отступы внутри для иконок */
 }
