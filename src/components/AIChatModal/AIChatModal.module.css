@@ -1,173 +1,126 @@
 /* Фиксированный фон на весь экран */
+/* Черный прозрачный фон за модальным окном */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 999999; 
-    overflow: hidden; 
+    position: fixed; /* Фиксируем на экране */
+    top: 0; left: 0;
+    width: 100vw; height: 100vh; /* Растягиваем на всю ширину и высоту вьюпорта */
+    z-index: 999999; /* Выводим на самый передний план */
+    overflow: hidden; /* Запрещаем прокрутку страницы под модалкой */
 }
 
-/* Стеклянный контейнер с размытием */
+/* Стеклянный контейнер (сама модалка) */
 .modal-glassContainer {
     width: 100%;
-    height: 100dvh; 
-    background-color: rgba(255, 255, 255, 0.2); 
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); 
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    height: 100dvh; /* Высота под мобильные браузеры (с учетом панелей навигации) */
+    background-color: rgba(255, 255, 255, 0.2); /* Твоя прозрачность */
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие заднего фона (iOS) */
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие заднего фона (остальные) */
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end; 
-    position: relative; 
+    flex-direction: column; /* Элементы идут сверху вниз */
+    justify-content: flex-end; /* Прижимаем содержимое к нижней части экрана */
+    position: relative; /* База для абсолютного позиционирования крестика и видео */
 }
 
-/* Стили для кнопки-крестика в верхнем углу */
+/* Кнопка закрытия окна */
 .modal-closeBtn {
-    position: absolute;
-    top: 5.45vw; 
-    right: 5.45vw; 
-    width: 7.73vw; /* Немного увеличил для удобства нажатия, было 4.73 */
-    height: 7.73vw; 
-    background: none;
-    border: none;
-    padding: 0;
-    z-index: 100; /* Поднял z-index, чтобы был выше видео */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute; /* Позиционируем точно по координатам */
+    top: 5.45vw; /* Отступ сверху в vw для адаптивности под 440px */
+    right: 5.45vw; /* Отступ справа */
+    width: 7.73vw; height: 7.73vw; /* Размер кнопки */
+    background: none; border: none; padding: 0;
+    z-index: 100; /* Ставим выше, чем слой с видео */
+    display: flex; align-items: center; justify-content: center;
 }
 
-/* Иконка внутри крестика */
 .modal-closeBtn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    width: 100%; height: 100%; object-fit: contain; /* Картинка вписывается в кнопку */
 }
 
-/* --- НОВЫЙ БЛОК: Кнопка переключения на текст (Зеленая, слева) --- */
-.modal-switchToTextBtn {
-    position: absolute;
-    top: 5.45vw;
-    left: 5.45vw;
-    width: 11vw; /* Примерно 48px на экране 440px */
-    height: 11vw;
-    background-color: #48BF48;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100; /* Поверх видео */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.modal-switchToTextBtn img {
-    width: 50%;
-    height: 50%;
-    filter: brightness(0) invert(1); /* Делаем иконку белой */
-}
-
-/* Область сообщений чата */
+/* Область, где живет чат или видео */
 .modal-chatHistory {
-    flex: 1; 
-    padding: 70px 20px 20px 20px; 
-    overflow-y: auto; 
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    position: relative; /* Для позиционирования видео внутри */
+    flex: 1; /* Занимает всё доступное место между верхом и панелью ввода */
+    padding: 70px 20px 20px 20px; /* Отступы, чтобы текст не упирался в края */
+    overflow-y: auto; /* Если сообщений много — включаем прокрутку */
+    display: flex; flex-direction: column; gap: 12px; /* Расстояние между пузырьками */
+    position: relative; /* Чтобы видео внутри растягивалось относительно этого блока */
 }
 
-/* --- НОВЫЙ БЛОК: Контейнер для видео-аватара --- */
+/* Слой с видео (полный экран) */
 .videoWrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000; /* Черный фон пока нет видео */
-    z-index: 50; /* Ниже кнопок управления, но выше чата */
+    position: absolute; /* Вырываем из потока и растягиваем по родительскому chatHistory */
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; /* Фон, пока видео не загрузилось */
+    z-index: 10; /* Слой ниже кнопок, но выше текстового чата */
+    border-radius: 20px;
+    overflow: hidden;
 }
 
 .videoPlaceholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
 }
 
 .statusText {
-    color: #48BF48;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    opacity: 0.7;
+    color: #48BF48; font-size: 12px; opacity: 0.7; /* Текст ожидания аватара */
 }
 
-/* Контейнер всей нижней панели */
+/* Панель управления внизу (инпут + кнопка) */
 .modal-footerControls {
     display: flex;
-    align-items: flex-end; 
+    align-items: flex-end; /* Все элементы растут ВВЕРХ, оставаясь прижатыми к низу */
     padding: 0 12px;
-    margin-bottom: 58px;
-    gap: 6px;
-    z-index: 60; /* Чтобы панель была поверх видео, если решишь её оставить */
+    margin-bottom: 58px; /* Твой отступ от низа экрана */
+    gap: 6px; /* Расстояние между белым полем и зеленой кнопкой */
+    position: relative;
+    z-index: 110; /* Этот блок всегда должен быть поверх видео */
 }
 
-/* Оболочка поля ввода с белым фоном */
+/* Белая оболочка инпута */
 .modal-inputWrapper {
     position: relative;
-    flex: 1;
-    min-height: 58px; 
+    flex: 1; /* Растягивается максимально по ширине */
+    min-height: 58px; /* Твоя стартовая высота */
     background: #FFFFFF;
-    border-radius: 28px 31px 31px 15px;
+    border-radius: 28px 31px 31px 15px; /* Твои уникальные скругления */
     display: flex;
-    align-items: flex-end;
+    align-items: flex-end; /* Текст внутри тоже прижат к низу */
 }
 
-/* Сама область ввода текста */
+/* Само текстовое поле */
 .modal-textArea {
-    width: 100%;
-    height: auto; 
-    background: transparent;
-    border: none;
-    outline: none;
-    resize: none;
-    padding: 18px 15px; 
+    width: 100%; height: auto; /* Высота управляется через JS (ref) */
+    background: transparent; border: none; outline: none;
+    resize: none; /* Запрещаем пользователю тянуть за угол поля */
+    padding: 18px 15px; /* Внутренние отступы текста */
     font-size: 16px;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Чтобы паддинги не увеличивали ширину */
     font-family: 'Inter', sans-serif;
-    max-height: 150px; 
+    max-height: 150px; /* Максимальный рост поля, дальше появится скролл */
     overflow-y: auto;
     line-height: 1.4;
 }
 
-/* Зеленая круглая кнопка действия */
+/* Твоя зеленая круглая кнопка */
 .modal-actionButton {
-    width: 58px;
-    height: 58px;
-    background-color: #48BF48;
-    border-radius: 50%;
+    width: 58px; height: 58px; /* Фиксированный размер */
+    background-color: #48BF48; /* Твой зеленый цвет */
+    border-radius: 50%; /* Делаем круг */
     border: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0; 
-    box-shadow: inset 0 0 0 1px #E5E0D4; 
-    z-index: 60;
+    display: flex; justify-content: center; align-items: center;
+    flex-shrink: 0; /* Запрещаем кнопке сжиматься, если инпут станет слишком широким */
+    box-shadow: inset 0 0 0 1px #E5E0D4; /* Твоя внутренняя обводка */
 }
 
-/* Размеры иконок внутри зеленой кнопки */
-.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
+/* Стили иконок внутри зеленой кнопки */
+.modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); } /* Белый цвет через инверсию */
 .modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
 
-/* Стиль пузырька ответа бота */
+/* Пузырек ответа бота */
 .modal-botMessage {
     background: white;
     padding: 12px 16px;
-    border-radius: 12px 12px 12px 0;
-    align-self: flex-start; 
+    border-radius: 12px 12px 12px 0; /* Стиль мессенджера */
+    align-self: flex-start; /* Прижимаем влево */
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
