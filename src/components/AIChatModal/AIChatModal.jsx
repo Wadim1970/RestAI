@@ -1,97 +1,96 @@
-import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и хуки
-import styles from './AIChatModal.module.css'; // Импортируем стили
+import React, { useState, useRef, useEffect } from 'react'; // Импорт React и хуков
+import styles from './AIChatModal.module.css'; // Импорт стилей
 
 const AIChatModal = ({ isOpen, onClose }) => {
-  const [inputValue, setInputValue] = useState(''); // Состояние для текста в инпуте
-  const [viewMode, setViewMode] = useState('text'); // Состояние режима: текст или видео
-  const textAreaRef = useRef(null); // Ссылка на DOM-элемент textarea для управления высотой
+  const [inputValue, setInputValue] = useState(''); // Стейт для текста
+  const [viewMode, setViewMode] = useState('text'); // Режим: 'text' (чат) или 'video' (аватар)
+  const textAreaRef = useRef(null); // Реф для авто-высоты текстового поля
 
-  // Эффект, который срабатывает при каждом изменении текста в поле ввода
+  // Эффект для динамического изменения высоты текстового поля (рост вверх)
   useEffect(() => {
-    if (textAreaRef.current) { // Проверяем, существует ли элемент
-      textAreaRef.current.style.height = 'auto'; // Сбрасываем высоту в начальную, чтобы пересчитать заново
-      const scrollHeight = textAreaRef.current.scrollHeight; // Получаем высоту контента внутри textarea
-      // Устанавливаем новую высоту, но не более 150px (чтобы не перекрыть всё окно)
-      textAreaRef.current.style.height = Math.min(scrollHeight, 150) + 'px';
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = 'auto'; // Сброс
+      textAreaRef.current.style.height = Math.min(textAreaRef.current.scrollHeight, 150) + 'px'; // Установка новой высоты
     }
-  }, [inputValue]); // Зависимость от текста: как только текст меняется, высота пересчитывается
+  }, [inputValue]);
 
-  if (!isOpen) return null; // Если модалка закрыта, ничего не рендерим
+  if (!isOpen) return null; // Если модалка закрыта — не рендерим ничего
 
-  // Обработчик нажатия на главную кнопку действия
+  // Логика кнопки действия (отправка или переключение режима)
   const handleActionClick = () => {
-    if (inputValue.trim().length > 0) { // Если в поле есть текст (кроме пробелов)
-      console.log("Отправка:", inputValue); // Логируем отправку
-      setInputValue(''); // Очищаем поле (высота сбросится автоматически через useEffect)
+    if (inputValue.trim().length > 0) {
+      console.log("Отправка сообщения:", inputValue);
+      setInputValue(''); // Очистка после отправки
     } else {
-      // Если поле пустое, переключаем режим между текстом и видео-аватаром
+      // Если текста нет — переключаемся на видео (или обратно)
       setViewMode(prev => prev === 'text' ? 'video' : 'text');
     }
   };
 
   return (
-    <div className={styles['modal-overlay']}> {/* Темный фон за модальным окном */}
-      <div className={styles['modal-glassContainer']}> {/* Основной стеклянный контейнер модалки */}
+    <div className={styles['modal-overlay']}>
+      <div className={styles['modal-glassContainer']}>
         
-        {/* Кнопка закрытия окна (крестик) */}
+        {/* --- КНОПКИ ПОВЕРХ КОНТЕНТА --- */}
+        
+        {/* Кнопка закрытия (Крестик) - Всегда справа сверху */}
         <button className={styles['modal-closeBtn']} onClick={onClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
-        {/* Центральная часть окна с историей чата или видео */}
-        <div className={styles['modal-chatHistory']}>
-          {viewMode === 'text' ? ( // Если текстовый режим:
+        {/* Зеленая кнопка возврата в текстовый режим - Показывается только в видео-режиме слева */}
+        {viewMode === 'video' && (
+          <button 
+            className={styles['modal-switchToTextBtn']} 
+            onClick={() => setViewMode('text')}
+          >
+            {/* Используем иконку чата для возврата */}
+            <img src="/icons/free-icon-chat.png" alt="В чат" />
+          </button>
+        )}
+
+        {/* --- ОСНОВНАЯ ОБЛАСТЬ --- */}
+        <div className={`${styles['modal-chatHistory']} ${viewMode === 'video' ? styles['videoActive'] : ''}`}>
+          {viewMode === 'text' ? (
+            // РЕЖИМ ЧАТА
             <div className={styles['modal-botMessage']}>
               Чем я могу вам помочь?
             </div>
-          ) : ( // Если видео режим: заглушка под аватар
-            <div 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                background: '#000', // Черный фон для будущего видео
-                borderRadius: '20px', 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              <span style={{ color: '#48BF48', fontSize: '14px', opacity: 0.6 }}>
-                [ ПОДКЛЮЧЕНИЕ ВИДЕО-АВАТАРА... ]
-              </span>
+          ) : (
+            // РЕЖИМ ВИДЕО (Full Screen)
+            <div className={styles['videoWrapper']}>
+              <div className={styles['videoPlaceholder']}>
+                <span className={styles['statusText']}>[ ОЖИДАНИЕ ПОТОКА АВАТАРА... ]</span>
+              </div>
+              {/* Сюда в будущем вставится <video /> от любого SDK (HeyGen/D-ID) */}
             </div>
           )}
         </div>
 
-        {/* Нижняя часть окна с полем ввода и кнопкой */}
-        <div className={styles['modal-footerControls']}>
-          <div className={styles['modal-inputWrapper']}>
-            {/* ИКОНКА МЕНЮ УДАЛЕНА ОТСЮДА ПО ТВОЕМУ ЗАПРОСУ */}
-            <textarea 
-              ref={textAreaRef} // Привязываем ссылку для управления высотой
-              className={styles['modal-textArea']} // Стили текстового поля
-              rows="1" // Начальное количество строк — одна
-              placeholder={viewMode === 'text' ? "Напишите сообщение..." : "Слушаю вас..."}
-              value={inputValue} // Связываем значение со стейтом
-              onChange={(e) => setInputValue(e.target.value)} // Обновляем стейт при вводе
-            />
-          </div>
-
-          {/* Правая кнопка: меняет иконку в зависимости от наличия текста или режима */}
-          <button className={styles['modal-actionButton']} onClick={handleActionClick}>
-            {inputValue.trim().length > 0 ? ( // Если текст написан — иконка "Самолетик/Старт"
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
-            ) : ( // Если текста нет — переключаем иконки Аудио/Чат в зависимости от режима окна
-              <img 
-                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
-                className={styles['modal-iconAudio']} 
-                alt="Switch" 
+        {/* --- ПАНЕЛЬ ВВОДА --- */}
+        {/* Показываем её только в текстовом режиме, чтобы видео было чистым */}
+        {viewMode === 'text' && (
+          <div className={styles['modal-footerControls']}>
+            <div className={styles['modal-inputWrapper']}>
+              <textarea 
+                ref={textAreaRef}
+                className={styles['modal-textArea']}
+                rows="1"
+                placeholder="Напишите сообщение..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
               />
-            )}
-          </button>
-        </div>
+            </div>
+            <button className={styles['modal-actionButton']} onClick={handleActionClick}>
+              <img 
+                src={inputValue.trim().length > 0 ? "/icons/free-icon-start.png" : "/icons/free-icon-audio.png"} 
+                className={styles['modal-iconSend']} 
+                alt="Action" 
+              />
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
