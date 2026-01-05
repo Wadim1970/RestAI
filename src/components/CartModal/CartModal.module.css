@@ -51,8 +51,8 @@
   position: absolute;
     top: 5.45vw; /* 12px от верха изображения */
     right: 5.45vw; /* 12px от правого края изображения */
-    width: 4.73vw; /* 34px */
-    height: 4.73vw; /* 34px */
+    width: 24px; /* 34px */
+    height: 24px; /* 34px */
     background: none;
     border: none;
     padding: 0;
