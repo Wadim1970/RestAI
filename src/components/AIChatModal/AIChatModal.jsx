@@ -72,22 +72,22 @@ const AIChatModal = ({ isOpen, onClose }) => {
 
           {/* ВТОРАЯ КНОПКА: Зеленая, переключатель режимов/отправка */}
           {/* Если мы в видео, отодвигаем её вправо через marginLeft: auto */}
-          <button 
-            className={styles['modal-actionButton']} 
-            style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
-            onClick={handleActionClick}
-          >
-            {inputValue.trim().length > 0 ? ( // Если текст есть — иконка стрелочки
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
-            ) : (
-              // Если пусто — иконка зависит от режима (в видео показываем ЧАТ, в чате — АУДИО)
-              <img 
-                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
-                className={styles['modal-iconAudio']} 
-                alt="Switch" 
-              />
-            )}
-          </button>
+        <button 
+  key={viewMode} // ДОБАВЛЕНО: принудительная перерисовка при смене режима
+  className={styles['modal-actionButton']} 
+  style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
+  onClick={handleActionClick}
+>
+  {inputValue.trim().length > 0 ? ( 
+    <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
+  ) : (
+    <img 
+      src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
+      className={styles['modal-iconAudio']} 
+      alt="Switch" 
+    />
+  )}
+</button>
         </div>
       </div>
     </div>
