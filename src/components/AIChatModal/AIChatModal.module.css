@@ -83,6 +83,9 @@
     background: #FFFFFF;
     border-radius: 28px 31px 31px 15px; /* Твои уникальные радиусы инпута */
     display: flex; align-items: flex-end;
+    will-change: transform, opacity; /* Подсказка браузеру для плавной отрисовки */
+    backface-visibility: hidden;     /* Убирает мерцание в Webkit */
+    transform: translateZ(0);        /* Принудительно включает 3D-ускорение */
 }
 
 /* Само текстовое поле */
@@ -108,6 +111,8 @@
     display: flex; justify-content: center; align-items: center;
     flex-shrink: 0; /* Не сжимается */
     box-shadow: inset 0 0 0 1px #E5E0D4; /* Внутренняя обводка */
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 /* Иконки внутри кнопки */
