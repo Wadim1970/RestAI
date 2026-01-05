@@ -70,7 +70,6 @@
     align-items: flex-end; /* Текст и кнопка растут вверх */
     padding: 0 12px;
     margin-bottom: 58px; /* Твой обязательный отступ от низа */
-    gap: 6px; /* Расстояние между полем и кнопкой */
     position: relative;
     z-index: 200; /* ВТОРАЯ КНОПКА ПОВЕРХ ВИДЕО (слой 200) */
 }
@@ -104,6 +103,7 @@
 
 /* ВТОРАЯ КНОПКА: Зеленая круглая кнопка действия */
 .modal-actionButton {
+    margin-left: 6px;
     width: 58px; height: 58px;
     background-color: #48BF48; /* Твой фирменный зеленый */
     border-radius: 50%; /* Круглая */
