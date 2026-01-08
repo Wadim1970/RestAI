@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и хуки (инструменты)
 import styles from './AIChatModal.module.css'; // Подключаем CSS-модуль
+import { useChatApi } from './useChatApi'; // ИМПОРТ: Подключаем наш файл-почтальон для связи с n8n
 
-const AIChatModal = ({ isOpen, onClose }) => {
+// Добавляем pageContext в пропсы, чтобы знать, на какой странице находится юзер
+const AIChatModal = ({ isOpen, onClose, pageContext }) => {
   const [inputValue, setInputValue] = useState(''); // Стейт для хранения текста пользователя
   const [viewMode, setViewMode] = useState('text'); // Режим окна: 'text' (чат) или 'video' (весь экран)
+  
+  // НОВЫЙ СТЕЙТ: Список всех сообщений в текущем диалоге
+  const [messages, setMessages] = useState([]); 
+  
   const textAreaRef = useRef(null); // Ссылка на textarea для управления её высотой
+
+  // ИНИЦИАЛИЗАЦИЯ API: Достаем функцию отправки и статус загрузки из нашего хука
+  // ЗАМЕНИ 'ТВОЙ_WEBHOOK_URL' на реальный адрес из n8n, когда он будет готов
+  const { sendMessageToAI, isLoading } = useChatApi('https://your-n8n-webhook-url.com');
 
   // Функция авто-роста поля вверх (срабатывает при каждом изменении текста)
   useEffect(() => {
@@ -17,11 +27,23 @@ const AIChatModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null; // Если модалка не активна — ничего не выводим
 
-  // Логика кнопки: если есть текст — шлем его, если нет — меняем видео/текст
-  const handleActionClick = () => {
+  // Логика кнопки: теперь она умеет отправлять данные в n8n через useChatApi
+  const handleActionClick = async () => { 
     if (inputValue.trim().length > 0) { // Если в поле есть текст (кроме пробелов)
-      console.log("Сообщение:", inputValue); // Логируем (потом здесь будет API)
-      setInputValue(''); // Очищаем ввод
+      
+      const userText = inputValue.trim(); // Сохраняем текст сообщения
+      setInputValue(''); // Сразу очищаем поле ввода для удобства юзера
+
+      // 1. Добавляем сообщение пользователя в список сообщений на экране
+      const newMessages = [...messages, { role: 'user', text: userText }];
+      setMessages(newMessages);
+
+      // 2. ОТПРАВКА В n8n: Передаем текст, контекст страницы и фиксированный ID (пока так)
+      const aiResponse = await sendMessageToAI(userText, pageContext, 'user-unique-id-123');
+
+      // 3. Добавляем ответ от нейросети в список сообщений на экране
+      setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
+
     } else {
       // Если пусто — переключаем экран между чатом и видео-аватаром
       setViewMode(prev => prev === 'text' ? 'video' : 'text');
@@ -35,9 +57,12 @@ const AIChatModal = ({ isOpen, onClose }) => {
         {/* ВИДЕО-АВАТАР (Отрисовывается только в режиме видео на весь экран) */}
         {viewMode === 'video' && (
           <div className={styles['videoWrapper']}> {/* Слой видео без границ и скруглений */}
-             <div className={styles['videoPlaceholder']}>
-               <span className={styles['statusText']}>[ ПОДКЛЮЧЕНИЕ ВИДЕО... ]</span>
-             </div>
+              <div className={styles['videoPlaceholder']}>
+                {/* Если бот "думает", пишем об этом поверх видео */}
+                <span className={styles['statusText']}>
+                  {isLoading ? '[ НЕЙРОСЕТЬ ГЕНЕРИРУЕТ ОТВЕТ... ]' : '[ ПОДКЛЮЧЕНИЕ ВИДЕО... ]'}
+                </span>
+              </div>
           </div>
         )}
 
@@ -49,7 +74,25 @@ const AIChatModal = ({ isOpen, onClose }) => {
         {/* ОБЛАСТЬ ЧАТА (Отрисовывается только в режиме текста) */}
         {viewMode === 'text' && (
           <div className={styles['modal-chatHistory']}>
-            <div className={styles['modal-botMessage']}>Чем я могу вам помочь?</div>
+            {/* Если сообщений еще нет — показываем приветствие */}
+            {messages.length === 0 && (
+              <div className={styles['modal-botMessage']}>Чем я могу вам помочь?</div>
+            )}
+
+            {/* Отрисовка истории переписки из стейта messages */}
+            {messages.map((msg, index) => (
+              <div 
+                key={index} 
+                className={msg.role === 'user' ? styles['userMessage'] : styles['modal-botMessage']}
+              >
+                {msg.text}
+              </div>
+            ))}
+
+            {/* Индикатор загрузки сообщения в чате */}
+            {isLoading && (
+              <div className={styles['modal-botMessage']}>...</div>
+            )}
           </div>
         )}
 
@@ -66,28 +109,29 @@ const AIChatModal = ({ isOpen, onClose }) => {
                 placeholder="Напишите сообщение..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                disabled={isLoading} // Блокируем ввод, пока ждем ответ от n8n
               />
             </div>
           )}
 
           {/* ВТОРАЯ КНОПКА: Зеленая, переключатель режимов/отправка */}
-          {/* Если мы в видео, отодвигаем её вправо через marginLeft: auto */}
-        <button 
-  key={viewMode} // ДОБАВЛЕНО: принудительная перерисовка при смене режима
-  className={styles['modal-actionButton']} 
-  style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
-  onClick={handleActionClick}
->
-  {inputValue.trim().length > 0 ? ( 
-    <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
-  ) : (
-    <img 
-      src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
-      className={styles['modal-iconAudio']} 
-      alt="Switch" 
-    />
-  )}
-</button>
+          <button 
+            key={viewMode} // Принудительная перерисовка при смене режима (убирает артефакты)
+            className={styles['modal-actionButton']} 
+            style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
+            onClick={handleActionClick}
+            disabled={isLoading && viewMode === 'text'} // Отключаем кнопку на время запроса
+          >
+            {inputValue.trim().length > 0 ? ( 
+              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
+            ) : (
+              <img 
+                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
+                className={styles['modal-iconAudio']} 
+                alt="Switch" 
+              />
+            )}
+          </button>
         </div>
       </div>
     </div>
