@@ -14,7 +14,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
 
   // ИНИЦИАЛИЗАЦИЯ API: Достаем функцию отправки и статус загрузки из нашего хука
   // ЗАМЕНИ 'ТВОЙ_WEBHOOK_URL' на реальный адрес из n8n, когда он будет готов
-  const { sendMessageToAI, isLoading } = useChatApi('http://188.130.160.62:5678/webhook-test/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
+  const { sendMessageToAI, isLoading } = useChatApi('https://floppy-pugs-learn.loca.lt/webhook-test/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
   // Функция авто-роста поля вверх (срабатывает при каждом изменении текста)
   useEffect(() => {
