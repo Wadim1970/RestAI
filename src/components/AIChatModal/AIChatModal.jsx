@@ -1,64 +1,68 @@
-import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и хуки (инструменты)
-import styles from './AIChatModal.module.css'; // Подключаем CSS-модуль
-import { useChatApi } from './useChatApi'; // ИМПОРТ: Подключаем наш файл-почтальон для связи с n8n
+import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и инструменты
+import styles from './AIChatModal.module.css'; // Подключаем стили
+import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 
-// Добавляем pageContext в пропсы, чтобы знать, на какой странице находится юзер
 const AIChatModal = ({ isOpen, onClose, pageContext }) => {
-  const [inputValue, setInputValue] = useState(''); // Стейт для хранения текста пользователя
-  const [viewMode, setViewMode] = useState('text'); // Режим окна: 'text' (чат) или 'video' (весь экран)
+  const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
+  const [viewMode, setViewMode] = useState('text'); // Режим: чат или видео
+  const [messages, setMessages] = useState([]); // Массив сообщений (история)
   
-  // НОВЫЙ СТЕЙТ: Список всех сообщений в текущем диалоге
-  const [messages, setMessages] = useState([]); 
-  
-  const textAreaRef = useRef(null); // Ссылка на textarea для управления её высотой
+  const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
+  const messagesEndRef = useRef(null); // НОВОЕ: Ссылка на невидимый элемент в конце чата для автоскролла
 
-  // ИНИЦИАЛИЗАЦИЯ API: Достаем функцию отправки и статус загрузки из нашего хука
-  // ЗАМЕНИ 'ТВОЙ_WEBHOOK_URL' на реальный адрес из n8n, когда он будет готов
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
-  // Функция авто-роста поля вверх (срабатывает при каждом изменении текста)
+  // НОВОЕ: Функция, которая принудительно прокручивает контейнер вниз
+  const scrollToBottom = () => {
+    // scrollIntoView плавно двигает экран к элементу messagesEndRef
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // НОВОЕ: Следим за появлением новых сообщений или индикатора загрузки
   useEffect(() => {
-    if (textAreaRef.current) { // Если поле существует
-      textAreaRef.current.style.height = 'auto'; // Сбрасываем высоту
-      // Устанавливаем высоту по контенту, но не более 150px
-      textAreaRef.current.style.height = Math.min(textAreaRef.current.scrollHeight, 150) + 'px';
+    if (viewMode === 'text') {
+      scrollToBottom(); // Как только массив messages изменился — скроллим вниз
     }
-  }, [inputValue, viewMode]); // Перезапускаем при вводе или смене режима
+  }, [messages, isLoading, viewMode]); // Триггеры: новые сообщения, статус "печатает" или смена режима
 
-  if (!isOpen) return null; // Если модалка не активна — ничего не выводим
+  // Функция авто-роста поля ввода
+  useEffect(() => {
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = 'auto'; // Сброс высоты
+      textAreaRef.current.style.height = Math.min(textAreaRef.current.scrollHeight, 150) + 'px'; // Рост до 150px
+    }
+  }, [inputValue, viewMode]);
 
-  // Логика кнопки: теперь она умеет отправлять данные в n8n через useChatApi
+  if (!isOpen) return null; // Если модалка закрыта — не рендерим ничего
+
+  // Логика кнопки отправки
   const handleActionClick = async () => { 
-    if (inputValue.trim().length > 0) { // Если в поле есть текст (кроме пробелов)
-      
-      const userText = inputValue.trim(); // Сохраняем текст сообщения
-      setInputValue(''); // Сразу очищаем поле ввода для удобства юзера
+    if (inputValue.trim().length > 0) { // Если есть текст
+      const userText = inputValue.trim(); // Убираем лишние пробелы
+      setInputValue(''); // Очищаем поле сразу
 
-      // 1. Добавляем сообщение пользователя в список сообщений на экране
-      const newMessages = [...messages, { role: 'user', text: userText }];
-      setMessages(newMessages);
+      const newMessages = [...messages, { role: 'user', text: userText }]; // Добавляем сообщение юзера
+      setMessages(newMessages); // Обновляем экран
 
-      // 2. ОТПРАВКА В n8n: Передаем текст, контекст страницы и фиксированный ID (пока так)
+      // Отправляем запрос в n8n (теперь с контекстом блюда)
       const aiResponse = await sendMessageToAI(userText, pageContext, 'user-unique-id-123');
-
-      // 3. Добавляем ответ от нейросети в список сообщений на экране
+      
+      // Добавляем ответ бота в историю
       setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
-
     } else {
-      // Если пусто — переключаем экран между чатом и видео-аватаром
+      // Если текста нет — переключаем видео/текст
       setViewMode(prev => prev === 'text' ? 'video' : 'text');
     }
   };
 
   return (
-    <div className={styles['modal-overlay']}> {/* Темная подложка на весь экран */}
-      <div className={styles['modal-glassContainer']}> {/* Стеклянный корпус окна */}
+    <div className={styles['modal-overlay']}> {/* Темная подложка */}
+      <div className={styles['modal-glassContainer']}> {/* Основное окно */}
         
-        {/* ВИДЕО-АВАТАР (Отрисовывается только в режиме видео на весь экран) */}
+        {/* Видео-аватар */}
         {viewMode === 'video' && (
-          <div className={styles['videoWrapper']}> {/* Слой видео без границ и скруглений */}
+          <div className={styles['videoWrapper']}>
               <div className={styles['videoPlaceholder']}>
-                {/* Если бот "думает", пишем об этом поверх видео */}
                 <span className={styles['statusText']}>
                   {isLoading ? '[ НЕЙРОСЕТЬ ГЕНЕРИРУЕТ ОТВЕТ... ]' : '[ ПОДКЛЮЧЕНИЕ ВИДЕО... ]'}
                 </span>
@@ -66,20 +70,19 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
           </div>
         )}
 
-        {/* ПЕРВАЯ КНОПКА: Крестик (всегда вверху справа, поверх видео и чата) */}
+        {/* Кнопка закрытия модалки */}
         <button className={styles['modal-closeBtn']} onClick={onClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
-        {/* ОБЛАСТЬ ЧАТА (Отрисовывается только в режиме текста) */}
+        {/* Область переписки */}
         {viewMode === 'text' && (
           <div className={styles['modal-chatHistory']}>
-            {/* Если сообщений еще нет — показываем приветствие */}
             {messages.length === 0 && (
               <div className={styles['modal-botMessage']}>Чем я могу вам помочь?</div>
             )}
 
-            {/* Отрисовка истории переписки из стейта messages */}
+            {/* Рендерим все сообщения из массива */}
             {messages.map((msg, index) => (
               <div 
                 key={index} 
@@ -89,39 +92,42 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
               </div>
             ))}
 
-            {/* Индикатор загрузки сообщения в чате */}
+            {/* Индикатор того, что бот думает */}
             {isLoading && (
               <div className={styles['modal-botMessage']}>...</div>
             )}
+            
+            {/* НОВОЕ: Невидимый "якорь" в самом низу списка. К нему всегда едет скролл */}
+            <div ref={messagesEndRef} style={{ float:"left", clear: "both" }} />
           </div>
         )}
 
-        {/* НИЖНЯЯ ПАНЕЛЬ (Поле ввода и ВТОРАЯ КНОПКА) */}
+        {/* Нижняя панель управления */}
         <div className={styles['modal-footerControls']}>
-          
-          {/* ПОЛЕ ВВОДА: показываем ТОЛЬКО в текстовом режиме */}
           {viewMode === 'text' && (
             <div className={styles['modal-inputWrapper']}>
               <textarea 
-                ref={textAreaRef} // Привязываем ref
+                ref={textAreaRef}
                 className={styles['modal-textArea']}
                 rows="1"
                 placeholder="Напишите сообщение..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                disabled={isLoading} // Блокируем ввод, пока ждем ответ от n8n
+                disabled={isLoading}
+                // НОВОЕ: Когда ставим фокус (появляется клавиатура) — подскролливаем вниз через 300мс
+                onFocus={() => setTimeout(scrollToBottom, 300)} 
               />
             </div>
           )}
 
-          {/* ВТОРАЯ КНОПКА: Зеленая, переключатель режимов/отправка */}
           <button 
-            key={viewMode} // Принудительная перерисовка при смене режима (убирает артефакты)
+            key={viewMode}
             className={styles['modal-actionButton']} 
             style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
             onClick={handleActionClick}
-            disabled={isLoading && viewMode === 'text'} // Отключаем кнопку на время запроса
+            disabled={isLoading && viewMode === 'text'}
           >
+            {/* Иконка меняется: если есть текст — самолетик, если нет — микрофон/чат */}
             {inputValue.trim().length > 0 ? ( 
               <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
             ) : (
