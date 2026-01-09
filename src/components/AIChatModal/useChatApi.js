@@ -10,15 +10,20 @@ export const useChatApi = (webhookUrl) => {
         try {
             // Отправляем POST запрос на адрес вебхука n8n
             const response = await fetch(webhookUrl, {
-                method: 'POST', // Метод отправки данных
-                headers: { 'Content-Type': 'application/json' }, // Указываем, что отправляем JSON
-                body: JSON.stringify({
-                    message: text,        // Текст сообщения от пользователя
-                    context: context,      // Окружение (на какой странице находится юзер)
-                    sessionId: sessionId   // ID сессии для сохранения истории в n8n (Redis)
-                }),
-            });
-
+               method: 'POST',
+               mode: 'cors', // ПРИНУДИТЕЛЬНО: указываем режим CORS
+               headers: {
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json' // ОБЯЗАТЕЛЬНО для Safari
+                     },
+                   body: JSON.stringify({
+                   message: userText,
+                   context: pageContext,
+                   userId: userId
+    }),
+});
+            
+            
             // Проверяем, успешно ли прошел запрос (код 200-299)
             if (!response.ok) {
                 throw new Error(`Ошибка сервера: ${response.status}`);
