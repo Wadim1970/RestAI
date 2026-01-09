@@ -137,7 +137,7 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat
 
           <div className={styles.buttonActionGroup}>
             {/* ИЗМЕНЕНО: Добавили onClick={onOpenChat} */}
-            <button className={styles.chatButton} onClick={onOpenChat}>
+            <button className={styles.chatButton} onClick={() => onOpenChat(dish)}>
               <img src="/icons/foto-avatar.png" className={styles.chatAvatar} alt="AI Chat" />
             </button>
 
