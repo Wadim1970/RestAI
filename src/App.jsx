@@ -5,103 +5,102 @@ import MenuPage from './components/MenuPage';
 import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function AppContent() {
-  const location = useLocation(); // Следим за текущим URL (главная или меню)
+  const location = useLocation(); // Хук для отслеживания текущего пути в приложении
 
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    // Пытаемся достать данные из памяти браузера при первой загрузке
+    // Загружаем корзину из памяти браузера при старте
     const savedCart = localStorage.getItem('restaurant_cart'); 
-    return savedCart ? JSON.parse(savedCart) : {}; // Если есть — парсим JSON, если нет — пустой объект
+    return savedCart ? JSON.parse(savedCart) : {}; 
   });
 
   // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
+    // Загружаем уже подтвержденные заказы (историю чека)
     const savedOrders = localStorage.getItem('restaurant_orders');
-    return savedOrders ? JSON.parse(savedOrders) : []; // Если есть — массив заказов, если нет — пустой массив
+    return savedOrders ? JSON.parse(savedOrders) : []; 
   });
 
-  // --- СОСТОЯНИЕ МОДАЛКИ И ИСТОРИИ ---
-  const [isChatOpen, setIsChatOpen] = useState(false); // Флаг: открыто окно чата или нет
-  const [viewHistory, setViewHistory] = useState([]); // Массив строк с названиями блюд, которые смотрел юзер
+  // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
+  const [isChatOpen, setIsChatOpen] = useState(false); // Открыт ли чат
+  const [viewHistory, setViewHistory] = useState([]); // История просмотров (список блюд)
+  const [chatContext, setChatContext] = useState(''); // НОВОЕ: Храним инфу о блюде, из которого открыли чат
 
-  // Эффект: сохраняем корзину в localStorage каждый раз, когда она меняется
+  // Эффект: сохранение корзины при каждом изменении
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Эффект: сохраняем заказы в localStorage каждый раз, когда они подтверждаются
+  // Эффект: сохранение истории заказов
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
 
   // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
   useEffect(() => {
-    const isMainPage = location.pathname === '/'; // Проверка: мы на главной?
-    
-    // МЕЛОЧЬ №1: Я упростил условия блокировки. Теперь, если чат открыт — скролл выключен ВЕЗДЕ.
+    const isMainPage = location.pathname === '/'; 
+    // Если мы на главной или открыт чат — блокируем системный скролл (для мобилок)
     if (isMainPage || isChatOpen) {
       document.body.style.overflow = 'hidden'; 
-      document.body.style.position = 'fixed'; // Фиксируем, чтобы iOS не дергала экран
+      document.body.style.position = 'fixed'; 
       document.body.style.width = '100%'; 
       document.body.style.height = '100%'; 
-      document.body.style.touchAction = 'none'; // МЕЛОЧЬ №2: Отключаем pull-to-refresh (свайп вниз для обновления)
+      document.body.style.touchAction = 'none'; 
     } else {
-      // Если мы в меню и чат закрыт — возвращаем стандартное поведение браузера
+      // Иначе возвращаем стандартный скролл
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
       document.body.style.height = '';
       document.body.style.touchAction = '';
     }
-  }, [isChatOpen, location.pathname]); // Срабатывает при смене страницы или открытии чата
+  }, [isChatOpen, location.pathname]);
 
   // --- ОБРАБОТЧИКИ ---
 
-  // МЕЛОЧЬ №3: Логика открытия чата. 
-  // Я убрал «else { setIsChatOpen(false) }», чтобы случайный вызов функции с другим параметром не закрыл модалку.
+  // Переключение режима чата
   const handleToggleChatMode = (mode) => {
     if (mode === 'chat') {
       setIsChatOpen(true);
     }
   };
 
-  // МЕЛОЧЬ №4: Я ВЕРНУЛ ЭТУ ФУНКЦИЮ. 
-  // В прошлом твоем коде её не было, а MenuPage её требовал. Это и вызывало белый экран (ReferenceError).
+  // Трекинг просмотров блюд (чтобы знать, что юзер листал)
   const trackDishView = (dishName) => {
     setViewHistory(prev => {
-      if (prev[prev.length - 1] === dishName) return prev; // Не дублируем одно и то же блюдо подряд
-      return [...prev, dishName].slice(-10); // Оставляем только 10 последних просмотров для экономии памяти
+      if (prev[prev.length - 1] === dishName) return prev; 
+      return [...prev, dishName].slice(-10); 
     });
   };
 
-  // Обновление количества товара
+  // Изменение количества товара в корзине (+1 или -1)
   const updateCart = (dishId, delta) => {
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
-      const newCount = Math.max(0, currentCount + delta); // Не уходим в минус
+      const newCount = Math.max(0, currentCount + delta); 
       if (newCount === 0) {
-        const { [dishId]: _, ...rest } = prev; // Удаляем товар из объекта, если его стало 0
+        const { [dishId]: _, ...rest } = prev; 
         return rest;
       }
       return { ...prev, [dishId]: newCount };
     });
   };
 
-  // Перенос из корзины в историю чека
+  // Подтверждение заказа (перенос из корзины в историю)
   const handleConfirmOrder = (cartItems) => {
     setConfirmedOrders(prev => [...prev, ...cartItems]);
-    setCart({}); // Чистим корзину
+    setCart({}); 
   };
 
   return (
     <div className="App">
       <Routes>
-        {/* Главный экран: передаем функцию открытия чата и статус (открыт/закрыт) */}
+        {/* Роут главной страницы */}
         <Route 
           path="/" 
           element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
         />
-        {/* Страница меню: передаем всё для работы корзины и трекинга блюд */}
+        {/* Роут страницы меню */}
         <Route 
           path="/menu" 
           element={
@@ -110,27 +109,37 @@ function AppContent() {
               updateCart={updateCart} 
               confirmedOrders={confirmedOrders}
               onConfirmOrder={handleConfirmOrder}
-              onOpenChat={() => setIsChatOpen(true)}
+              // ОБНОВЛЕНО: теперь функция принимает dish и сохраняет его данные для чата
+              onOpenChat={(dish) => {
+                if (dish) {
+                  const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+                  setChatContext(info); // Кладём данные о блюде в стейт
+                } else {
+                  setChatContext('Общее меню');
+                }
+                setIsChatOpen(true); // Открываем чат
+              }}
               trackDishView={trackDishView} 
             />
           } 
         />
       </Routes>
 
-      {/* МЕЛОЧЬ №5: Я убрал отсюда пропс onModeToggle={handleToggleChatMode}.
-         Почему? Потому что модалка теперь сама переключает режимы «текст/видео» внутри себя.
-         Ей больше не нужно сообщать об этом в App.js. Это делает код чище и быстрее.
-      */}
+      {/* Модальное окно чата с ИИ */}
       <AIChatModal 
         isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
+        onClose={() => {
+          setIsChatOpen(false); // Закрываем чат
+          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии не было старых данных
+        }} 
         viewHistory={viewHistory}
+        pageContext={chatContext} // ОТПРАВЛЯЕМ КОНТЕКСТ: Теперь данные о борще долетят до n8n
       />
     </div>
   );
 }
 
-// Стартовая точка приложения
+// Входная точка с HashRouter для корректной работы на Vercel/GitHub Pages
 function App() {
   return (
     <HashRouter>
