@@ -65,6 +65,10 @@
     z-index: 20; /* Твой слой над видео */
 }
 
+.modal-chatHistory > :first-child {
+    margin-top: auto !important;
+}
+
 /* ВИДЕО НА ВЕСЬ ЭКРАН (БЕЗ СКРУГЛЕНИЙ И ОБРУБКОВ) */
 .videoWrapper {
     position: absolute; /* Вырываем из потока и кладем фоном */
