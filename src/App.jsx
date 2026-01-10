@@ -5,33 +5,33 @@ import MenuPage from './components/MenuPage';
 import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function AppContent() {
-  const location = useLocation(); // Хук для отслеживания текущего пути в приложении
+  const location = useLocation(); // Хук для отслеживания текущего пути (маршрута)
 
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    // Загружаем корзину из памяти браузера при старте
+    // Загружаем данные корзины из localStorage при инициализации
     const savedCart = localStorage.getItem('restaurant_cart'); 
     return savedCart ? JSON.parse(savedCart) : {}; 
   });
 
   // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    // Загружаем уже подтвержденные заказы (историю чека)
+    // Загружаем историю подтвержденных заказов
     const savedOrders = localStorage.getItem('restaurant_orders');
     return savedOrders ? JSON.parse(savedOrders) : []; 
   });
 
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
-  const [isChatOpen, setIsChatOpen] = useState(false); // Открыт ли чат
-  const [viewHistory, setViewHistory] = useState([]); // История просмотров (список блюд)
-  const [chatContext, setChatContext] = useState(''); // НОВОЕ: Храним инфу о блюде, из которого открыли чат
+  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыт ли чат с ИИ
+  const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
+  const [chatContext, setChatContext] = useState(''); // Контекст для ИИ (данные о блюде или разделе)
 
-  // Эффект: сохранение корзины при каждом изменении
+  // Эффект: сохранение корзины в память браузера при каждом её изменении
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Эффект: сохранение истории заказов
+  // Эффект: сохранение истории заказов в память браузера
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
@@ -39,7 +39,7 @@ function AppContent() {
   // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
   useEffect(() => {
     const isMainPage = location.pathname === '/'; 
-    // Если мы на главной или открыт чат — блокируем системный скролл (для мобилок)
+    // Блокируем прокрутку страницы, если мы на главной или открыт чат (для фиксации UI)
     if (isMainPage || isChatOpen) {
       document.body.style.overflow = 'hidden'; 
       document.body.style.position = 'fixed'; 
@@ -47,7 +47,7 @@ function AppContent() {
       document.body.style.height = '100%'; 
       document.body.style.touchAction = 'none'; 
     } else {
-      // Иначе возвращаем стандартный скролл
+      // Возвращаем стандартное поведение скролла для страницы меню
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
@@ -58,14 +58,14 @@ function AppContent() {
 
   // --- ОБРАБОТЧИКИ ---
 
-  // Переключение режима чата
+  // Открытие чата из главного экрана (MainScreen)
   const handleToggleChatMode = (mode) => {
     if (mode === 'chat') {
       setIsChatOpen(true);
     }
   };
 
-  // Трекинг просмотров блюд (чтобы знать, что юзер листал)
+  // Запись истории просмотров (сохраняем последние 10 уникальных просмотров)
   const trackDishView = (dishName) => {
     setViewHistory(prev => {
       if (prev[prev.length - 1] === dishName) return prev; 
@@ -73,7 +73,7 @@ function AppContent() {
     });
   };
 
-  // Изменение количества товара в корзине (+1 или -1)
+  // Изменение количества товара в корзине
   const updateCart = (dishId, delta) => {
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
@@ -86,7 +86,7 @@ function AppContent() {
     });
   };
 
-  // Подтверждение заказа (перенос из корзины в историю)
+  // Подтверждение заказа: перенос товаров из корзины в историю и очистка корзины
   const handleConfirmOrder = (cartItems) => {
     setConfirmedOrders(prev => [...prev, ...cartItems]);
     setCart({}); 
@@ -95,12 +95,12 @@ function AppContent() {
   return (
     <div className="App">
       <Routes>
-        {/* Роут главной страницы */}
+        {/* Главная страница */}
         <Route 
           path="/" 
           element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
         />
-        {/* Роут страницы меню */}
+        {/* Страница меню */}
         <Route 
           path="/menu" 
           element={
@@ -109,15 +109,20 @@ function AppContent() {
               updateCart={updateCart} 
               confirmedOrders={confirmedOrders}
               onConfirmOrder={handleConfirmOrder}
-              // ОБНОВЛЕНО: теперь функция принимает dish и сохраняет его данные для чата
-              onOpenChat={(dish) => {
+              // ИЗМЕНЕНО: Теперь функция принимает dish (объект блюда) и currentSection (название раздела)
+              onOpenChat={(dish, currentSection) => {
                 if (dish) {
+                  // Если чат открыт из карточки конкретного блюда — передаем полные данные о нем
                   const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
-                  setChatContext(info); // Кладём данные о блюде в стейт
+                  setChatContext(info); 
+                } else if (currentSection) {
+                  // НОВОЕ: Если открыли из общего меню — передаем текущий видимый раздел (скролл)
+                  setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
                 } else {
-                  setChatContext('Общее меню');
+                  // Если данных нет, передаем общую заглушку
+                  setChatContext('Общее меню ресторана');
                 }
-                setIsChatOpen(true); // Открываем чат
+                setIsChatOpen(true); // Открываем модальное окно чата
               }}
               trackDishView={trackDishView} 
             />
@@ -130,16 +135,16 @@ function AppContent() {
         isOpen={isChatOpen} 
         onClose={() => {
           setIsChatOpen(false); // Закрываем чат
-          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии не было старых данных
+          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии данные не дублировались
         }} 
         viewHistory={viewHistory}
-        pageContext={chatContext} // ОТПРАВЛЯЕМ КОНТЕКСТ: Теперь данные о борще долетят до n8n
+        pageContext={chatContext} // Передаем собранный контекст (блюдо или раздел) в чат
       />
     </div>
   );
 }
 
-// Входная точка с HashRouter для корректной работы на Vercel/GitHub Pages
+// Обертка с HashRouter для корректной навигации в веб-окружениях
 function App() {
   return (
     <HashRouter>
