@@ -15,7 +15,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
   // Функция, которая принудительно прокручивает контейнер вниз
   const scrollToBottom = () => {
     // scrollIntoView плавно двигает экран к элементу messagesEndRef
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
   // НОВОЕ: Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
