@@ -8,17 +8,32 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
   const [messages, setMessages] = useState([]); // Массив сообщений (история)
   
   const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
-  const messagesEndRef = useRef(null); // НОВОЕ: Ссылка на невидимый элемент в конце чата для автоскролла
+  const messagesEndRef = useRef(null); // Ссылка на невидимый элемент в конце чата для автоскролла
 
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
-  // НОВОЕ: Функция, которая принудительно прокручивает контейнер вниз
+  // Функция, которая принудительно прокручивает контейнер вниз
   const scrollToBottom = () => {
     // scrollIntoView плавно двигает экран к элементу messagesEndRef
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // НОВОЕ: Следим за появлением новых сообщений или индикатора загрузки
+  // НОВОЕ: Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
+  const handleInputFocus = () => {
+    scrollToBottom(); // Сразу скроллим при нажатии
+
+    // На Android клавиатура выезжает с анимацией. Чтобы чат не тормозил,
+    // мы запускаем цикл подтягивания (каждые 50мс), пока клавиатура открывается.
+    const scrollInterval = setInterval(scrollToBottom, 50);
+
+    // Через 600мс (когда клавиатура полностью открыта) останавливаем цикл
+    setTimeout(() => {
+      clearInterval(scrollInterval);
+      scrollToBottom(); // Финальный скролл для точности
+    }, 600);
+  };
+
+  // Следим за появлением новых сообщений или индикатора загрузки
   useEffect(() => {
     if (viewMode === 'text') {
       scrollToBottom(); // Как только массив messages изменился — скроллим вниз
@@ -97,7 +112,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
               <div className={styles['modal-botMessage']}>...</div>
             )}
             
-            {/* НОВОЕ: Невидимый "якорь" в самом низу списка. К нему всегда едет скролл */}
+            {/* Невидимый "якорь" в самом низу списка. К нему всегда едет скролл */}
             <div ref={messagesEndRef} style={{ float:"left", clear: "both" }} />
           </div>
         )}
@@ -114,8 +129,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={isLoading}
-                // НОВОЕ: Когда ставим фокус (появляется клавиатура) — подскролливаем вниз через 300мс
-                onFocus={() => setTimeout(scrollToBottom, 300)} 
+                // ИЗМЕНЕНО: Используем новую функцию handleInputFocus для плавной работы на Android
+                onFocus={handleInputFocus} 
               />
             </div>
           )}
