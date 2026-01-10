@@ -123,7 +123,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={isLoading}
                 // ИЗМЕНЕНО: Используем новую функцию handleInputFocus для плавной работы на Android
-                onFocus={handleInputFocus} 
+                //onFocus={handleInputFocus} 
               />
             </div>
           )}
