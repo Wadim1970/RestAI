@@ -18,9 +18,27 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
-  // НОВОЕ: Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
- const handleInputFocus = () => {
-    // Убираем все setTimeout и интервалы. 
+  // --- НОВОЕ: АВТО-ПРИВЕТСТВИЕ ПРИ ОТКРЫТИИ ---
+  useEffect(() => {
+    // Если модалка открыта и история сообщений пуста — запрашиваем приветствие у ИИ
+    if (isOpen && messages.length === 0 && !isLoading) {
+      const fetchGreeting = async () => {
+        // Отправляем технический маркер "ПРИВЕТСТВИЕ", чтобы n8n понял задачу
+        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, 'user-unique-id-123');
+        // Добавляем полученный ответ как самое первое сообщение бота
+        setMessages([{ role: 'bot', text: aiGreeting }]);
+      };
+      fetchGreeting();
+    }
+    
+    // Очищаем сообщения при закрытии, чтобы при новом открытии (с новым контекстом) ИИ снова поздоровался
+    if (!isOpen) {
+      setMessages([]);
+    }
+  }, [isOpen]); // Следим только за открытием/закрытием модалки
+
+  // Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
+  const handleInputFocus = () => {
     // Если система (interactive-widget) работает, она сама подожмет экран.
     // Оставляем только разовый вызов, чтобы просто "подровнять" позицию.
     scrollToBottom();
@@ -86,8 +104,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
         {/* Область переписки */}
         {viewMode === 'text' && (
           <div className={styles['modal-chatHistory']}>
-            {messages.length === 0 && (
-              <div className={styles['modal-botMessage']}>Чем я могу вам помочь?</div>
+            {/* Если сообщений еще нет и идет загрузка первого приветствия */}
+            {messages.length === 0 && isLoading && (
+              <div className={styles['modal-botMessage']}>Подключаюсь к меню...</div>
             )}
 
             {/* Рендерим все сообщения из массива */}
@@ -100,8 +119,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
               </div>
             ))}
 
-            {/* Индикатор того, что бот думает */}
-            {isLoading && (
+            {/* Индикатор того, что бот думает (показываем только когда уже есть сообщения) */}
+            {isLoading && messages.length > 0 && (
               <div className={styles['modal-botMessage']}>...</div>
             )}
             
@@ -122,8 +141,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={isLoading}
-                // ИЗМЕНЕНО: Используем новую функцию handleInputFocus для плавной работы на Android
-                //onFocus={handleInputFocus} 
+                // Фокус теперь просто подравнивает скролл, без лишних скачков
+                onFocus={handleInputFocus} 
               />
             </div>
           )}
