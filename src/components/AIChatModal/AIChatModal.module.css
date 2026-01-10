@@ -56,7 +56,8 @@
     /* НОВОЕ: Это заставит сообщения прижиматься к низу, когда их мало, 
        и правильно выталкиваться вверх клавиатурой */
     justify-content: flex-start; 
-    overscroll-behavior-y: contain;
+    
+    overscroll-behavior-y: none;
     scroll-behavior: smooth;
     /* Важно для Android: предотвращает дерганье контента */
     height: 100%;
