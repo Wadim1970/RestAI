@@ -12,22 +12,17 @@ export const useChatApi = (webhookUrl) => {
         try {
             // Выполняем запрос к n8n
             const response = await fetch(webhookUrl, {
-                method: 'POST', // Метод отправки данных
-                mode: 'cors',   // Разрешаем кросс-доменные запросы
-                headers: {
-                    /* ПЛАН Б: Меняем application/json на text/plain.
-                       Это «успокаивает» Safari, так как такой запрос считается простым 
-                       и браузер не делает предварительную проверку (Preflight).
-                    */
-                    'Content-Type': 'text/plain', 
-                    'Accept': 'application/json' // Говорим, что в ответ хотим получить JSON
-                },
-                // Превращаем объект в строку. ВАЖНО: используем правильные имена переменных!
-                body: JSON.stringify({
-                    message: text,     // Текст от пользователя
-                    context: context,  // Данные о блюде (контекст)
-                    userId: sessionId  // Идентификатор сессии
-                }),
+                method: 'POST',
+    // Убираем mode: 'cors', если n8n и так видит запрос (иногда Safari на нем спотыкается)
+    headers: {
+        // Пробуем вернуть application/json, но БЕЗ лишних заголовков типа Accept
+        'Content-Type': 'application/json' 
+    },
+    body: JSON.stringify({
+        message: text,
+        context: context,
+        userId: sessionId
+    }),
             });
             
             // Если сервер ответил с ошибкой (например, 500 или 404)
