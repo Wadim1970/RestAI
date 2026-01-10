@@ -18,6 +18,10 @@
     flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
     justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
     position: relative; /* Чтобы крестик и видео позиционировались внутри */
+    transform: translateZ(0);
+    will-change: height;
+    /* Плавный переход для изменения высоты */
+    transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 /* ПЕРВАЯ КНОПКА: Крестик закрытия */
@@ -52,6 +56,10 @@
     /* НОВОЕ: Это заставит сообщения прижиматься к низу, когда их мало, 
        и правильно выталкиваться вверх клавиатурой */
     justify-content: flex-start; 
+    overscroll-behavior-y: contain;
+    scroll-behavior: smooth;
+    /* Важно для Android: предотвращает дерганье контента */
+    height: 100%;
 
     z-index: 20; /* Твой слой над видео */
 }
