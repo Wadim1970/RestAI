@@ -1,15 +1,23 @@
 {
-  "short_name": "Сыроварня",
-  "name": "Сыроварня: Меню",
+  "short_name": "RestAI",
+  "name": "RestAI: Интеллектуальное Меню",
+  "description": "Ваш персональный ИИ-помощник в мире гастрономии. Сканируйте QR и заказывайте.",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "icons/restai-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icons/restai-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/index.html",
   "display": "standalone",
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff"
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "orientation": "portrait"
 }
