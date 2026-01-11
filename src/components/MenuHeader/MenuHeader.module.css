@@ -19,8 +19,8 @@
     -webkit-transform: translateX(-50%) translateZ(0);
 
     /* Эффект размытия заднего фона */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    -webkit-backdrop-filter: blur(4px) saturate(100%) contrast(100%);
+    backdrop-filter: blur(4px) saturate(100%) contrast(100%);
 
     background-color: rgba(255, 255, 255, 0.2); 
     
