@@ -1,84 +1,156 @@
-import React, { useState, useEffect, useCallback } from 'react'; 
+import React, { useState, useEffect } from 'react'; 
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; 
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal'; 
 
 function AppContent() {
-  const location = useLocation();
-  const [guestInfo, setGuestInfo] = useState({ uuid: '', fingerprint: '' });
-  const [currentSessionId, setCurrentSessionId] = useState('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatContext, setChatContext] = useState('');
-  const [viewHistory, setViewHistory] = useState([]);
+  const location = useLocation(); // Хук для отслеживания текущего пути (маршрута)
 
+  // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('restaurant_cart');
-    return saved ? JSON.parse(saved) : {};
+    // Загружаем данные корзины из localStorage при инициализации
+    const savedCart = localStorage.getItem('restaurant_cart'); 
+    return savedCart ? JSON.parse(savedCart) : {}; 
   });
 
+  // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    const saved = localStorage.getItem('restaurant_orders');
-    return saved ? JSON.parse(saved) : [];
+    // Загружаем историю подтвержденных заказов
+    const savedOrders = localStorage.getItem('restaurant_orders');
+    return savedOrders ? JSON.parse(savedOrders) : []; 
   });
 
+  // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
+  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыт ли чат с ИИ
+  const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
+  const [chatContext, setChatContext] = useState(''); // Контекст для ИИ (данные о блюде или разделе)
+
+  // Эффект: сохранение корзины в память браузера при каждом её изменении
   useEffect(() => {
-    let uuid = localStorage.getItem('restai_guest_uuid') || crypto.randomUUID();
-    localStorage.setItem('restai_guest_uuid', uuid);
-    setGuestInfo({ uuid, fingerprint: btoa(navigator.userAgent).slice(0, 16) });
-  }, []);
+    localStorage.setItem('restaurant_cart', JSON.stringify(cart));
+  }, [cart]);
 
-  useEffect(() => localStorage.setItem('restaurant_cart', JSON.stringify(cart)), [cart]);
-  useEffect(() => localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders)), [confirmedOrders]);
+  // Эффект: сохранение истории заказов в память браузера
+  useEffect(() => {
+    localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
+  }, [confirmedOrders]);
 
-  // ФИКС ЦИКЛА: Обернули функцию в useCallback
-  const handleOpenChat = useCallback((dish, section) => {
-    if (dish) {
-      setChatContext(`Блюдо: ${dish.dish_name}. Состав: ${dish.ingredients}`);
-    } else if (section) {
-      setChatContext(`Раздел: ${section}`);
+  // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
+  useEffect(() => {
+    const isMainPage = location.pathname === '/'; 
+    // Блокируем прокрутку страницы, если мы на главной или открыт чат (для фиксации UI)
+    if (isMainPage || isChatOpen) {
+      document.body.style.overflow = 'hidden'; 
+      document.body.style.position = 'fixed'; 
+      document.body.style.width = '100%'; 
+      document.body.style.height = '100%'; 
+      document.body.style.touchAction = 'none'; 
     } else {
-      setChatContext('Общее меню');
+      // Возвращаем стандартное поведение скролла для страницы меню
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.touchAction = '';
     }
-    setCurrentSessionId(`sess_${Date.now()}`);
-    setIsChatOpen(true);
-  }, []);
+  }, [isChatOpen, location.pathname]);
 
-  const handleCloseChat = useCallback(() => {
-    setIsChatOpen(false);
-    setChatContext('');
-  }, []);
+  // --- ОБРАБОТЧИКИ ---
+
+  // Открытие чата из главного экрана (MainScreen)
+  const handleToggleChatMode = (mode) => {
+    if (mode === 'chat') {
+      setIsChatOpen(true);
+    }
+  };
+
+  // Запись истории просмотров (сохраняем последние 10 уникальных просмотров)
+  const trackDishView = (dishName) => {
+    setViewHistory(prev => {
+      if (prev[prev.length - 1] === dishName) return prev; 
+      return [...prev, dishName].slice(-10); 
+    });
+  };
+
+  // Изменение количества товара в корзине
+  const updateCart = (dishId, delta) => {
+    setCart(prev => {
+      const currentCount = prev[dishId] || 0;
+      const newCount = Math.max(0, currentCount + delta); 
+      if (newCount === 0) {
+        const { [dishId]: _, ...rest } = prev; 
+        return rest;
+      }
+      return { ...prev, [dishId]: newCount };
+    });
+  };
+
+  // Подтверждение заказа: перенос товаров из корзины в историю и очистка корзины
+  const handleConfirmOrder = (cartItems) => {
+    setConfirmedOrders(prev => [...prev, ...cartItems]);
+    setCart({}); 
+  };
 
   return (
     <div className="App">
       <Routes>
-        <Route path="/" element={<MainScreen onChatModeToggle={() => handleOpenChat()} isChatOpen={isChatOpen} />} />
-        <Route path="/menu" element={
-          <MenuPage 
-            cart={cart} 
-            updateCart={(id, d) => setCart(prev => {
-                const val = (prev[id] || 0) + d;
-                if (val <= 0) { const { [id]: _, ...r } = prev; return r; }
-                return { ...prev, [id]: val };
-            })} 
-            confirmedOrders={confirmedOrders}
-            onOpenChat={handleOpenChat}
-            trackDishView={(name) => setViewHistory(prev => [...prev, name].slice(-10))}
-          />
-        } />
+        {/* Главная страница */}
+        <Route 
+          path="/" 
+          element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
+        />
+        {/* Страница меню */}
+        <Route 
+          path="/menu" 
+          element={
+            <MenuPage 
+              cart={cart} 
+              updateCart={updateCart} 
+              confirmedOrders={confirmedOrders}
+              onConfirmOrder={handleConfirmOrder}
+              // ИЗМЕНЕНО: Теперь функция принимает dish (объект блюда) и currentSection (название раздела)
+              onOpenChat={(dish, currentSection) => {
+                if (dish) {
+                  // Если чат открыт из карточки конкретного блюда — передаем полные данные о нем
+                  const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+                  setChatContext(info); 
+                } else if (currentSection) {
+                  // НОВОЕ: Если открыли из общего меню — передаем текущий видимый раздел (скролл)
+                  setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
+                } else {
+                  // Если данных нет, передаем общую заглушку
+                  setChatContext('Общее меню ресторана');
+                }
+                setIsChatOpen(true); // Открываем модальное окно чата
+              }}
+              trackDishView={trackDishView} 
+            />
+          } 
+        />
       </Routes>
 
+      {/* Модальное окно чата с ИИ */}
       <AIChatModal 
         isOpen={isChatOpen} 
-        onClose={handleCloseChat} 
-        pageContext={chatContext}
-        guestUuid={guestInfo.uuid}
-        guestFingerprint={guestInfo.fingerprint}
-        sessionId={currentSessionId}
+        onClose={() => {
+          setIsChatOpen(false); // Закрываем чат
+          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии данные не дублировались
+        }} 
+        viewHistory={viewHistory}
+        pageContext={chatContext} // Передаем собранный контекст (блюдо или раздел) в чат
       />
     </div>
   );
 }
 
-function App() { return <HashRouter><AppContent /></HashRouter>; }
+// Обертка с HashRouter для корректной навигации в веб-окружениях
+function App() {
+  return (
+    <HashRouter>
+      <AppContent />
+    </HashRouter>
+  );
+}
+
 export default App;
