@@ -1,39 +1,64 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react'; // Подключаем хук для управления состоянием загрузки
 
 export const useChatApi = (webhookUrl) => {
+    // isLoading будет true, когда мы отправили запрос и ждем ответа
     const [isLoading, setIsLoading] = useState(false);
 
-    const sendMessageToAI = useCallback(async (text, context, sessionId, guestUuid, guestFingerprint) => {
-        setIsLoading(true);
+    // Основная функция для связи с n8n
+    // Принимает: text (сообщение), context (блюдо), sessionId (ID юзера)
+    const sendMessageToAI = async (text, context, sessionId = 'default-user') => {
+        setIsLoading(true); // Включаем индикатор «бот думает»
+        
         try {
+            // Выполняем запрос к n8n
             const response = await fetch(webhookUrl, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain', 'Accept': 'application/json' },
+                method: 'POST', // Метод отправки данных
+                mode: 'cors',   // Разрешаем кросс-доменные запросы
+                headers: {
+                    /* ПЛАН Б: Меняем application/json на text/plain.
+                       Это «успокаивает» Safari, так как такой запрос считается простым 
+                       и браузер не делает предварительную проверку (Preflight).
+                    */
+                    'Content-Type': 'text/plain', 
+                    'Accept': 'application/json' // Говорим, что в ответ хотим получить JSON
+                },
+                // Превращаем объект в строку. ВАЖНО: используем правильные имена переменных!
                 body: JSON.stringify({
-                    message: text,
-                    context: context,
-                    sessionId: sessionId,
-                    guestUuid: guestUuid,
-                    fingerprint: guestFingerprint
+                    message: text,     // Текст от пользователя
+                    context: context,  // Данные о блюде (контекст)
+                    userId: sessionId  // Идентификатор сессии
                 }),
             });
+            
+            // Если сервер ответил с ошибкой (например, 500 или 404)
+            if (!response.ok) {
+                throw new Error(`Ошибка сервера: ${response.status}`);
+            }
 
-            if (!response.ok) throw new Error(`Status: ${response.status}`);
+            // Получаем «сырой» ответ от сервера
             const responseText = await response.text();
+            
             try {
+                // Пытаемся распарсить ответ как JSON
                 const data = JSON.parse(responseText);
+                // Ищем ответ в разных полях, которые может прислать n8n/AI Agent
                 return data.output || data.text || data.message || responseText;
-            } catch {
+            } catch (jsonError) {
+                // Если пришел не JSON, а просто текст — возвращаем как есть
                 return responseText;
             }
+
         } catch (error) {
-            console.error("API Error:", error);
-            return "Ошибка связи.";
+            // Логируем ошибку в консоль для отладки
+            console.error("n8n Error:", error);
+            // Возвращаем текст-заглушку для пользователя
+            return "Извините, я немного отвлекся. Повторите, пожалуйста!";
         } finally {
+            // В любом случае (успех или ошибка) выключаем загрузку
             setIsLoading(false);
         }
-    }, [webhookUrl]);
+    };
 
+    // Возвращаем функцию и статус загрузки в компонент AIChatModal
     return { sendMessageToAI, isLoading };
 };
