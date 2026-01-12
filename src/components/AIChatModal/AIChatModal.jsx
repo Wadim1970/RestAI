@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'; // Подключа�
 import styles from './AIChatModal.module.css'; // Подключаем стили
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 
-const AIChatModal = ({ isOpen, onClose, pageContext }) => {
+// ИЗМЕНЕНО: Добавляем в пропсы guestUuid, guestFingerprint и sessionId из App.jsx
+const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint, sessionId }) => {
   const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
   const [viewMode, setViewMode] = useState('text'); // Режим: чат или видео
   const [messages, setMessages] = useState([]); // Массив сообщений (история)
@@ -10,6 +11,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
   const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
   const messagesEndRef = useRef(null); // Ссылка на невидимый элемент в конце чата для автоскролла
 
+  // Используем хук API. Передаем URL твоего вебхука
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
   // Функция, которая принудительно прокручивает контейнер вниз
@@ -23,8 +25,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
     // Если модалка открыта и история сообщений пуста — запрашиваем приветствие у ИИ
     if (isOpen && messages.length === 0 && !isLoading) {
       const fetchGreeting = async () => {
-        // Отправляем технический маркер "ПРИВЕТСТВИЕ", чтобы n8n понял задачу
-        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, 'user-unique-id-123');
+        // ИЗМЕНЕНО: Отправляем "ПРИВЕТСТВИЕ" с использованием динамического sessionId и данных гостя
+        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, guestUuid, guestFingerprint);
         // Добавляем полученный ответ как самое первое сообщение бота
         setMessages([{ role: 'bot', text: aiGreeting }]);
       };
@@ -35,12 +37,12 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
     if (!isOpen) {
       setMessages([]);
     }
-  }, [isOpen]); // Следим только за открытием/закрытием модалки
+    // Добавили sessionId в зависимости, чтобы эффект понимал, когда сессия обновилась
+  }, [isOpen, messages.length, isLoading, pageContext, sessionId, guestUuid, guestFingerprint, sendMessageToAI]); 
 
   // Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
   const handleInputFocus = () => {
     // Если система (interactive-widget) работает, она сама подожмет экран.
-    // Оставляем только разовый вызов, чтобы просто "подровнять" позицию.
     scrollToBottom();
   };
 
@@ -70,8 +72,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
       const newMessages = [...messages, { role: 'user', text: userText }]; // Добавляем сообщение юзера
       setMessages(newMessages); // Обновляем экран
 
-      // Отправляем запрос в n8n (теперь с контекстом блюда)
-      const aiResponse = await sendMessageToAI(userText, pageContext, 'user-unique-id-123');
+      // ИЗМЕНЕНО: Отправляем запрос в n8n со всеми идентификаторами (sessionId, uuid, fingerprint)
+      const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, guestUuid, guestFingerprint);
       
       // Добавляем ответ бота в историю
       setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
