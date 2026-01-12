@@ -1,53 +1,67 @@
-import React, { useState, useRef, useEffect } from 'react'; // Импортируем React и стандартные хуки
-import styles from './AIChatModal.module.css'; // Подключаем стили
-import { useChatApi } from './useChatApi'; // Импортируем логику API
+import React, { useState, useRef, useEffect } from 'react';
+import styles from './AIChatModal.module.css';
+import { useChatApi } from './useChatApi';
 
 const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint, sessionId }) => {
-  const [inputValue, setInputValue] = useState(''); // Текст ввода пользователя
-  const [messages, setMessages] = useState([]); // История сообщений
+  const [inputValue, setInputValue] = useState('');
+  const [messages, setMessages] = useState([]);
+  
+  const textAreaRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  
+  // ФЛАГ ДЛЯ ПРЕДОТВРАЩЕНИЯ ПОВТОРНОГО ПРИВЕТСТВИЯ
+  const hasFetchedGreeting = useRef(false);
 
-  const textAreaRef = useRef(null); // Ссылка на поле ввода
-  const messagesEndRef = useRef(null); // Ссылка для автоскролла вниз
-
-  // Подключаем API с твоим вебхуком
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
-  // ФИКС КНОПОК: Если модалка закрыта, возвращаем null. 
-  // Это убирает невидимый слой, который блокировал клики в меню.
+  // Если закрыто — выкидываем из DOM сразу
   if (!isOpen) return null;
 
-  // Автопрокрутка к последнему сообщению
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Эффект для приветствия и очистки при закрытии
+  // ЭФФЕКТ ПРИВЕТСТВИЯ: Теперь БЕЗ sendMessageToAI в зависимостях
   useEffect(() => {
-    if (isOpen && messages.length === 0 && !isLoading) {
+    // Если открыто и мы еще не запрашивали приветствие
+    if (isOpen && !hasFetchedGreeting.current) {
+      
       const fetchGreeting = async () => {
-        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, guestUuid, guestFingerprint);
-        setMessages([{ role: 'bot', text: aiGreeting }]);
+        hasFetchedGreeting.current = true; // Сразу блокируем повтор
+        try {
+          const aiGreeting = await sendMessageToAI(
+            "ПРИВЕТСТВИЕ", 
+            pageContext, 
+            sessionId, 
+            guestUuid, 
+            guestFingerprint
+          );
+          setMessages([{ role: 'bot', text: aiGreeting }]);
+        } catch (error) {
+          console.error("Ошибка:", error);
+          hasFetchedGreeting.current = false; // Разрешаем переповтор при ошибке
+        }
       };
+
       fetchGreeting();
     }
 
-    // При закрытии стейт очищается, чтобы при новом открытии всё было чисто
+    // Сброс флага при размонтировании
     return () => {
-      if (!isOpen) setMessages([]);
+      if (!isOpen) {
+        hasFetchedGreeting.current = false;
+        setMessages([]);
+      }
     };
-  }, [isOpen, pageContext, sessionId, guestUuid, guestFingerprint, sendMessageToAI]);
+    // ВАЖНО: Мы убрали sendMessageToAI отсюда! Это остановит бесконечный цикл #310.
+  }, [isOpen, pageContext, sessionId, guestUuid, guestFingerprint]); 
 
-  // Скролл при каждом новом сообщении
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const handleInputFocus = () => scrollToBottom();
-
-  // Функция отправки сообщения
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
-
     const userText = inputValue;
     setInputValue(''); 
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
@@ -57,11 +71,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint
   };
 
   return (
-    // Добавляем принудительный класс active, так как рендерим только если isOpen = true
     <div className={`${styles.modalOverlay} ${styles.active}`} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button className={styles.closeButton} onClick={onClose}>×</button>
-        
         <div className={styles.messagesContainer}>
           {messages.map((msg, index) => (
             <div key={index} className={msg.role === 'user' ? styles.userMsg : styles.botMsg}>
@@ -70,14 +82,12 @@ const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint
           ))}
           <div ref={messagesEndRef} />
         </div>
-
         <div className={styles.inputArea}>
           <textarea
             ref={textAreaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onFocus={handleInputFocus}
-            placeholder="Спросите ИИ о блюдах или составе..."
+            placeholder="Спросите ИИ..."
           />
           <button onClick={handleSend} disabled={isLoading}>
             {isLoading ? '...' : 'Отправить'}
