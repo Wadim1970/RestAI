@@ -16,7 +16,7 @@ function AppContent() {
 
   // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    // Загружаем историю подтвержденных заказов
+    // Загружаем истории подтвержденных заказов
     const savedOrders = localStorage.getItem('restaurant_orders');
     return savedOrders ? JSON.parse(savedOrders) : []; 
   });
@@ -25,6 +25,9 @@ function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыт ли чат с ИИ
   const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
   const [chatContext, setChatContext] = useState(''); // Контекст для ИИ (данные о блюде или разделе)
+
+  // --- НОВОЕ: СОСТОЯНИЕ ДЛЯ ДИНАМИЧЕСКОГО ID СЕССИИ ---
+  const [currentSessionId, setCurrentSessionId] = useState(''); // Уникальный ID текущего диалога
 
   // Эффект: сохранение корзины в память браузера при каждом её изменении
   useEffect(() => {
@@ -61,6 +64,8 @@ function AppContent() {
   // Открытие чата из главного экрана (MainScreen)
   const handleToggleChatMode = (mode) => {
     if (mode === 'chat') {
+      // НОВОЕ: Генерируем уникальный ID сессии при открытии с главной
+      setCurrentSessionId(`sess_${Date.now()}`); 
       setIsChatOpen(true);
     }
   };
@@ -109,17 +114,16 @@ function AppContent() {
               updateCart={updateCart} 
               confirmedOrders={confirmedOrders}
               onConfirmOrder={handleConfirmOrder}
-              // ИЗМЕНЕНО: Теперь функция принимает dish (объект блюда) и currentSection (название раздела)
               onOpenChat={(dish, currentSection) => {
+                // НОВОЕ: Генерируем уникальный ID сессии при каждом открытии чата из меню
+                setCurrentSessionId(`sess_${Date.now()}`); 
+
                 if (dish) {
-                  // Если чат открыт из карточки конкретного блюда — передаем полные данные о нем
                   const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
                   setChatContext(info); 
                 } else if (currentSection) {
-                  // НОВОЕ: Если открыли из общего меню — передаем текущий видимый раздел (скролл)
                   setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
                 } else {
-                  // Если данных нет, передаем общую заглушку
                   setChatContext('Общее меню ресторана');
                 }
                 setIsChatOpen(true); // Открываем модальное окно чата
@@ -135,10 +139,12 @@ function AppContent() {
         isOpen={isChatOpen} 
         onClose={() => {
           setIsChatOpen(false); // Закрываем чат
-          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии данные не дублировались
+          setChatContext('');   // Очищаем контекст
         }} 
         viewHistory={viewHistory}
-        pageContext={chatContext} // Передаем собранный контекст (блюдо или раздел) в чат
+        pageContext={chatContext} // Передаем собранный контекст
+        // НОВОЕ: Передаем сгенерированный ID сессии в модалку
+        sessionId={currentSessionId} 
       />
     </div>
   );
