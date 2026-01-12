@@ -1,180 +1,142 @@
-import React, { useState, useEffect } from 'react'; 
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; 
-import MainScreen from './components/MainScreen'; 
-import MenuPage from './components/MenuPage'; 
-import AIChatModal from './components/AIChatModal/AIChatModal'; 
+import React, { useState, useEffect } from 'react'; // Подключаем ядро React и хуки состояния/эффектов
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; // Подключаем роутинг для навигации
+import MainScreen from './components/MainScreen'; // Импортируем компонент главного экрана (заставки)
+import MenuPage from './components/MenuPage'; // Импортируем компонент страницы меню
+import AIChatModal from './components/AIChatModal/AIChatModal'; // Импортируем модалку чата с ИИ
 
 function AppContent() {
-  const location = useLocation(); // Хук для отслеживания текущего пути (маршрута)
+  const location = useLocation(); // Создаем объект для отслеживания текущего URL/пути
 
-  // --- СОСТОЯНИЕ ИДЕНТИФИКАЦИИ (RestAI) ---
-  // guestInfo хранит постоянный UUID гостя и его цифровой отпечаток (fingerprint)
+  // --- БЛОК ИДЕНТИФИКАЦИИ RestAI ---
+  // Создаем состояние для хранения постоянных данных гостя (ID и отпечаток)
   const [guestInfo, setGuestInfo] = useState({ uuid: '', fingerprint: '' });
-  // currentSessionId меняется при каждом открытии чата, чтобы ИИ начинал с чистого листа
+  // Создаем состояние для ID текущей беседы (обнуляется при каждом открытии чата)
   const [currentSessionId, setCurrentSessionId] = useState('');
 
-  // Эффект: выполняется один раз при загрузке приложения для опознания гостя
+  // Эффект, который срабатывает один раз при загрузке сайта
   useEffect(() => {
-    // Пытаемся достать существующий UUID из памяти браузера
+    // Ищем в памяти браузера уже существующий ID гостя
     let uuid = localStorage.getItem('restai_guest_uuid');
     if (!uuid) {
-      // Если гость новый — генерируем ему уникальный UUID
+      // Если его нет (первый вход) — генерируем новый случайный UUID
       uuid = crypto.randomUUID();
-      // И сохраняем его в память на будущее
+      // Сохраняем его, чтобы при следующем входе узнать этого же юзера
       localStorage.setItem('restai_guest_uuid', uuid);
     }
-    // Собираем базовые данные устройства для создания "отпечатка" (защита от очистки кеша)
-    const fingerprintData = {
-      ua: navigator.userAgent, // Данные браузера
-      res: `${window.screen.width}x${window.screen.height}` // Разрешение экрана
-    };
-    // Кодируем данные в строку для удобной передачи
-    const fingerprintHash = btoa(JSON.stringify(fingerprintData)).slice(0, 32);
-    // Записываем данные в состояние
+    // Собираем данные браузера для создания цифрового "отпечатка" (защита от чистки куки)
+    const fingerprintHash = btoa(navigator.userAgent).slice(0, 16);
+    // Записываем UUID и отпечаток в состояние приложения
     setGuestInfo({ uuid, fingerprint: fingerprintHash });
-  }, []);
+  }, []); // Пустой массив значит: выполнить только 1 раз при старте
 
-  // --- СОСТОЯНИЕ КОРЗИНЫ ---
+  // --- БЛОК КОРЗИНЫ ---
+  // Инициализируем корзину данными из памяти браузера или пустым объектом
   const [cart, setCart] = useState(() => {
-    // Загружаем сохраненную корзину из localStorage
-    const savedCart = localStorage.getItem('restaurant_cart'); 
-    return savedCart ? JSON.parse(savedCart) : {}; 
+    const saved = localStorage.getItem('restaurant_cart'); 
+    return saved ? JSON.parse(saved) : {}; 
   });
 
-  // --- СОСТОЯНИЕ ЗАКАЗОВ ---
+  // --- БЛОК ЗАКАЗОВ ---
+  // Инициализируем список заказов историей из памяти или пустым массивом
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    // Загружаем историю подтвержденных заказов
-    const savedOrders = localStorage.getItem('restaurant_orders');
-    return savedOrders ? JSON.parse(savedOrders) : []; 
+    const saved = localStorage.getItem('restaurant_orders');
+    return saved ? JSON.parse(saved) : []; 
   });
 
-  // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
-  const [isChatOpen, setIsChatOpen] = useState(false); // Открыт ли чат
-  const [viewHistory, setViewHistory] = useState([]); // История просмотров блюд
-  const [chatContext, setChatContext] = useState(''); // Контекст (блюдо/раздел) для ИИ
+  // --- БЛОК ЧАТА ---
+  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыто окно чата или закрыто
+  const [viewHistory, setViewHistory] = useState([]); // Массив последних просмотренных блюд (для контекста ИИ)
+  const [chatContext, setChatContext] = useState(''); // Строка с описанием того, что сейчас видит юзер
 
-  // Эффект: сохранение корзины при каждом её изменении
+  // Эффект для автоматического сохранения корзины при любом её изменении
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Эффект: сохранение истории заказов
+  // Эффект для автоматического сохранения истории заказов
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
 
-  // --- УПРАВЛЕНИЕ СКРОЛЛОМ (БЕЗ POSITION FIXED, КОТОРЫЙ ЛОМАЛ КНОПКУ) ---
-  useEffect(() => {
-    const isMainPage = location.pathname === '/'; 
-    // Если мы на главной или открыт чат — просто скрываем полосу прокрутки
-    if (isMainPage || isChatOpen) {
-      document.body.style.overflow = 'hidden'; 
-      // ВНИМАНИЕ: Я убрал position: fixed и touchAction, чтобы кнопки оставались кликабельными
-    } else {
-      // Возвращаем стандартный скролл для страницы меню
-      document.body.style.overflow = '';
-    }
-  }, [isChatOpen, location.pathname]);
+  // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
 
-  // --- ОБРАБОТЧИКИ ---
-
-  // Новая универсальная функция открытия чата
+  // Функция для открытия чата (принимает данные о блюде или разделе меню)
   const handleOpenChat = (dish, currentSection) => {
-    // Формируем текстовое описание для ИИ в зависимости от того, где открыт чат
     if (dish) {
-      // Если открыли из карточки блюда
-      setChatContext(`Блюдо: ${dish.dish_name}. Состав: ${dish.ingredients}`); 
+      // Если чат открыт из карточки — запоминаем данные этого блюда
+      setChatContext(`Блюдо: ${dish.dish_name}. Описание: ${dish.description}`); 
     } else if (currentSection) {
-      // Если открыли, листая категорию
-      setChatContext(`Пользователь смотрит раздел: "${currentSection}"`);
+      // Если просто из раздела — запоминаем название раздела
+      setChatContext(`Раздел меню: ${currentSection}`);
     } else {
-      // Общий вызов чата
+      // Если открыто кнопкой "помощь" — ставим общий контекст
       setChatContext('Общее меню');
     }
-
-    // ГЕНЕРАЦИЯ СЕССИИ: Каждое открытие чата получает уникальный ID
-    // Это гарантирует, что ИИ не будет путать блюда из разных открытий чата
-    const newSession = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    
+    // Генерируем новый ID сессии на основе времени (чтобы n8n видел новый диалог)
+    const newSession = `sess_${Date.now()}`;
     setCurrentSessionId(newSession);
-
-    // Показываем окно чата
+    // Меняем состояние на "открыто", что покажет модалку
     setIsChatOpen(true);
   };
 
-  // Запись истории просмотров (до 10 позиций)
-  const trackDishView = (dishName) => {
-    setViewHistory(prev => {
-      if (prev[prev.length - 1] === dishName) return prev; 
-      return [...prev, dishName].slice(-10); 
-    });
-  };
-
-  // Обновление корзины
+  // Функция для обновления количества блюд в корзине
   const updateCart = (dishId, delta) => {
     setCart(prev => {
-      const currentCount = prev[dishId] || 0;
-      const newCount = Math.max(0, currentCount + delta); 
-      if (newCount === 0) {
+      // Считаем новое количество (не даем уйти в минус)
+      const newCount = Math.max(0, (prev[dishId] || 0) + delta);
+      // Если количество 0 — удаляем блюдо из объекта корзины
+      if (newCount === 0) { 
         const { [dishId]: _, ...rest } = prev; 
-        return rest;
+        return rest; 
       }
+      // Иначе обновляем значение для конкретного ID блюда
       return { ...prev, [dishId]: newCount };
     });
   };
 
-  // Подтверждение заказа
-  const handleConfirmOrder = (cartItems) => {
-    setConfirmedOrders(prev => [...prev, ...cartItems]);
-    setCart({}); 
-  };
-
   return (
-    <div className="App">
-      <Routes>
-        {/* Главная страница (заставка с видео) */}
+    <div className="App"> {/* Главный контейнер приложения */}
+      <Routes> {/* Контейнер для переключения страниц */}
+        {/* Маршрут для главной страницы (твоя заставка с видео) */}
         <Route 
           path="/" 
           element={
             <MainScreen 
+              // Прокидываем функцию открытия чата (она должна вызываться в MainScreen)
               onChatModeToggle={(mode) => mode === 'chat' && handleOpenChat()} 
               isChatOpen={isChatOpen} 
             />
           } 
         />
-        {/* Страница основного меню */}
+        {/* Маршрут для страницы меню */}
         <Route 
           path="/menu" 
           element={
             <MenuPage 
-              cart={cart} 
-              updateCart={updateCart} 
-              confirmedOrders={confirmedOrders}
-              onConfirmOrder={handleConfirmOrder}
-              onOpenChat={handleOpenChat} // Прокидываем нашу новую функцию открытия
-              trackDishView={trackDishView} 
+              cart={cart} // Передаем состояние корзины
+              updateCart={updateCart} // Передаем функцию изменения корзины
+              confirmedOrders={confirmedOrders} // Передаем историю заказов
+              onOpenChat={handleOpenChat} // Передаем функцию открытия чата
             />
           } 
         />
       </Routes>
 
-      {/* Модальное окно чата: передаем контекст и все идентификаторы для n8n */}
+      {/* Компонент чата (рендерится всегда, но показывается по условию isOpen) */}
       <AIChatModal 
-        isOpen={isChatOpen} 
-        onClose={() => {
-          setIsChatOpen(false); // Закрываем
-          setChatContext('');   // Очищаем контекст для следующего раза
-        }} 
-        viewHistory={viewHistory}
-        pageContext={chatContext} 
-        guestUuid={guestInfo.uuid} // Постоянный ID для базы данных
-        guestFingerprint={guestInfo.fingerprint} // Отпечаток устройства
-        sessionId={currentSessionId} // Динамический ID текущей беседы
+        isOpen={isChatOpen} // Передаем статус (открыт/закрыт)
+        onClose={() => setIsChatOpen(false)} // Функция для закрытия крестиком
+        pageContext={chatContext} // Передаем информацию о блюде для ИИ
+        guestUuid={guestInfo.uuid} // Передаем постоянный ID гостя для n8n
+        guestFingerprint={guestInfo.fingerprint} // Передаем отпечаток браузера для n8n
+        sessionId={currentSessionId} // Передаем ID текущей сессии для n8n
       />
     </div>
   );
 }
 
-// Корневой компонент с роутером
+// Главная обертка приложения с HashRouter для корректной работы PWA
 function App() {
   return (
     <HashRouter>
@@ -183,4 +145,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; // Экспортируем компонент для запуска в index.js
