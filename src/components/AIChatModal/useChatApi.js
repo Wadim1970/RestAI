@@ -1,66 +1,64 @@
-import { useState } from 'react'; // Подключаем хук для управления состоянием загрузки
+import { useState, useCallback } from 'react'; // Подключаем useState и ОБЯЗАТЕЛЬНО useCallback для стабилизации ссылок
 
+// Хук для связи с твоим сервером n8n
 export const useChatApi = (webhookUrl) => {
-    // isLoading будет true, когда мы отправили запрос и ждем ответа
+    // Состояние загрузки: true, когда запрос в пути
     const [isLoading, setIsLoading] = useState(false);
 
-    // Основная функция для связи с n8n
-    // ИЗМЕНЕНО: Теперь принимает дополнительные параметры для платформы RestAI
-    const sendMessageToAI = async (text, context, sessionId, guestUuid, guestFingerprint) => {
-        setIsLoading(true); // Включаем индикатор «бот думает»
+    // МЫ ОБОРАЧИВАЕМ ФУНКЦИЮ В useCallback. Это убивает ошибку #310.
+    // Теперь функция не пересоздается при каждом рендере, и useEffect в модалке спокоен.
+    const sendMessageToAI = useCallback(async (text, context, sessionId, guestUuid, guestFingerprint) => {
+        setIsLoading(true); // Включаем индикатор загрузки ("бот печатает")
         
         try {
-            // Выполняем запрос к n8n
+            // Выполняем сетевой запрос к твоему вебхуку
             const response = await fetch(webhookUrl, {
-                method: 'POST', // Метод отправки данных
+                method: 'POST', // Используем метод POST для отправки данных
                 mode: 'cors',   // Разрешаем кросс-доменные запросы
                 headers: {
-                    /* ПЛАН Б: Меняем application/json на text/plain.
-                       Это «успокаивает» Safari, так как такой запрос считается простым 
-                       и браузер не делает предварительную проверку (Preflight).
-                    */
+                    // Используем text/plain, чтобы избежать лишних проверок (Preflight) в Safari
                     'Content-Type': 'text/plain', 
-                    'Accept': 'application/json' // Говорим, что в ответ хотим получить JSON
+                    'Accept': 'application/json' // Ожидаем в ответ JSON
                 },
-                // Превращаем объект в строку.
+                // Превращаем все наши данные в JSON-строку для сервера
                 body: JSON.stringify({
-                    message: text,          // Текст сообщения (или "ПРИВЕТСТВИЕ")
-                    context: context,       // Данные о текущем блюде/разделе
-                    sessionId: sessionId,   // Динамический ID (чтобы ИИ не путал Карбонару с Пепперони)
-                    guestUuid: guestUuid,   // Постоянный ID гостя (для твоей базы в Supabase)
-                    fingerprint: guestFingerprint // Цифровой отпечаток (для страховки идентификации)
+                    message: text,               // Текст сообщения или команда ПРИВЕТСТВИЕ
+                    context: context,             // Контекст (блюдо или раздел меню)
+                    sessionId: sessionId,         // ID текущей сессии чата
+                    guestUuid: guestUuid,         // Уникальный ID гостя из localStorage
+                    fingerprint: guestFingerprint // Отпечаток устройства
                 }),
             });
             
-            // Если сервер ответил с ошибкой (например, 500 или 404)
+            // Если сервер вернул ошибку (например, 500) — выбрасываем исключение
             if (!response.ok) {
                 throw new Error(`Ошибка сервера: ${response.status}`);
             }
 
-            // Получаем «сырой» ответ от сервера
+            // Получаем ответ от сервера в виде простого текста
             const responseText = await response.text();
             
             try {
-                // Пытаемся распарсить ответ как JSON
+                // Пытаемся превратить текст в объект (JSON)
                 const data = JSON.parse(responseText);
-                // Ищем ответ в разных полях, которые может прислать n8n/AI Agent
+                // Ищем ответ в разных полях, которые может вернуть n8n
                 return data.output || data.text || data.message || responseText;
             } catch (jsonError) {
-                // Если пришел не JSON, а просто текст — возвращаем как есть
+                // Если сервер прислал не JSON, а просто текст — возвращаем текст как есть
                 return responseText;
             }
 
         } catch (error) {
-            // Логируем ошибку в консоль для отладки
+            // Если произошла любая ошибка (сеть, сервер) — пишем в консоль
             console.error("n8n Error:", error);
-            // Возвращаем текст-заглушку для пользователя
+            // Возвращаем пользователю вежливую заглушку
             return "Извините, я немного отвлекся. Повторите, пожалуйста!";
         } finally {
-            // В любом случае (успех или ошибка) выключаем загрузку
+            // Выключаем индикатор загрузки в любом случае (успех или провал)
             setIsLoading(false);
         }
-    };
+    }, [webhookUrl]); // Функция пересоздастся только если изменится URL вебхука (никогда)
 
-    // Возвращаем функцию и статус загрузки в компонент AIChatModal
+    // Возвращаем стабильную функцию и статус загрузки наружу
     return { sendMessageToAI, isLoading };
 };
