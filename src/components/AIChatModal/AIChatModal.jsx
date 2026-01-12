@@ -1,171 +1,82 @@
-import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и инструменты
-import styles from './AIChatModal.module.css'; // Подключаем стили
-import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
+import React, { useState, useRef, useEffect } from 'react'; // Импорт инструментов React
+import styles from './AIChatModal.module.css'; // Импорт стилей (модульных)
+import { useChatApi } from './useChatApi'; // Импорт логики запросов к ИИ
 
-// ИЗМЕНЕНО: Добавляем в пропсы guestUuid, guestFingerprint и sessionId из App.jsx
+// ОСТАВЛЯЕМ ТОЛЬКО ОДНО ОБЪЯВЛЕНИЕ ФУНКЦИИ
 const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint, sessionId }) => {
-  const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
-  const [viewMode, setViewMode] = useState('text'); // Режим: чат или видео
-  const [messages, setMessages] = useState([]); // Массив сообщений (история)
+  const [inputValue, setInputValue] = useState(''); // Состояние для текста ввода
+  const [messages, setMessages] = useState([]); // Состояние для истории сообщений
   
-  const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
-  const messagesEndRef = useRef(null); // Ссылка на невидимый элемент в конце чата для автоскролла
+  const textAreaRef = useRef(null); // Ссылка на поле ввода
+  const messagesEndRef = useRef(null); // Ссылка для автоскролла
 
-  // Используем хук API. Передаем URL твоего вебхука
+  // Подключаем API. URL вебхука из твоего кода
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
-  // Функция, которая принудительно прокручивает контейнер вниз
+  // ГЛАВНОЕ: Если модалка закрыта — возвращаем null, чтобы она физически исчезла и не блокировала клики
+  if (!isOpen) return null;
+
+  // Функция автоскролла вниз
   const scrollToBottom = () => {
-    // scrollIntoView плавно двигает экран к элементу messagesEndRef
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // --- НОВОЕ: АВТО-ПРИВЕТСТВИЕ ПРИ ОТКРЫТИИ ---
+  // Эффект для приветствия и очистки при закрытии
   useEffect(() => {
-    // Если модалка открыта и история сообщений пуста — запрашиваем приветствие у ИИ
     if (isOpen && messages.length === 0 && !isLoading) {
       const fetchGreeting = async () => {
-        // ИЗМЕНЕНО: Отправляем "ПРИВЕТСТВИЕ" с использованием динамического sessionId и данных гостя
+        // Отправляем ПРИВЕТСТВИЕ со всеми новыми ID
         const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, guestUuid, guestFingerprint);
-        // Добавляем полученный ответ как самое первое сообщение бота
         setMessages([{ role: 'bot', text: aiGreeting }]);
       };
       fetchGreeting();
     }
+  }, [isOpen, sessionId, guestUuid, guestFingerprint]); // Следим за важными ID
+
+  // Функция отправки сообщения
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return; // Не отправляем пустоту
+
+    const userText = inputValue;
+    setInputValue(''); // Чистим поле ввода
     
-    // Очищаем сообщения при закрытии, чтобы при новом открытии (с новым контекстом) ИИ снова поздоровался
-    if (!isOpen) {
-      setMessages([]);
-    }
-    // Добавили sessionId в зависимости, чтобы эффект понимал, когда сессия обновилась
-  }, [isOpen, messages.length, isLoading, pageContext, sessionId, guestUuid, guestFingerprint, sendMessageToAI]); 
+    // Добавляем сообщение пользователя в чат
+    setMessages(prev => [...prev, { role: 'user', text: userText }]);
 
-  // Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
-  const handleInputFocus = () => {
-    // Если система (interactive-widget) работает, она сама подожмет экран.
-    scrollToBottom();
-  };
+    // Запрос к ИИ со всеми новыми данными
+    const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, guestUuid, guestFingerprint);
 
-  // Следим за появлением новых сообщений или индикатора загрузки
-  useEffect(() => {
-    if (viewMode === 'text') {
-      scrollToBottom(); // Как только массив messages изменился — скроллим вниз
-    }
-  }, [messages, isLoading, viewMode]); // Триггеры: новые сообщения, статус "печатает" или смена режима
-
-  // Функция авто-роста поля ввода
-  useEffect(() => {
-    if (textAreaRef.current) {
-      textAreaRef.current.style.height = 'auto'; // Сброс высоты
-      textAreaRef.current.style.height = Math.min(textAreaRef.current.scrollHeight, 150) + 'px'; // Рост до 150px
-    }
-  }, [inputValue, viewMode]);
-
-  if (!isOpen) return null; // Если модалка закрыта — не рендерим ничего
-
-  // Логика кнопки отправки
-  const handleActionClick = async () => { 
-    if (inputValue.trim().length > 0) { // Если есть текст
-      const userText = inputValue.trim(); // Убираем лишние пробелы
-      setInputValue(''); // Очищаем поле сразу
-
-      const newMessages = [...messages, { role: 'user', text: userText }]; // Добавляем сообщение юзера
-      setMessages(newMessages); // Обновляем экран
-
-      // ИЗМЕНЕНО: Отправляем запрос в n8n со всеми идентификаторами (sessionId, uuid, fingerprint)
-      const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, guestUuid, guestFingerprint);
-      
-      // Добавляем ответ бота в историю
-      setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
-    } else {
-      // Если текста нет — переключаем видео/текст
-      setViewMode(prev => prev === 'text' ? 'video' : 'text');
-    }
+    // Добавляем ответ бота
+    setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
+    scrollToBottom(); // Листаем вниз
   };
 
   return (
-    <div className={styles['modal-overlay']}> {/* Темная подложка */}
-      <div className={styles['modal-glassContainer']}> {/* Основное окно */}
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        {/* Кнопка закрытия */}
+        <button className={styles.closeButton} onClick={onClose}>×</button>
         
-        {/* Видео-аватар */}
-        {viewMode === 'video' && (
-          <div className={styles['videoWrapper']}>
-              <div className={styles['videoPlaceholder']}>
-                <span className={styles['statusText']}>
-                  {isLoading ? '[ НЕЙРОСЕТЬ ГЕНЕРИРУЕТ ОТВЕТ... ]' : '[ ПОДКЛЮЧЕНИЕ ВИДЕО... ]'}
-                </span>
-              </div>
-          </div>
-        )}
-
-        {/* Кнопка закрытия модалки */}
-        <button className={styles['modal-closeBtn']} onClick={onClose}>
-          <img src="/icons/icon-on.png" alt="Закрыть" />
-        </button>
-
-        {/* Область переписки */}
-        {viewMode === 'text' && (
-          <div className={styles['modal-chatHistory']}>
-            {/* Если сообщений еще нет и идет загрузка первого приветствия */}
-            {messages.length === 0 && isLoading && (
-              <div className={styles['modal-botMessage']}>Подключаюсь к меню...</div>
-            )}
-
-            {/* Рендерим все сообщения из массива */}
-            {messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className={msg.role === 'user' ? styles['userMessage'] : styles['modal-botMessage']}
-              >
-                {msg.text}
-              </div>
-            ))}
-
-            {/* Индикатор того, что бот думает (показываем только когда уже есть сообщения) */}
-            {isLoading && messages.length > 0 && (
-              <div className={styles['modal-botMessage']}>...</div>
-            )}
-            
-            {/* Невидимый "якорь" в самом низу списка. К нему всегда едет скролл */}
-            <div ref={messagesEndRef} style={{ float:"left", clear: "both" }} />
-          </div>
-        )}
-
-        {/* Нижняя панель управления */}
-        <div className={styles['modal-footerControls']}>
-          {viewMode === 'text' && (
-            <div className={styles['modal-inputWrapper']}>
-              <textarea 
-                ref={textAreaRef}
-                className={styles['modal-textArea']}
-                rows="1"
-                placeholder="Напишите сообщение..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                disabled={isLoading}
-                // Фокус теперь просто подравнивает скролл, без лишних скачков
-                onFocus={handleInputFocus} 
-              />
+        {/* Контейнер сообщений */}
+        <div className={styles.messagesContainer}>
+          {messages.map((msg, index) => (
+            <div key={index} className={msg.role === 'user' ? styles.userMsg : styles.botMsg}>
+              {msg.text}
             </div>
-          )}
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
 
-          <button 
-            key={viewMode}
-            className={styles['modal-actionButton']} 
-            style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
-            onClick={handleActionClick}
-            disabled={isLoading && viewMode === 'text'}
-          >
-            {/* Иконка меняется: если есть текст — самолетик, если нет — микрофон/чат */}
-            {inputValue.trim().length > 0 ? ( 
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
-            ) : (
-              <img 
-                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
-                className={styles['modal-iconAudio']} 
-                alt="Switch" 
-              />
-            )}
+        {/* Поле ввода */}
+        <div className={styles.inputArea}>
+          <textarea 
+            ref={textAreaRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Спросите ИИ..."
+          />
+          <button onClick={handleSend} disabled={isLoading}>
+            {isLoading ? '...' : 'Отправить'}
           </button>
         </div>
       </div>
