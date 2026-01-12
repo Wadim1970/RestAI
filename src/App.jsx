@@ -7,6 +7,15 @@ import AIChatModal from './components/AIChatModal/AIChatModal';
 function AppContent() {
   const location = useLocation(); // Хук для отслеживания текущего пути (маршрута)
 
+  // --- СОСТОЯНИЕ ИДЕНТИФИКАЦИИ ГОСТЯ (ПЛАТФОРМА RestAI) ---
+  const [guestInfo, setGuestInfo] = useState({
+    uuid: '',        // Постоянный ID для Supabase
+    fingerprint: ''  // Цифровой отпечаток устройства
+  });
+
+  // --- СОСТОЯНИЕ ДИНАМИЧЕСКОЙ СЕССИИ (ДЛЯ ПАМЯТИ ИИ) ---
+  const [currentSessionId, setCurrentSessionId] = useState(''); // Сбрасывает память ИИ при смене блюда
+
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
     // Загружаем данные корзины из localStorage при инициализации
@@ -26,6 +35,31 @@ function AppContent() {
   const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
   const [chatContext, setChatContext] = useState(''); // Контекст для ИИ (данные о блюде или разделе)
 
+  // ЭФФЕКТ: Идентификация пользователя при загрузке приложения
+  useEffect(() => {
+    // 1. Работа с UUID (постоянный маркер)
+    let uuid = localStorage.getItem('restai_guest_uuid');
+    if (!uuid) {
+      uuid = crypto.randomUUID(); // Генерируем новый, если гость зашел впервые
+      localStorage.setItem('restai_guest_uuid', uuid);
+    }
+
+    // 2. Сбор признаков для Fingerprint (устройство, экран, язык)
+    const fingerprintData = {
+      ua: navigator.userAgent, // Браузер и ОС
+      res: `${window.screen.width}x${window.screen.height}`, // Разрешение экрана
+      lang: navigator.language, // Язык системы
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone, // Часовой пояс
+      mem: navigator.deviceMemory || 'unknown' // Примерный объем ОЗУ (если доступно)
+    };
+    
+    // Превращаем данные в короткую строку-хэш
+    const fingerprintHash = btoa(JSON.stringify(fingerprintData)).slice(0, 32);
+
+    // Сохраняем "паспорт" гостя в стейт
+    setGuestInfo({ uuid, fingerprint: fingerprintHash });
+  }, []);
+
   // Эффект: сохранение корзины в память браузера при каждом её изменении
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
@@ -39,7 +73,6 @@ function AppContent() {
   // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
   useEffect(() => {
     const isMainPage = location.pathname === '/'; 
-    // Блокируем прокрутку страницы, если мы на главной или открыт чат (для фиксации UI)
     if (isMainPage || isChatOpen) {
       document.body.style.overflow = 'hidden'; 
       document.body.style.position = 'fixed'; 
@@ -47,7 +80,6 @@ function AppContent() {
       document.body.style.height = '100%'; 
       document.body.style.touchAction = 'none'; 
     } else {
-      // Возвращаем стандартное поведение скролла для страницы меню
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
@@ -58,14 +90,28 @@ function AppContent() {
 
   // --- ОБРАБОТЧИКИ ---
 
-  // Открытие чата из главного экрана (MainScreen)
-  const handleToggleChatMode = (mode) => {
-    if (mode === 'chat') {
-      setIsChatOpen(true);
+  // Универсальная функция открытия чата (с обновлением сессии и контекста)
+  const handleOpenChat = (dish, currentSection) => {
+    // 1. Установка контекста (блюдо или раздел)
+    if (dish) {
+      const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+      setChatContext(info); 
+    } else if (currentSection) {
+      setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
+    } else {
+      setChatContext('Общее меню ресторана');
     }
+
+    // 2. ГЕНЕРАЦИЯ ДИНАМИЧЕСКОГО ID СЕССИИ (чтобы ИИ не путал Карбонару с Пепперони)
+    // Мы создаем уникальный ключ для текущего входа в чат
+    const newSession = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    setCurrentSessionId(newSession);
+
+    // 3. Открытие модалки
+    setIsChatOpen(true);
   };
 
-  // Запись истории просмотров (сохраняем последние 10 уникальных просмотров)
+  // Запись истории просмотров (последние 10)
   const trackDishView = (dishName) => {
     setViewHistory(prev => {
       if (prev[prev.length - 1] === dishName) return prev; 
@@ -86,7 +132,7 @@ function AppContent() {
     });
   };
 
-  // Подтверждение заказа: перенос товаров из корзины в историю и очистка корзины
+  // Подтверждение заказа
   const handleConfirmOrder = (cartItems) => {
     setConfirmedOrders(prev => [...prev, ...cartItems]);
     setCart({}); 
@@ -95,12 +141,15 @@ function AppContent() {
   return (
     <div className="App">
       <Routes>
-        {/* Главная страница */}
         <Route 
           path="/" 
-          element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
+          element={
+            <MainScreen 
+              onChatModeToggle={(mode) => mode === 'chat' && handleOpenChat()} 
+              isChatOpen={isChatOpen} 
+            />
+          } 
         />
-        {/* Страница меню */}
         <Route 
           path="/menu" 
           element={
@@ -109,21 +158,7 @@ function AppContent() {
               updateCart={updateCart} 
               confirmedOrders={confirmedOrders}
               onConfirmOrder={handleConfirmOrder}
-              // ИЗМЕНЕНО: Теперь функция принимает dish (объект блюда) и currentSection (название раздела)
-              onOpenChat={(dish, currentSection) => {
-                if (dish) {
-                  // Если чат открыт из карточки конкретного блюда — передаем полные данные о нем
-                  const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
-                  setChatContext(info); 
-                } else if (currentSection) {
-                  // НОВОЕ: Если открыли из общего меню — передаем текущий видимый раздел (скролл)
-                  setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
-                } else {
-                  // Если данных нет, передаем общую заглушку
-                  setChatContext('Общее меню ресторана');
-                }
-                setIsChatOpen(true); // Открываем модальное окно чата
-              }}
+              onOpenChat={handleOpenChat} // Используем обновленную функцию с ID сессии
               trackDishView={trackDishView} 
             />
           } 
@@ -134,11 +169,15 @@ function AppContent() {
       <AIChatModal 
         isOpen={isChatOpen} 
         onClose={() => {
-          setIsChatOpen(false); // Закрываем чат
-          setChatContext('');   // Очищаем контекст, чтобы при следующем открытии данные не дублировались
+          setIsChatOpen(false); 
+          setChatContext('');   
         }} 
         viewHistory={viewHistory}
-        pageContext={chatContext} // Передаем собранный контекст (блюдо или раздел) в чат
+        pageContext={chatContext} 
+        // ПЕРЕДАЕМ ДАННЫЕ ПЛАТФОРМЫ RESTAI
+        guestUuid={guestInfo.uuid}           // Для записи в Supabase (кто это?)
+        guestFingerprint={guestInfo.fingerprint} // Для доп. идентификации
+        sessionId={currentSessionId}         // Для памяти n8n (какой сейчас разговор?)
       />
     </div>
   );
