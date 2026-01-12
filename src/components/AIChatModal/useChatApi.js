@@ -5,8 +5,8 @@ export const useChatApi = (webhookUrl) => {
     const [isLoading, setIsLoading] = useState(false);
 
     // Основная функция для связи с n8n
-    // Принимает: text (сообщение), context (блюдо), sessionId (ID юзера)
-    const sendMessageToAI = async (text, context, sessionId = 'default-user') => {
+    // ИЗМЕНЕНО: Теперь принимает дополнительные параметры для платформы RestAI
+    const sendMessageToAI = async (text, context, sessionId, guestUuid, guestFingerprint) => {
         setIsLoading(true); // Включаем индикатор «бот думает»
         
         try {
@@ -22,11 +22,13 @@ export const useChatApi = (webhookUrl) => {
                     'Content-Type': 'text/plain', 
                     'Accept': 'application/json' // Говорим, что в ответ хотим получить JSON
                 },
-                // Превращаем объект в строку. ВАЖНО: используем правильные имена переменных!
+                // Превращаем объект в строку.
                 body: JSON.stringify({
-                    message: text,     // Текст от пользователя
-                    context: context,  // Данные о блюде (контекст)
-                    userId: sessionId  // Идентификатор сессии
+                    message: text,          // Текст сообщения (или "ПРИВЕТСТВИЕ")
+                    context: context,       // Данные о текущем блюде/разделе
+                    sessionId: sessionId,   // Динамический ID (чтобы ИИ не путал Карбонару с Пепперони)
+                    guestUuid: guestUuid,   // Постоянный ID гостя (для твоей базы в Supabase)
+                    fingerprint: guestFingerprint // Цифровой отпечаток (для страховки идентификации)
                 }),
             });
             
