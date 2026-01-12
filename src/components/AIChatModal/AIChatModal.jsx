@@ -1,34 +1,37 @@
-import React, { useState, useRef, useEffect } from 'react'; // Импортируем базовые инструменты React
-import styles from './AIChatModal.module.css'; // Импортируем стили этого компонента
-import { useChatApi } from './useChatApi'; // Импортируем наш хук для связи с сервером n8n
+import React, { useState, useRef, useEffect } from 'react'; // Подключаем хуки
+import styles from './AIChatModal.module.css'; // Подключаем стили
+import { useChatApi } from './useChatApi'; // Подключаем твой API
 
-// Объявляем компонент и принимаем все пропсы, включая новые ID для идентификации
+// Основной компонент модалки
 const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint, sessionId }) => {
-  const [inputValue, setInputValue] = useState(''); // Состояние для хранения текста, который вводит пользователь
-  const [messages, setMessages] = useState([]); // Состояние для хранения истории всей переписки
+  const [inputValue, setInputValue] = useState(''); // Стейт для ввода текста
+  const [messages, setMessages] = useState([]); // Стейт для истории сообщений
+  
+  // РЕФ ДЛЯ ПРЕДОТВРАЩЕНИЯ ПОВТОРОВ (Error #310)
+  // Этот флаг будет помнить, что мы уже отправили запрос, даже когда компонент перерисовывается
+  const greetingSent = useRef(false); 
+  const messagesEndRef = useRef(null); // Ссылка для скролла вниз
 
-  const messagesEndRef = useRef(null); // Создаем ссылку на пустой div в конце списка, чтобы скроллить к нему
-
-  // Подключаем логику запросов. Передаем адрес твоего вебхука.
-  // Получаем функцию отправки и статус загрузки (isLoading)
+  // Подключаем API
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
-  // СТРАХОВКА: Если модалка закрыта — возвращаем пустоту (null). 
-  // Это полностью убирает её из верстки, чтобы она не перекрывала кнопки меню.
+  // Если модалка закрыта — убираем её из DOM (чтобы не мешала кнопкам меню)
   if (!isOpen) return null;
 
-  // Функция для автоматической прокрутки чата вниз к последнему сообщению
+  // Функция автопрокрутки
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // ЭФФЕКТ ДЛЯ ПРИВЕТСТВИЯ (Исправляет ошибку #310)
+  // ЭФФЕКТ ПРИВЕТСТВИЯ (ИСПРАВЛЕННЫЙ)
   useEffect(() => {
-    // Если чат открылся И в нем еще нет сообщений И сейчас ничего не загружается
-    if (isOpen && messages.length === 0 && !isLoading) {
+    // Условие: если открыто, запрос еще НЕ отправлялся и сейчас не идет загрузка
+    if (isOpen && !greetingSent.current && !isLoading) {
+      
       const fetchGreeting = async () => {
+        greetingSent.current = true; // СРАЗУ ставим флаг в true, чтобы не было дублей
         try {
-          // Отправляем специальный маркер "ПРИВЕТСТВИЕ" с нашими новыми ID
+          // Отправляем запрос приветствия
           const aiGreeting = await sendMessageToAI(
             "ПРИВЕТСТВИЕ", 
             pageContext, 
@@ -36,36 +39,40 @@ const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint
             guestUuid, 
             guestFingerprint
           );
-          // Когда ИИ ответил — кладем его приветствие в историю сообщений
+          // Добавляем ответ бота в чат
           setMessages([{ role: 'bot', text: aiGreeting }]);
         } catch (error) {
-          console.error("Ошибка при получении приветствия:", error);
+          console.error("Ошибка чата:", error);
+          greetingSent.current = false; // Если ошибка — разрешаем попробовать еще раз
         }
       };
-      fetchGreeting(); // Запускаем процесс
-    }
-    // ВАЖНО: В зависимостях оставляем только isOpen. 
-    // Если добавить сюда sendMessageToAI или messages, начнется бесконечный цикл (Error #310).
-  }, [isOpen]); 
 
-  // Эффект для автоматического скролла вниз при добавлении каждого нового сообщения
+      fetchGreeting();
+    }
+    
+    // Сброс флага при закрытии модалки (чтобы при следующем открытии сработало снова)
+    return () => {
+      if (!isOpen) {
+        greetingSent.current = false;
+      }
+    };
+  }, [isOpen, pageContext, sessionId, guestUuid, guestFingerprint]); // Теперь зависимости не вызовут цикл благодаря флагу greetingSent
+
+  // Эффект для скролла при появлении сообщений
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Функция обработки отправки сообщения пользователем
+  // Обработка отправки сообщения
   const handleSend = async () => {
-    // Если поле пустое или ИИ сейчас "думает" — ничего не делаем
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading) return; // Если пусто или грузится — выходим
 
-    const userText = inputValue; // Копируем текст из поля ввода
-    setInputValue(''); // Сразу очищаем поле ввода для удобства юзера
-
-    // Добавляем сообщение пользователя в список на экране
-    setMessages(prev => [...prev, { role: 'user', text: userText }]);
+    const userText = inputValue;
+    setInputValue(''); // Чистим поле ввода
+    setMessages(prev => [...prev, { role: 'user', text: userText }]); // Показываем текст юзера
 
     try {
-      // Отправляем запрос на сервер n8n со всеми данными
+      // Отправляем в n8n
       const aiResponse = await sendMessageToAI(
         userText, 
         pageContext, 
@@ -73,44 +80,37 @@ const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint
         guestUuid, 
         guestFingerprint
       );
-      // Добавляем ответ нейронки в список сообщений
+      // Показываем ответ ИИ
       setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
     } catch (error) {
-      // Если произошла ошибка — выводим системное сообщение в чат
-      setMessages(prev => [...prev, { role: 'bot', text: "Простите, произошла ошибка связи." }]);
+      setMessages(prev => [...prev, { role: 'bot', text: "Ошибка связи с сервером." }]);
     }
   };
 
   return (
-    // Затемненный фон модалки. Клик по нему закрывает окно (onClose)
     <div className={styles.modalOverlay} onClick={onClose}>
-      {/* Само окно чата. stopPropagation нужен, чтобы клик внутри окна не закрывал его случайно */}
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        
-        {/* Кнопка-крестик для закрытия чата */}
+        {/* Кнопка закрыть */}
         <button className={styles.closeButton} onClick={onClose}>×</button>
 
-        {/* Область со списком сообщений */}
+        {/* Список сообщений */}
         <div className={styles.messagesContainer}>
           {messages.map((msg, index) => (
-            // Отрисовываем сообщение. Класс стиля зависит от того, бот это или юзер
             <div key={index} className={msg.role === 'user' ? styles.userMsg : styles.botMsg}>
               {msg.text}
             </div>
           ))}
-          {/* Элемент-якорь, к которому прилипает скролл */}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Область ввода текста и кнопка отправки */}
+        {/* Ввод текста */}
         <div className={styles.inputArea}>
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()} // Отправка по Enter
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="Задайте вопрос..."
           />
-          {/* Кнопка отправки. Блокируется (disabled), пока ИИ отвечает */}
           <button onClick={handleSend} disabled={isLoading}>
             {isLoading ? '...' : 'Отправить'}
           </button>
@@ -120,4 +120,4 @@ const AIChatModal = ({ isOpen, onClose, pageContext, guestUuid, guestFingerprint
   );
 };
 
-export default AIChatModal; // Экспортируем компонент для App.jsx
+export default AIChatModal;
