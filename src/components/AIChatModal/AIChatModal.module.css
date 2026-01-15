@@ -41,33 +41,30 @@
 
 /* Область текстовых сообщений */
 .modal-chatHistory {
-    flex: 1; /* Занимает всё свободное место в центре */
-    padding: 70px 20px 20px 20px; /* Твой отступ сверху для крестика */
-    overflow-y: auto; /* Включаем скролл */
+  flex: 1; 
+    padding: 70px 20px 20px 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
     
-    /* ВАЖНО ДЛЯ МОБИЛОК: */
-    display: flex; 
+    /* Стандартный поток сверху вниз */
+    display: flex;
     flex-direction: column; 
     gap: 12px;
-    
-    /* НОВОЕ: Плавный скролл для iOS, чтобы автоскролл не дергался */
+
+    /* Это важно для плавности на iPhone */
     -webkit-overflow-scrolling: touch; 
     
-    /* НОВОЕ: Это заставит сообщения прижиматься к низу, когда их мало, 
-       и правильно выталкиваться вверх клавиатурой */
-    /*justify-content: flex-end; - мешало скролу когда высота окна чата была выше экрана*/ 
+    /* Чтобы не дергалось окно браузера */
+    overscroll-behavior-y: contain;
     
-    overscroll-behavior-y: none;
-    /*scroll-behavior: smooth;
-    /* Важно для Android: предотвращает дерганье контента */
-    height: 100%;
-
-    z-index: 20; /* Твой слой над видео */
+    position: relative;
+    z-index: 20;
 }
 
 .modal-chatHistory::before {
     content: '';
-    margin-top: auto;
+    display: block;
+    margin-top: auto; /* Вот она, магия Телеграма */
 }
 }
 
@@ -148,10 +145,21 @@
 
 /* Сообщение бота (текстовое) */
 .modal-botMessage {
+    align-self: flex-start; /* Бот прижат к леву */
     background: white;
     padding: 12px 16px;
     border-radius: 12px 12px 12px 0;
-    align-self: flex-start;
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    word-wrap: break-word;
+}
+
+.userMessage {
+    align-self: flex-end; /* Юзер прижат к праву */
+    background: #48BF48;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 12px;
+    max-width: 85%;
+    word-wrap: break-word;
 }
