@@ -55,7 +55,7 @@
     
     /* НОВОЕ: Это заставит сообщения прижиматься к низу, когда их мало, 
        и правильно выталкиваться вверх клавиатурой */
-    justify-content: flex-end; 
+    /*justify-content: flex-end; - мешало скролу когда высота окна чата была выше экрана*/ 
     
     overscroll-behavior-y: none;
     /*scroll-behavior: smooth;
@@ -65,8 +65,10 @@
     z-index: 20; /* Твой слой над видео */
 }
 
-.modal-chatHistory > :first-child {
-    margin-top: auto !important;
+.modal-chatHistory::before {
+    content: '';
+    margin-top: auto;
+}
 }
 
 /* ВИДЕО НА ВЕСЬ ЭКРАН (БЕЗ СКРУГЛЕНИЙ И ОБРУБКОВ) */
