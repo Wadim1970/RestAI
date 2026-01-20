@@ -21,6 +21,13 @@ function AppContent() {
     return savedOrders ? JSON.parse(savedOrders) : []; 
   });
 
+  // --- НОВОЕ: СОСТОЯНИЕ ИСТОРИИ ЧАТА ---
+  // Инициализируем сообщения из localStorage, чтобы они сохранялись при перезагрузке
+  const [chatMessages, setChatMessages] = useState(() => {
+    const savedChat = localStorage.getItem('chat_history');
+    return savedChat ? JSON.parse(savedChat) : [];
+  });
+
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
   const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыт ли чат с ИИ
   const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
@@ -38,6 +45,12 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
+
+  // --- НОВОЕ: СОСТОЯНИЕ СОХРАНЕНИЯ ЧАТА ---
+  // Эффект: записываем массив сообщений в localStorage при каждом его обновлении
+  useEffect(() => {
+    localStorage.setItem('chat_history', JSON.stringify(chatMessages));
+  }, [chatMessages]);
 
   // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
   useEffect(() => {
@@ -95,6 +108,8 @@ function AppContent() {
   const handleConfirmOrder = (cartItems) => {
     setConfirmedOrders(prev => [...prev, ...cartItems]);
     setCart({}); 
+    // НОВОЕ: Очищаем историю чата при подтверждении заказа (нажатии "Принести счет")
+    setChatMessages([]);
   };
 
   return (
@@ -143,8 +158,10 @@ function AppContent() {
         }} 
         viewHistory={viewHistory}
         pageContext={chatContext} // Передаем собранный контекст
-        // НОВОЕ: Передаем сгенерированный ID сессии в модалку
-        sessionId={currentSessionId} 
+        sessionId={currentSessionId} // НОВОЕ: Передаем сгенерированный ID сессии в модалку
+        // НОВОЕ: Передаем историю сообщений и функцию её изменения из App в модалку
+        messages={chatMessages}
+        setMessages={setChatMessages}
       />
     </div>
   );
