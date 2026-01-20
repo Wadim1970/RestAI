@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react'; // Подключа�
 import styles from './AIChatModal.module.css'; // Подключаем стили
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 
-const AIChatModal = ({ isOpen, onClose, pageContext }) => {
+// ИЗМЕНЕНИЕ 1: Добавлены пропсы messages, setMessages и sessionId (из App.jsx)
+const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages }) => {
   const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
   const [viewMode, setViewMode] = useState('text'); // Режим: чат или видео
-  const [messages, setMessages] = useState([]); // Массив сообщений (история)
+  
+  // ИЗМЕНЕНИЕ 2: Удален локальный стейт [messages, setMessages], теперь используем пропсы выше
   
   const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
   const messagesEndRef = useRef(null); // Ссылка на невидимый элемент в конце чата для автоскролла
@@ -24,17 +26,15 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
     if (isOpen && messages.length === 0 && !isLoading) {
       const fetchGreeting = async () => {
         // Отправляем технический маркер "ПРИВЕТСТВИЕ", чтобы n8n понял задачу
-        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, 'user-unique-id-123');
+        // ИЗМЕНЕНИЕ 3: Используем динамический sessionId вместо статичного 'user-unique-id-123'
+        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId);
         // Добавляем полученный ответ как самое первое сообщение бота
         setMessages([{ role: 'bot', text: aiGreeting }]);
       };
       fetchGreeting();
     }
     
-    // Очищаем сообщения при закрытии, чтобы при новом открытии (с новым контекстом) ИИ снова поздоровался
-    if (!isOpen) {
-      setMessages([]);
-    }
+    // ИЗМЕНЕНИЕ 4: Удалена очистка setMessages([]), чтобы история сохранялась в localStorage
   }, [isOpen]); // Следим только за открытием/закрытием модалки
 
   // Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
@@ -70,8 +70,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext }) => {
       const newMessages = [...messages, { role: 'user', text: userText }]; // Добавляем сообщение юзера
       setMessages(newMessages); // Обновляем экран
 
-      // Отправляем запрос в n8n (теперь с контекстом блюда)
-      const aiResponse = await sendMessageToAI(userText, pageContext, 'user-unique-id-123');
+      // Отправляем запрос в n8n (теперь с контекстом блюда и динамической сессией)
+      const aiResponse = await sendMessageToAI(userText, pageContext, sessionId);
       
       // Добавляем ответ бота в историю
       setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
