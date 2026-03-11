@@ -11,8 +11,10 @@ const DEFAULT_BRANDING = {
   accentColor: '#48BF48',
   backgroundColor: '#ffffff',
   priceBgColor: '#E5E0D4',
-  headingFont: 'Manrope',
-  bodyFont: 'Inter',
+  branding_heading_font: 'Manrope',
+  branding_body_font: 'Inter',
+  font_url_header: null,
+  font_url_body: null,
 };
 
 export const useBrandingConfig = (restaurantId) => {
@@ -23,7 +25,7 @@ export const useBrandingConfig = (restaurantId) => {
   useEffect(() => {
     if (!restaurantId) {
       setLoading(false);
-      setBranding(DEFAULT_BRANDING); // ✅ Используем дефолт, если нет ID
+      setBranding(DEFAULT_BRANDING);
       return;
     }
 
@@ -33,7 +35,7 @@ export const useBrandingConfig = (restaurantId) => {
         const { data, error: fetchError } = await supabase
           .from('restaurants')
           .select(
-            'branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font'
+            'branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font, font_url_header, font_url_body'
           )
           .eq('restaurantId', restaurantId)
           .single();
@@ -46,12 +48,16 @@ export const useBrandingConfig = (restaurantId) => {
             accentColor: data.branding_accent_color || DEFAULT_BRANDING.accentColor,
             backgroundColor: data.branding_background_color || DEFAULT_BRANDING.backgroundColor,
             priceBgColor: data.branding_price_bg_color || DEFAULT_BRANDING.priceBgColor,
-            headingFont: data.branding_heading_font || DEFAULT_BRANDING.headingFont,
-            bodyFont: data.branding_body_font || DEFAULT_BRANDING.bodyFont,
+            branding_heading_font: data.branding_heading_font || DEFAULT_BRANDING.branding_heading_font,
+            branding_body_font: data.branding_body_font || DEFAULT_BRANDING.branding_body_font,
+            font_url_header: data.font_url_header || null,
+            font_url_body: data.font_url_body || null,
           });
+          
+          console.log('✅ Брендинг загружен:', data);
         }
       } catch (err) {
-        console.error('Ошибка загрузки брендинга:', err);
+        console.error('❌ Ошибка загрузки брендинга:', err);
         setError(err.message);
         setBranding(DEFAULT_BRANDING);
       } finally {
