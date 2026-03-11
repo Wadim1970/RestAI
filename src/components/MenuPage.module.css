@@ -1,5 +1,7 @@
 /* MenuPage.module.css (Полный файл с CSS переменными) */
 
+/* MenuPage.module.css (Полный файл с CSS переменными) */
+
 :root {
     --color-primary: #304D22;
     --color-accent: #48BF48;
@@ -14,11 +16,8 @@
     max-width: 440px; 
     margin: 0 auto;
     
-    /* Убираем fixed и 100vh */
     position: relative; 
     min-height: 100vh;
-    
-    /* Убираем внутренн��й скролл, пусть скроллится вся страница */
     overflow-y: visible; 
     
     box-sizing: border-box; 
@@ -30,7 +29,6 @@
     padding-right: 22px;
 
     background-color: var(--color-background);
-
     text-align: left;
 }
 
@@ -41,11 +39,8 @@
     font-weight: 600;
     color: var(--color-primary);
     
-    /* Обнуляем маржины, чтобы они не складывались с паддингом контейнера */
     margin-left: 0; 
     padding-left: 0;
-    
-    /* Принудительно влево */
     text-align: left;
     display: block;
     width: 100%;
@@ -57,16 +52,13 @@
 /* --- Сетка блюд (2 ряда) --- */
 .dishGrid {
     display: grid;
-    /* Используем 1fr, чтобы колонки делили место поровну */
     grid-template-columns: repeat(2, 1fr); 
     
     padding: 0 !important; 
     margin: 0 !important;
     
-    /* Расстояние между карточками */
     gap: 30px 22px; 
     
-    /* Ширина 100% от родителя (440px минус его отступы) */
     width: 100%;
     box-sizing: border-box;
 }
@@ -84,7 +76,7 @@
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1; 
-    overflow: visible;  /* ← ИЗМЕНЕНО: вместо hidden */
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -96,23 +88,21 @@
 .dishImage {
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Картинка становится "прозрачной" для кликов */
-    -webkit-user-drag: none; /* Запрещаем перетаскивание на iPhone */
-    /* Заставляет картинку вписаться в квадрат без искажений */
+    pointer-events: none;
+    -webkit-user-drag: none;
     object-fit: contain; 
     
-    /* Дополнительный фикс для старых версий Android WebView */
     max-width: 100%;
     max-height: 100%;
     
     display: block;
 }
 
-/* --- Поле с ценой (E5E0D4) --- */
+/* --- Поле с ценой --- */
 .priceTag {
     position: absolute;
-    left: 1px; /* 1 пиксель от левого края */
-    bottom: 3px; /* 3 пикселя от нижнего края */
+    left: 1px;
+    bottom: 3px;
     width: 81px;
     height: 31px;
     background-color: var(--color-price-bg);
@@ -124,36 +114,35 @@
 .dishPrice {
     font-family: var(--font-heading);
     font-size: 20px;
-    font-weight: 700; /* Bold */
+    font-weight: 700;
     color: var(--color-primary);
 }
 
 /* --- Кнопка выбора блюда --- */
 .selectButton {
     position: absolute;
-    right: 3px; /* 3 пикселя от правого края */
-    bottom: 3px; /* 3 пикселя от нижнего края */
+    right: 3px;
+    bottom: 3px;
     width: 37px;
     height: 37px;
     background-color: #fff;
-    border: 1px solid var(--color-accent); /* Окантовка 48BF48 */
+    border: 1px solid var(--color-accent);
     
-    /* Скругления: 20, 20, 0, 20 */
     border-radius: 20px 20px 0 20px; 
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
+    z-index: 10;
 }
 
 .selectButton.selected {
-    background-color: var(--color-accent); /* Зеленый 48BF48 */
-    border-color: #fff;
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 .checkmarkIcon {
-    /* Иконка галочки (21x15) */
     width: 21px;
     height: 15px;
     
@@ -176,7 +165,6 @@
 
 /* --- Позиция скролла для якорей --- */
 .menuSection {
-    /* Высота вашего хедера + небольшой запас */
     scroll-margin-top: 160px; 
 }
 
