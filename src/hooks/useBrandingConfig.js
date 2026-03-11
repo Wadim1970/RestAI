@@ -35,7 +35,7 @@ export const useBrandingConfig = (restaurantId) => {
           .select(
             'branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font'
           )
-          .eq('id', restaurantId)
+          .eq('restaurantId', restaurantId)
           .single();
 
         if (fetchError) throw fetchError;
