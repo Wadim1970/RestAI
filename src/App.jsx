@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'; 
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; 
+import { HashRouter, Routes, Route } from 'react-router-dom'; 
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import { BrandingProvider } from './context/BrandingContext';
+import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
 
 function AppContent() {
-  const location = useLocation();
   const [restaurantId, setRestaurantId] = useState(null);
 
   // Получаем ID ресторана из URL параметров или localStorage
@@ -49,8 +49,6 @@ function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
-
-  // --- СОСТОЯНИЕ ДЛЯ ДИНАМИЧЕСКОГО ID СЕССИИ ---
   const [currentSessionId, setCurrentSessionId] = useState('');
 
   // Эффект: сохранение корзины
@@ -68,25 +66,90 @@ function AppContent() {
     localStorage.setItem('chat_history', JSON.stringify(chatMessages));
   }, [chatMessages]);
 
-  // Остальной код компонента...
+  // Функция отслеживания просмотров
+  const trackDishView = (dishName) => {
+    setViewHistory(prev => [...prev, dishName]);
+  };
+
+  const handleToggleChatMode = (newMode) => {
+    // Логика переключения режима чата, если нужна
+  };
+
+  const updateCart = (delta, dishId) => {
+    setCart(prev => {
+      const currentCount = prev[dishId] || 0;
+      const newCount = Math.max(0, currentCount + delta); 
+      if (newCount === 0) {
+        const { [dishId]: _, ...rest } = prev; 
+        return rest;
+      }
+      return { ...prev, [dishId]: newCount };
+    });
+  };
+
+  const handleConfirmOrder = (cartItems) => {
+    setConfirmedOrders(prev => [...prev, ...cartItems]);
+    setCart({}); 
+    setChatMessages([]);
+  };
 
   return (
     <BrandingProvider branding={branding} loading={brandingLoading}>
-      <HashRouter>
+      <ThemeProvider>
         <Routes>
-          <Route path="/" element={<MainScreen onChatModeToggle={(newMode) => {}} isChatOpen={isChatOpen} />} />
-          <Route path="/menu" element={<MenuPage cart={cart} updateCart={setCart} confirmedOrders={confirmedOrders} onConfirmOrder={(order) => setConfirmedOrders([...confirmedOrders, order])} onOpenChat={() => setIsChatOpen(true)} trackDishView={(dishName) => setViewHistory([...viewHistory, dishName])} />} />
+          <Route 
+            path="/" 
+            element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
+          />
+          <Route 
+            path="/menu" 
+            element={
+              <MenuPage 
+                cart={cart} 
+                updateCart={updateCart} 
+                confirmedOrders={confirmedOrders}
+                onConfirmOrder={handleConfirmOrder}
+                onOpenChat={(dish, currentSection) => {
+                  setCurrentSessionId(`sess_${Date.now()}`); 
+                  if (dish) {
+                    const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+                    setChatContext(info); 
+                  } else if (currentSection) {
+                    setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
+                  } else {
+                    setChatContext('Общее меню ресторана');
+                  }
+                  setIsChatOpen(true);
+                }}
+                trackDishView={trackDishView} 
+              />
+            } 
+          />
         </Routes>
-        {isChatOpen && <AIChatModal onClose={() => setIsChatOpen(false)} chatMessages={chatMessages} setChatMessages={setChatMessages} chatContext={chatContext} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} />}
-      </HashRouter>
+
+        <AIChatModal 
+          isOpen={isChatOpen} 
+          onClose={() => {
+            setIsChatOpen(false);
+            setChatContext('');
+          }} 
+          viewHistory={viewHistory}
+          pageContext={chatContext}
+          sessionId={currentSessionId}
+          messages={chatMessages}
+          setMessages={setChatMessages}
+        />
+      </ThemeProvider>
     </BrandingProvider>
   );
-};
+}
 
-export default function App() {
+function App() {
   return (
     <HashRouter>
       <AppContent />
     </HashRouter>
   );
 }
+
+export default App;
