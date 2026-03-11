@@ -8,28 +8,35 @@ export const ThemeProvider = ({ children }) => {
   // ЭФФЕКТ 1: Загрузка Google Fonts динамически
   // ==========================================
   useEffect(() => {
-    // ✅ ИСПРАВЛЕНИЕ: используем правильные названия полей из таблицы
     if (!branding.font_url_header && !branding.font_url_body) {
       console.warn('⚠️ URLs шрифтов не найдены в таблице');
       return;
     }
 
-    // Если есть оба URL, объединяем их в один запрос
     let fontUrl = '';
-    
+
     if (branding.font_url_header && branding.font_url_body) {
-      // Оба URL существуют - нужно их правильно объединить
-      const headerUrl = branding.font_url_header.replace('&display=swap', '');
-      const bodyUrl = branding.font_url_body.replace('&display=swap', '');
+      // Очищаем URL от пробелов и дублей
+      const headerUrl = branding.font_url_header
+        .replace(/& display=swap/g, '')  // Удаляем "& display=swap" с пробелом
+        .replace(/&display=swap/g, ''); // Удаляем "&display=swap"
       
-      // Извлекаем только часть с семейством шрифтов из второго URL
-      const bodyFamily = bodyUrl.replace('https://fonts.googleapis.com/css2?family=', '');
+      const bodyUrl = branding.font_url_body
+        .replace(/& display=swap/g, '')
+        .replace(/&display=swap/g, '');
       
-      fontUrl = `${headerUrl}&family=${bodyFamily}&display=swap`;
+      // Если это разные шрифты, объединяем их
+      if (headerUrl !== bodyUrl) {
+        const bodyFamily = bodyUrl.replace('https://fonts.googleapis.com/css2?family=', '');
+        fontUrl = `${headerUrl}&family=${bodyFamily}&display=swap`;
+      } else {
+        // Если одинаковые шрифты, используем один URL
+        fontUrl = `${headerUrl}&display=swap`;
+      }
     } else if (branding.font_url_header) {
-      fontUrl = branding.font_url_header;
+      fontUrl = branding.font_url_header.replace(/& display=swap/g, '&display=swap');
     } else if (branding.font_url_body) {
-      fontUrl = branding.font_url_body;
+      fontUrl = branding.font_url_body.replace(/& display=swap/g, '&display=swap');
     }
 
     const link = document.createElement('link');
@@ -58,7 +65,6 @@ export const ThemeProvider = ({ children }) => {
   // ЭФФЕКТ 2: Применение CSS переменных к DOM
   // ==========================================
   useEffect(() => {
-    // ✅ ИСПРАВЛЕНИЕ: используем правильные названия полей
     const headingFont = branding.branding_heading_font || 'Manrope';
     const bodyFont = branding.branding_body_font || 'Inter';
 
