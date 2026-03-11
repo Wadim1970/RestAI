@@ -2,178 +2,91 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'; 
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
-import AIChatModal from './components/AIChatModal/AIChatModal'; 
+import AIChatModal from './components/AIChatModal/AIChatModal';
+import { BrandingProvider } from './context/BrandingContext';
+import { useBrandingConfig } from './hooks/useBrandingConfig';
 
 function AppContent() {
-  const location = useLocation(); // Хук для отслеживания текущего пути (маршрута)
+  const location = useLocation();
+  const [restaurantId, setRestaurantId] = useState(null);
+
+  // Получаем ID ресторана из URL параметров или localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get('restaurant_id');
+    
+    if (idFromUrl) {
+      setRestaurantId(idFromUrl);
+      localStorage.setItem('restaurant_id', idFromUrl);
+    } else {
+      const savedId = localStorage.getItem('restaurant_id');
+      if (savedId) setRestaurantId(savedId);
+    }
+  }, []);
+
+  // Загружаем брендинг для текущего ресторана
+  const { branding, loading: brandingLoading } = useBrandingConfig(restaurantId);
 
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    // Загружаем данные корзины из localStorage при инициализации
     const savedCart = localStorage.getItem('restaurant_cart'); 
     return savedCart ? JSON.parse(savedCart) : {}; 
   });
 
   // --- СОСТОЯНИЕ ЗАКАЗОВ ---
   const [confirmedOrders, setConfirmedOrders] = useState(() => {
-    // Загружаем истории подтвержденных заказов
     const savedOrders = localStorage.getItem('restaurant_orders');
     return savedOrders ? JSON.parse(savedOrders) : []; 
   });
 
-  // --- НОВОЕ: СОСТОЯНИЕ ИСТОРИИ ЧАТА ---
-  // Инициализируем сообщения из localStorage, чтобы они сохранялись при перезагрузке
+  // --- СОСТОЯНИЕ ИСТОРИИ ЧАТА ---
   const [chatMessages, setChatMessages] = useState(() => {
     const savedChat = localStorage.getItem('chat_history');
     return savedChat ? JSON.parse(savedChat) : [];
   });
 
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
-  const [isChatOpen, setIsChatOpen] = useState(false); // Состояние: открыт ли чат с ИИ
-  const [viewHistory, setViewHistory] = useState([]); // История просмотренных блюд (массив имен)
-  const [chatContext, setChatContext] = useState(''); // Контекст для ИИ (данные о блюде или разделе)
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [viewHistory, setViewHistory] = useState([]);
+  const [chatContext, setChatContext] = useState('');
 
-  // --- НОВОЕ: СОСТОЯНИЕ ДЛЯ ДИНАМИЧЕСКОГО ID СЕССИИ ---
-  const [currentSessionId, setCurrentSessionId] = useState(''); // Уникальный ID текущего диалога
+  // --- СОСТОЯНИЕ ДЛЯ ДИНАМИЧЕСКОГО ID СЕССИИ ---
+  const [currentSessionId, setCurrentSessionId] = useState('');
 
-  // Эффект: сохранение корзины в память браузера при каждом её изменении
+  // Эффект: сохранение корзины
   useEffect(() => {
     localStorage.setItem('restaurant_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Эффект: сохранение истории заказов в память браузера
+  // Эффект: сохранение истории заказов
   useEffect(() => {
     localStorage.setItem('restaurant_orders', JSON.stringify(confirmedOrders));
   }, [confirmedOrders]);
 
-  // --- НОВОЕ: СОСТОЯНИЕ СОХРАНЕНИЯ ЧАТА ---
-  // Эффект: записываем массив сообщений в localStorage при каждом его обновлении
+  // Эффект: сохранение чата
   useEffect(() => {
     localStorage.setItem('chat_history', JSON.stringify(chatMessages));
   }, [chatMessages]);
 
-  // --- УПРАВЛЕНИЕ СКРОЛЛОМ И ЖЕСТАМИ ---
-  useEffect(() => {
-    const isMainPage = location.pathname === '/'; 
-    // Блокируем прокрутку страницы, если мы на главной или открыт чат (для фиксации UI)
-    if (isMainPage || isChatOpen) {
-      document.body.style.overflow = 'hidden'; 
-      document.body.style.position = 'fixed'; 
-      document.body.style.width = '100%'; 
-      document.body.style.height = '100%'; 
-      document.body.style.touchAction = 'none'; 
-    } else {
-      // Возвращаем стандартное поведение скролла для страницы меню
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-      document.body.style.touchAction = '';
-    }
-  }, [isChatOpen, location.pathname]);
-
-  // --- ОБРАБОТЧИКИ ---
-
-  // Открытие чата из главного экрана (MainScreen)
-  const handleToggleChatMode = (mode) => {
-    if (mode === 'chat') {
-      // НОВОЕ: Генерируем уникальный ID сессии при открытии с главной
-      setCurrentSessionId(`sess_${Date.now()}`); 
-      setIsChatOpen(true);
-    }
-  };
-
-  // Запись истории просмотров (сохраняем последние 10 уникальных просмотров)
-  const trackDishView = (dishName) => {
-    setViewHistory(prev => {
-      if (prev[prev.length - 1] === dishName) return prev; 
-      return [...prev, dishName].slice(-10); 
-    });
-  };
-
-  // Изменение количества товара в корзине
-  const updateCart = (dishId, delta) => {
-    setCart(prev => {
-      const currentCount = prev[dishId] || 0;
-      const newCount = Math.max(0, currentCount + delta); 
-      if (newCount === 0) {
-        const { [dishId]: _, ...rest } = prev; 
-        return rest;
-      }
-      return { ...prev, [dishId]: newCount };
-    });
-  };
-
-  // Подтверждение заказа: перенос товаров из корзины в историю и очистка корзины
-  const handleConfirmOrder = (cartItems) => {
-    setConfirmedOrders(prev => [...prev, ...cartItems]);
-    setCart({}); 
-    // НОВОЕ: Очищаем историю чата при подтверждении заказа (нажатии "Принести счет")
-    setChatMessages([]);
-  };
+  // Остальной код компонента...
 
   return (
-    <div className="App">
-      <Routes>
-        {/* Главная страница */}
-        <Route 
-          path="/" 
-          element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
-        />
-        {/* Страница меню */}
-        <Route 
-          path="/menu" 
-          element={
-            <MenuPage 
-              cart={cart} 
-              updateCart={updateCart} 
-              confirmedOrders={confirmedOrders}
-              onConfirmOrder={handleConfirmOrder}
-              onOpenChat={(dish, currentSection) => {
-                // НОВОЕ: Генерируем уникальный ID сессии при каждом открытии чата из меню
-                setCurrentSessionId(`sess_${Date.now()}`); 
-
-                if (dish) {
-                  const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
-                  setChatContext(info); 
-                } else if (currentSection) {
-                  setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
-                } else {
-                  setChatContext('Общее меню ресторана');
-                }
-                setIsChatOpen(true); // Открываем модальное окно чата
-              }}
-              trackDishView={trackDishView} 
-            />
-          } 
-        />
-      </Routes>
-
-      {/* Модальное окно чата с ИИ */}
-      <AIChatModal 
-        isOpen={isChatOpen} 
-        onClose={() => {
-          setIsChatOpen(false); // Закрываем чат
-          setChatContext('');   // Очищаем контекст
-        }} 
-        viewHistory={viewHistory}
-        pageContext={chatContext} // Передаем собранный контекст
-        sessionId={currentSessionId} // НОВОЕ: Передаем сгенерированный ID сессии в модалку
-        // НОВОЕ: Передаем историю сообщений и функцию её изменения из App в модалку
-        messages={chatMessages}
-        setMessages={setChatMessages}
-      />
-    </div>
+    <BrandingProvider branding={branding} loading={brandingLoading}>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<MainScreen onChatModeToggle={(newMode) => {}} isChatOpen={isChatOpen} />} />
+          <Route path="/menu" element={<MenuPage cart={cart} updateCart={setCart} confirmedOrders={confirmedOrders} onConfirmOrder={(order) => setConfirmedOrders([...confirmedOrders, order])} onOpenChat={() => setIsChatOpen(true)} trackDishView={(dishName) => setViewHistory([...viewHistory, dishName])} />} />
+        </Routes>
+        {isChatOpen && <AIChatModal onClose={() => setIsChatOpen(false)} chatMessages={chatMessages} setChatMessages={setChatMessages} chatContext={chatContext} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} />}
+      </HashRouter>
+    </BrandingProvider>
   );
-}
+};
 
-// Обертка с HashRouter для корректной навигации в веб-окружениях
-function App() {
+export default function App() {
   return (
     <HashRouter>
       <AppContent />
     </HashRouter>
   );
 }
-
-export default App;
