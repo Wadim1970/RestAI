@@ -84,13 +84,13 @@
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1; 
-    overflow: hidden; /* Чтобы ничего не вылазило за границы квадрата */
+    overflow: visible;  /* ← ИЗМЕНЕНО: вместо hidden */
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: transparent; /* Исходный прозрачный фон */
+    background-color: transparent;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent; /* Убираем синюю вспышку при нажатии на iPhone */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .dishImage {
