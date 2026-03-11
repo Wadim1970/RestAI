@@ -26,7 +26,13 @@ function AppContent() {
 
   // Загружаем брендинг для текущего ресторана
   const { branding, loading: brandingLoading } = useBrandingConfig(restaurantId);
-
+useEffect(() => {
+  console.log('🔍 branding объект:', branding);
+  console.log('🔍 branding.font_url_header:', branding?.font_url_header);
+  console.log('🔍 branding.font_url_body:', branding?.font_url_body);
+  console.log('🔍 restaurantId:', restaurantId);
+  console.log('🔍 brandingLoading:', brandingLoading);
+}, [branding, restaurantId, brandingLoading]);
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem('restaurant_cart'); 
