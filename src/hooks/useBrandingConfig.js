@@ -5,7 +5,7 @@ const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co';
 const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Дефолтные значения (фолбэк)
+// Дефолтные значения
 const DEFAULT_BRANDING = {
   primaryColor: '#304D22',
   accentColor: '#48BF48',
@@ -23,6 +23,7 @@ export const useBrandingConfig = (restaurantId) => {
   useEffect(() => {
     if (!restaurantId) {
       setLoading(false);
+      setBranding(DEFAULT_BRANDING); // ✅ Используем дефолт, если нет ID
       return;
     }
 
