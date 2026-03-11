@@ -12,17 +12,24 @@ function AppContent() {
 
   // Получаем ID ресторана из URL параметров или localStorage
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const idFromUrl = params.get('restaurant_id');
-    
-    if (idFromUrl) {
-      setRestaurantId(idFromUrl);
-      localStorage.setItem('restaurant_id', idFromUrl);
+  const params = new URLSearchParams(window.location.search);
+  const idFromUrl = params.get('restaurant_id');
+  
+  if (idFromUrl) {
+    setRestaurantId(idFromUrl);
+    localStorage.setItem('restaurant_id', idFromUrl);
+  } else {
+    const savedId = localStorage.getItem('restaurant_id');
+    if (savedId) {
+      setRestaurantId(savedId);
     } else {
-      const savedId = localStorage.getItem('restaurant_id');
-      if (savedId) setRestaurantId(savedId);
+      // ⭐ Используй ID своего ресторана из таблицы
+      const defaultId = 'dd89773c-0952-4fd1-9510-514094a928ee'; // Измени на реальный ID
+      setRestaurantId(defaultId);
+      localStorage.setItem('restaurant_id', defaultId);
     }
-  }, []);
+  }
+}, []);
 
   // Загружаем брендинг для текущего ресторана
   const { branding, loading: brandingLoading } = useBrandingConfig(restaurantId);
