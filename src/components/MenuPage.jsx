@@ -132,15 +132,16 @@ export default function MenuPage({
     };
 
     // Добавление/удаление блюда в корзину кнопкой-галочкой на карточке
-    const toggleDishSelection = (e, dishId) => {
-        e.stopPropagation(); // Чтобы не открылась модалка самого блюда
-        const currentCount = cart[dishId] || 0;
-        if (currentCount > 0) {
-            updateCart(dishId, -currentCount); // Если уже есть — удаляем полностью
-        } else {
-            updateCart(dishId, 1); // Если нет — добавляем 1 штуку
-        }
-    };
+    // Добавление/удаление блюда в корзину кнопкой-галочкой на карточке
+const toggleDishSelection = (e, dishId) => {
+    e.stopPropagation(); // Чтобы не открылась модалка самого блюда
+    const currentCount = cart[dishId] || 0;
+    if (currentCount > 0) {
+        updateCart(-currentCount, dishId); // ✅ ИСПРАВЛЕНО: (delta, dishId)
+    } else {
+        updateCart(1, dishId); // ✅ ИСПРАВЛЕНО: (delta, dishId)
+    }
+};
 
     if (loading) return <div className={styles.loader}>Загрузка...</div>;
 
