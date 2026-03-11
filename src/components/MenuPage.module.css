@@ -18,7 +18,7 @@
     position: relative; 
     min-height: 100vh;
     
-    /* Убираем внутренний скролл, пусть скроллится вся страница */
+    /* Убираем внутренн��й скролл, пусть скроллится вся страница */
     overflow-y: visible; 
     
     box-sizing: border-box; 
@@ -88,19 +88,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f5f5f5; /* Легкий ��он при загрузке */
+    background-color: transparent; /* Исходный прозрачный фон */
     cursor: pointer;
     -webkit-tap-highlight-color: transparent; /* Убираем синюю вспышку при нажатии на iPhone */
-    border-radius: 8px;
 }
 
 .dishImage {
     width: 100%;
     height: 100%;
     pointer-events: none; /* Картинка становится "прозрачной" для кликов */
-    -webkit-user-drag: none; /* Запрещ��ем перетаскивание на iPhone */
+    -webkit-user-drag: none; /* Запрещаем перетаскивание на iPhone */
     /* Заставляет картинку вписаться в квадрат без искажений */
-    object-fit: cover; 
+    object-fit: contain; 
     
     /* Дополнительный фикс для старых версий Android WebView */
     max-width: 100%;
@@ -112,39 +111,32 @@
 /* --- Поле с ценой (E5E0D4) --- */
 .priceTag {
     position: absolute;
-    left: 8px; /* 8 пиксель от левого края */
-    bottom: 8px; /* 8 пиксель от нижнего края */
-    width: auto;
-    min-width: 81px;
+    left: 1px; /* 1 пиксель от левого края */
+    bottom: 3px; /* 3 пикселя от нижнего края */
+    width: 81px;
     height: 31px;
     background-color: var(--color-price-bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 8px;
-    border-radius: 4px;
-    z-index: 2;
 }
 
 .dishPrice {
     font-family: var(--font-heading);
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 700; /* Bold */
-    color: var(--color-primary); 
-    margin: 0;
-    padding: 0;
-    white-space: nowrap;
+    color: var(--color-primary);
 }
 
 /* --- Кнопка выбора блюда --- */
 .selectButton {
     position: absolute;
-    right: 8px; /* 8 пиксель от правого края */
-    bottom: 8px; /* 8 пиксель от нижнего края */
-    width: 40px;
-    height: 40px;
-    background-color: #ffffff;
-    border: 2px solid var(--color-accent); /* Окантовка 48BF48 */
+    right: 3px; /* 3 пикселя от правого края */
+    bottom: 3px; /* 3 пикселя от нижнего края */
+    width: 37px;
+    height: 37px;
+    background-color: #fff;
+    border: 1px solid var(--color-accent); /* Окантовка 48BF48 */
     
     /* Скругления: 20, 20, 0, 20 */
     border-radius: 20px 20px 0 20px; 
@@ -152,22 +144,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
-    z-index: 3;
-    padding: 0;
-}
-
-.selectButton:hover {
-    transform: scale(1.05);
-}
-
-.selectButton:active {
-    transform: scale(0.95);
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 .selectButton.selected {
     background-color: var(--color-accent); /* Зеленый 48BF48 */
-    border-color: #ffffff;
+    border-color: #fff;
 }
 
 .checkmarkIcon {
@@ -179,23 +161,17 @@
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    
-    display: block;
 }
 
 /* --- Название блюда под изображением --- */
 .dishName {
     font-family: var(--font-heading);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 400;
     color: var(--color-primary);
-    text-align: left; 
+    text-align: center; 
     width: 100%;
-    margin-top: 12px;
-    margin-bottom: 0;
-    padding: 0;
-    line-height: 1.3;
-    word-break: break-word;
+    margin-top: 10px;
 }
 
 /* --- Позиция скролла для якорей --- */
