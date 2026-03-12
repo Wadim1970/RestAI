@@ -7,8 +7,7 @@
     --color-accent: #48BF48;
     --color-background: #ffffff;
     --color-price-bg: #E5E0D4;
-    --font-heading: 'Manrope', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    /* --font-heading и --font-body задаются динамически через ThemeProvider */
 }
 
 /* --- Общий контейнер страницы --- */

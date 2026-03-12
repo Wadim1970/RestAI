@@ -84,7 +84,7 @@
     align-items: center;
     justify-content: center;
     
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading, sans-serif);
     font-size: 1rem;           /* 16px */
     font-weight: 400; 
     color: #000;
