@@ -131,6 +131,10 @@
     background-color: #fff; /* Белая иконка, когда корзина активна */
 }
 
+.orderButton:disabled {
+    cursor: default;           /* Обычный курсор, чтобы показать, что кнопка неактивна */
+}
+
 /* --- 3. Кнопка Вызова официанта --- */
 .callButton {
     background-color: var(--color-call); 
