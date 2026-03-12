@@ -142,16 +142,16 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat
             </button>
 
             {currentCount === 0 ? (
-              <button className={styles.addToCartBtn} onClick={() => updateCart(dish.id, 1)}>
+              <button className={styles.addToCartBtn} onClick={() => updateCart(1, dish.id)}>
                 Добавить в заказ
               </button>
             ) : (
               <div className={styles.counterBtn}>
-                <button onClick={() => updateCart(dish.id, -1)} className={styles.minusBtn}>
+                <button onClick={() => updateCart(-1, dish.id)} className={styles.minusBtn}>
                   <img src="/icons/icon-minus.png" alt="minus" className={styles.controlIcon} />
                 </button>
                 <span className={styles.countNumber}>{currentCount}</span>
-                <button onClick={() => updateCart(dish.id, 1)} className={styles.plusBtn}>
+                <button onClick={() => updateCart(1, dish.id)} className={styles.plusBtn}>
                   <img src="/icons/icon-plus.png" alt="plus" className={styles.controlIcon} />
                 </button>
               </div>
