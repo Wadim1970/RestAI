@@ -122,7 +122,7 @@ export default function MenuPage({
     : [];
 
     const sections = Object.keys(groupedMenu || {}); // Список всех имен секций
-    const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0; // Есть ли что-то в корзине или чеке
+    const isOrderActive = Object.keys(cart).length > 0; // Есть ли что-то в корзине или чеке
 
     // Обработчик открытия подробного окна блюда
     const handleOpenModal = (dish) => {
