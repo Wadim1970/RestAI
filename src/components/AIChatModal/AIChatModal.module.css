@@ -152,6 +152,7 @@
     max-width: 85%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     word-wrap: break-word;
+    font-family: var(--font-body, sans-serif);
 }
 
 .userMessage {
@@ -162,4 +163,5 @@
     border-radius: 12px 12px 0 12px;
     max-width: 85%;
     word-wrap: break-word;
+    font-family: var(--font-body, sans-serif);
 }
