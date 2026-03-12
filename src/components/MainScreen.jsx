@@ -116,7 +116,7 @@ const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
           
           <span style={{ 
             color: 'white', 
-            fontFamily: 'var(--font-heading, sans-serif)', 
+            
             fontWeight: 'bold',
             fontSize: '18px',
             letterSpacing: '2px'
