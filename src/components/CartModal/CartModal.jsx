@@ -138,9 +138,9 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
                     <div className={styles.itemPrice}>{item.cost_rub} ₽</div>
                   </div>
                   <div className={styles.counter}>
-                    <button onClick={() => updateCart(item.id, -1)} className={styles.countBtn}>-</button>
+                    <button onClick={() => updateCart(-1, item.id)} className={styles.countBtn}>-</button>
                     <span className={styles.countNumber}>{item.count}</span>
-                    <button onClick={() => updateCart(item.id, 1)} className={styles.countBtn}>+</button>
+                    <button onClick={() => updateCart(1, item.id)} className={styles.countBtn}>+</button>
                   </div>
                 </div>
               ))}
