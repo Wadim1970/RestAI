@@ -110,7 +110,7 @@
 
 .navButton.orderButton.active {
     background-color: #48BF48;  /* Фиксированный ярко-зеленый, не зависит от брендинга */
-    border: 1px solid var(--color-primary); 
+    border: 1px solid #fff; 
 }
 
 .orderIcon {
