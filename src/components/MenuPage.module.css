@@ -126,7 +126,7 @@
     width: 37px;
     height: 37px;
     background-color: #fff;
-    border: 1px solid var(--color-accent);
+    border: 1px solid #48BF48; /* Фиксированный цвет, не зависит от брендинга */
     
     border-radius: 20px 20px 0 20px; 
     display: flex;
@@ -138,8 +138,8 @@
 }
 
 .selectButton.selected {
-    background-color: var(--color-accent);
-    border-color: var(--color-accent);
+    background-color: #48BF48; /* Фиксированный цвет, не зависит от брендинга */
+    border-color: #fff;
 }
 
 .checkmarkIcon {

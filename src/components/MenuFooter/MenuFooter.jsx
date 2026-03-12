@@ -8,13 +8,11 @@ const Avatar = () => (
 );
 
 const Basket = ({ isActive }) => (
-      <img 
-        src="/icons/free-icon-basket.png" 
-        alt="Корзина" 
-        className={styles.orderIcon} 
-        /* Если нужно, чтобы иконка становилась белой при активации через CSS filter */
-        style={isActive ? { filter: 'brightness(0) invert(1)' } : {}}
-     />
+    <div
+        className={`${styles.orderIcon} ${isActive ? styles.orderIconActive : ''}`}
+        role="img"
+        aria-label="Корзина"
+    />
 );
 
 const Bell = () => (
