@@ -40,6 +40,7 @@
     box-shadow: 0 500px 0 0 #FBFBF9; /* Декоративная тень вниз, создающая бесконечный фон */
     animation: slideUp 0.3s ease-out; /* Анимация выезда снизу вверх */
     transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); /* Плавный переход для закрытия */
+    font-family: var(--font-heading, sans-serif);
 }
 
 /* Определение анимации появления */
