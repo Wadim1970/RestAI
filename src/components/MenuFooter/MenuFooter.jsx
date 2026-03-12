@@ -38,6 +38,7 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
                     <button 
                         className={`${styles.navButton} ${styles.orderButton} ${orderActive ? styles.active : ''}`} 
                         onClick={onOrderClick}
+                        disabled={!orderActive}
                     >
                         <Basket isActive={orderActive} />
                     </button>
