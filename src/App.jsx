@@ -42,8 +42,13 @@ useEffect(() => {
 }, [branding, restaurantId, brandingLoading]);
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
-    const savedCart = localStorage.getItem('restaurant_cart'); 
-    return savedCart ? JSON.parse(savedCart) : {}; 
+    const savedCart = localStorage.getItem('restaurant_cart');
+    if (!savedCart) return {};
+    const parsed = JSON.parse(savedCart);
+    // Filter out any invalid (null, NaN, or non-positive) entries left by previous bugs
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, v]) => typeof v === 'number' && v > 0)
+    );
   });
 
   // --- СОСТОЯНИЕ ЗАКАЗОВ ---
