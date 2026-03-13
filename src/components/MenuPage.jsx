@@ -221,6 +221,7 @@ const toggleDishSelection = (e, dishId) => {
                 confirmedOrders={confirmedOrders || []}
                 updateCart={updateCart}
                 onConfirmOrder={onConfirmOrder}
+                onRequestBill={onRequestBill}
             />
         </>
     );
