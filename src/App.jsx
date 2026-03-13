@@ -143,10 +143,6 @@ const handleRequestBill = () => {
                 onConfirmOrder={handleConfirmOrder}
                 onRequestBill={handleRequestBill} 
                 onOpenChat={(dish, currentSection) => {
-                  if (!currentSessionId) {
-                      setCurrentSessionId(`sess_${Date.now()}`); 
-                  }
-                onOpenChat={(dish, currentSection) => {
                   // Генерируем сессию ТОЛЬКО если ее еще нет
                   if (!currentSessionId) {
                       setCurrentSessionId(`sess_${Date.now()}`); 
