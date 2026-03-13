@@ -147,7 +147,11 @@ const handleRequestBill = () => {
                       setCurrentSessionId(`sess_${Date.now()}`); 
                   }
                 onOpenChat={(dish, currentSection) => {
-                  setCurrentSessionId(`sess_${Date.now()}`); 
+                  // Генерируем сессию ТОЛЬКО если ее еще нет
+                  if (!currentSessionId) {
+                      setCurrentSessionId(`sess_${Date.now()}`); 
+                  }
+                  
                   if (dish) {
                     const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
                     setChatContext(info); 
