@@ -23,7 +23,8 @@ export default function MenuPage({
     confirmedOrders = [], 
     onConfirmOrder,
     onOpenChat,      // Функция для открытия чата (приходит из App.jsx)
-    trackDishView    // Функция для логирования просмотров блюд
+    trackDishView,    // Функция для логирования просмотров блюд
+    onRequestBill // 1. ДОБАВИТЬ ЭТОТ ПРОПС СЮДА
 }) {
     const [groupedMenu, setGroupedMenu] = useState({}); // Меню, разбитое по категориям
     const [loading, setLoading] = useState(true); // Состояние загрузки данных
