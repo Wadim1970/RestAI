@@ -110,7 +110,21 @@ useEffect(() => {
     setCart({}); 
     setChatMessages([]);
   };
+const handleRequestBill = () => {
+    // Очищаем локальные состояния
+    setCart({});
+    setConfirmedOrders([]);
+    setChatMessages([]);
+    setCurrentSessionId(''); 
 
+    // Очищаем localStorage
+    localStorage.removeItem('restaurant_cart');
+    localStorage.removeItem('restaurant_orders');
+    localStorage.removeItem('chat_history');
+    localStorage.removeItem('ai_chat_session'); 
+
+    alert('Счет запрошен! Скоро официант подойдет к вам.');
+  };
   return (
     <BrandingProvider branding={branding} loading={brandingLoading}>
       <ThemeProvider>
@@ -127,6 +141,11 @@ useEffect(() => {
                 updateCart={updateCart} 
                 confirmedOrders={confirmedOrders}
                 onConfirmOrder={handleConfirmOrder}
+                onRequestBill={handleRequestBill} 
+                onOpenChat={(dish, currentSection) => {
+                  if (!currentSessionId) {
+                      setCurrentSessionId(`sess_${Date.now()}`); 
+                  }
                 onOpenChat={(dish, currentSection) => {
                   setCurrentSessionId(`sess_${Date.now()}`); 
                   if (dish) {
