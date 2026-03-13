@@ -26,7 +26,7 @@ export const useChatApi = (webhookUrl) => {
                 body: JSON.stringify({
                     message: text,     // Текст от пользователя
                     context: context,  // Данные о блюде (контекст)
-                    userId: sessionId  // Идентификатор сессии
+                    sessionId: sessionId  // Идентификатор сессии
                 }),
             });
             
