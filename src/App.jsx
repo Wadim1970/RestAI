@@ -67,7 +67,10 @@ useEffect(() => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
-  const [currentSessionId, setCurrentSessionId] = useState('');
+  const [currentSessionId, setCurrentSessionId] = useState(() => {
+    const savedSession = localStorage.getItem('ai_chat_session');
+    return savedSession || '';
+  });
 
   // Эффект: сохранение корзины
   useEffect(() => {
@@ -83,6 +86,14 @@ useEffect(() => {
   useEffect(() => {
     localStorage.setItem('chat_history', JSON.stringify(chatMessages));
   }, [chatMessages]);
+
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem('ai_chat_session', currentSessionId);
+    } else {
+      localStorage.removeItem('ai_chat_session');
+    }
+  }, [currentSessionId]);
 
   // Функция отслеживания просмотров
   const trackDishView = (dishName) => {
