@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 
-const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder }) => {
+const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill }) => {
   const [comment, setComment] = useState(''); // Состояние для текста комментария
   const [isClosing, setIsClosing] = useState(false); // Состояние для запуска анимации закрытия
-  
+     
   const touchStart = useRef(null); // Храним координату Y начала касания
   const touchEnd = useRef(null); // Храним координату Y конца/движения касания
   const modalRef = useRef(null); // Ссылка на само окно (чтобы его двигать)
@@ -184,7 +184,10 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
           </div>
           <button 
             className={`${styles.orderBtn} ${!hasNewItems ? styles.billBtn : ''}`} 
-            onClick={hasNewItems ? () => { onConfirmOrder(cartItems); setComment(''); } : () => console.log("Счет")}
+            onClick={hasNewItems 
+              ? () => { onConfirmOrder(cartItems); setComment(''); } 
+              : () => { onRequestBill(); onClose(); }
+            }
           >
             {hasNewItems ? 'Отправить заказ' : 'Принести счет'}
           </button>
