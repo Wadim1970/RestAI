@@ -4,4 +4,5 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+   base: './', // Добавьте эту строку. Она говорит Vite использовать относительные пути для статики
 })
