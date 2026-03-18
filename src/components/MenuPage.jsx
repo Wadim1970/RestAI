@@ -167,7 +167,7 @@ const toggleDishSelection = (e, dishId) => {
                                             className={styles.dishImageContainer}
                                             onClick={() => handleOpenModal(dish)}
                                         >
-                                            {dish.image_url && <img src={dish.image_url} alt={dish.dish_name} className={styles.dishImage} />}
+                                            {dish.image_url && <img src={dish.image_url} alt={dish.dish_name} className={styles.dishImage} loading="lazy" />}
                                             <div className={styles.priceTag}>
                                                 <p className={styles.dishPrice}>{dish.cost_rub} ₽</p>
                                             </div>
