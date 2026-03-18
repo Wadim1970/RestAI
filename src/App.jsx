@@ -12,25 +12,45 @@ function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
 
   // Получаем ID ресторана из URL параметров или localStorage
+ function AppContent() {
+  const [restaurantId, setRestaurantId] = useState(null);
+  const [tableNumber, setTableNumber] = useState(null); // 1. Добавляем стейт для номера столика
+
+  // Получаем ID ресторана и номер столика из URL параметров или localStorage
   useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const idFromUrl = params.get('restaurant_id');
-  
-  if (idFromUrl) {
-    setRestaurantId(idFromUrl);
-    localStorage.setItem('restaurant_id', idFromUrl);
-  } else {
-    const savedId = localStorage.getItem('restaurant_id');
-    if (savedId) {
-      setRestaurantId(savedId);
+    // 2. Читаем параметры после знака "?"
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get('restaurant_id');
+    const tableFromUrl = params.get('table'); // Ищем параметр &table=9
+    
+    if (idFromUrl) {
+      setRestaurantId(idFromUrl);
+      localStorage.setItem('restaurant_id', idFromUrl);
+      
+      // 3. Если в ссылке есть номер стола, тоже сохраняем его
+      if (tableFromUrl) {
+        setTableNumber(tableFromUrl);
+        localStorage.setItem('table_number', tableFromUrl);
+      }
     } else {
-      // ⭐ Используй ID своего ресторана из таблицы
-      const defaultId = 'dd89773c-0952-4fd1-9510-514094a928ee'; // Измени на реальный ID
-      setRestaurantId(defaultId);
-      localStorage.setItem('restaurant_id', defaultId);
+      // 4. Если зашли без параметров (например, обновили страницу), берем из памяти
+      const savedId = localStorage.getItem('restaurant_id');
+      const savedTable = localStorage.getItem('table_number');
+      
+      if (savedId) {
+        setRestaurantId(savedId);
+        if (savedTable) {
+          setTableNumber(savedTable);
+        }
+      } else {
+        // ⭐ Дефолтный ресторан на случай прямых заходов (без QR)
+        const defaultId = 'dd89773c-0952-4fd1-9510-514094a928ee'; // Ваш реальный ID
+        setRestaurantId(defaultId);
+        localStorage.setItem('restaurant_id', defaultId);
+        // Номер стола не задаем, так как это прямой заход не из-за столика
+      }
     }
-  }
-}, []);
+  }, []);
 
   // Загружаем брендинг для текущего ресторана
   const { branding, loading: brandingLoading } = useBrandingConfig(restaurantId);
