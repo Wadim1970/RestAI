@@ -35,7 +35,7 @@ export const useBrandingConfig = (restaurantId) => {
         const { data, error: fetchError } = await supabase
           .from('restaurants')
           .select(
-            'branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font, font_url_header, font_url_body'
+            'name, branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font, font_url_header, font_url_body'
           )
           .eq('restaurantId', restaurantId)
           .single();
@@ -44,6 +44,7 @@ export const useBrandingConfig = (restaurantId) => {
 
         if (data) {
           setBranding({
+            name: data.name || 'Ресторан', // <-- ДОБАВИТЬ ЭТУ СТРОКУ
             primaryColor: data.branding_primary_color || DEFAULT_BRANDING.primaryColor,
             accentColor: data.branding_accent_color || DEFAULT_BRANDING.accentColor,
             backgroundColor: data.branding_background_color || DEFAULT_BRANDING.backgroundColor,
