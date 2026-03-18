@@ -8,10 +8,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
 import { supabase } from './supabaseClient';
 
-function AppContent() {
-  const [restaurantId, setRestaurantId] = useState(null);
-
-  // Получаем ID ресторана из URL параметров или localStorage
+ // Получаем ID ресторана из URL параметров или localStorage
  function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null); // 1. Добавляем стейт для номера столика
