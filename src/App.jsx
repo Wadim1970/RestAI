@@ -195,10 +195,49 @@ useEffect(() => {
     });
   };
 
-  const handleConfirmOrder = (cartItems) => {
-    setConfirmedOrders(prev => [...prev, ...cartItems]);
-    setCart({}); 
-    setChatMessages([]);
+   const handleConfirmOrder = async (cartItems) => {
+    // 1. Считаем итоговую сумму заказа
+    const totalAmount = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
+
+    // 2. Формируем красивый и чистый массив блюд для колонки items (JSONB)
+    const itemsToSave = cartItems.map(item => ({
+      dish_id: item.id,
+      name: item.dish_name,
+      price: item.cost_rub,
+      count: item.count
+    }));
+
+    try {
+      // 3. Отправляем заказ в Supabase
+      const { error } = await supabase
+        .from('orders')
+        .insert([{
+          guest_id: guestId, // Порядковый номер гостя (из нашего фонового генератора)
+          restaurant_id: restaurantId || 'default', // ID ресторана
+          restaurant_name: branding?.restaurant_name || 'Ресторан', // Имя ресторана из брендинга
+          session_id: currentSessionId, // Временная сессия чата
+          items: itemsToSave,
+          total_amount: totalAmount,
+          comment: '' // Оставляем пустым (пока в корзине нет поля для комментария)
+        }]);
+
+      if (error) {
+        console.error("Ошибка записи заказа в БД:", error);
+        alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
+        return; // Прерываем выполнение, корзину не очищаем!
+      }
+
+      console.log('✅ Заказ успешно отправлен на кухню (в БД)!');
+
+      // 4. Если всё успешно, обновляем интерфейс (локально)
+      setConfirmedOrders(prev => [...prev, ...cartItems]);
+      setCart({}); 
+      // setChatMessages([]); <- Я рекомендую закомментировать или удалить эту строку, 
+      // чтобы история общения с ИИ не стиралась при оформлении заказа!
+      
+    } catch (err) {
+      console.error("Системная ошибка при оформлении:", err);
+    }
   };
 const handleRequestBill = () => {
     // Очищаем локальные состояния
