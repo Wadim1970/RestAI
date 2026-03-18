@@ -1,6 +1,6 @@
 // src/components/MenuPage.jsx
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../supabaseClient';
 import styles from './MenuPage.module.css';
 
 // Импорт дочерних компонентов страницы
@@ -8,11 +8,6 @@ import MenuHeader from './MenuHeader/MenuHeader';
 import MenuFooter from './MenuFooter/MenuFooter'; 
 import DishModal from './DishModal/DishModal';
 import CartModal from './CartModal/CartModal';
-
-// Настройка подключения к базе данных Supabase
-const supabaseUrl = 'https://utdfzrpkoscyikitceow.supabase.co'; 
-const supabaseAnonKey = 'sb_publishable_a2-xBdfgS2KCwRUiA4-JDw_Pl8Q-L83'; 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Компонент иконки "галочка" для выбранных блюд
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
