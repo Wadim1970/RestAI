@@ -214,7 +214,7 @@ useEffect(() => {
         .insert([{
           guest_id: guestId, // Порядковый номер гостя (из нашего фонового генератора)
           restaurant_id: restaurantId || 'default', // ID ресторана
-          restaurant_name: branding?.restaurant_name || 'Ресторан', // Имя ресторана из брендинга
+          restaurant_name: branding?.name || 'Ресторан',
           session_id: currentSessionId, // Временная сессия чата
           items: itemsToSave,
           total_amount: totalAmount,
