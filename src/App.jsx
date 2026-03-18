@@ -6,6 +6,7 @@ import AIChatModal from './components/AIChatModal/AIChatModal';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
+import { supabase } from './supabaseClient';
 
 function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
@@ -40,6 +41,67 @@ useEffect(() => {
   console.log('🔍 restaurantId:', restaurantId);
   console.log('🔍 brandingLoading:', brandingLoading);
 }, [branding, restaurantId, brandingLoading]);
+
+    // ========================================================
+  // --- ФОНОВАЯ ИДЕНТИФИКАЦИЯ И РЕГИСТРАЦИЯ ГОСТЯ ---
+  // ========================================================
+  const [guestId, setGuestId] = useState(null); // Здесь будет храниться порядковый номер гостя (id из БД)
+
+  useEffect(() => {
+    const initializeGuest = async () => {
+      // 1. Проверяем или генерируем device_id
+      let deviceId = localStorage.getItem('restai_device_id');
+      
+      if (!deviceId) {
+        deviceId = crypto.randomUUID(); // Генерируем уникальный ID силами браузера
+        localStorage.setItem('restai_device_id', deviceId);
+      }
+
+      try {
+        // 2. Ищем гостя в базе данных по device_id
+        const { data: existingGuest, error: searchError } = await supabase
+          .from('guests')
+          .select('id, visit_count')
+          .eq('device_id', deviceId)
+          .maybeSingle(); // Используем maybeSingle вместо single, чтобы не кидало ошибку, если гостя нет
+
+        if (existingGuest) {
+          // 3А. ГОСТЬ НАЙДЕН: Обновляем счетчик визитов и дату
+          await supabase
+            .from('guests')
+            .update({ 
+              visit_count: existingGuest.visit_count + 1,
+              last_visit_at: new Date().toISOString() 
+            })
+            .eq('id', existingGuest.id);
+            
+          setGuestId(existingGuest.id); // Сохраняем ID гостя в стейт
+          console.log(`С возвращением! Гость №${existingGuest.id}, визит: ${existingGuest.visit_count + 1}`);
+
+        } else {
+          // 3Б. ГОСТЬ НОВЫЙ: Создаем запись в таблице
+          // visit_count (1) и даты проставятся базой автоматически согласно вашей схеме SQL
+          const { data: newGuest, error: insertError } = await supabase
+            .from('guests')
+            .insert([{ device_id: deviceId }]) 
+            .select('id')
+            .single();
+
+          if (newGuest) {
+            setGuestId(newGuest.id);
+            console.log(`Создан новый гость №${newGuest.id}`);
+          }
+          if (insertError) console.error("Ошибка создания гостя:", insertError);
+        }
+      } catch (err) {
+        console.error("Системная ошибка при инициализации гостя:", err);
+      }
+    };
+
+    initializeGuest();
+  }, []); // Отработает 1 раз при старте приложения
+  // ========================================================
+  
   // --- СОСТОЯНИЕ КОРЗИНЫ ---
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem('restaurant_cart');
