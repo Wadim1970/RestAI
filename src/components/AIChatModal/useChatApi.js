@@ -6,7 +6,7 @@ export const useChatApi = (webhookUrl) => {
 
     // Основная функция для связи с n8n
     // Принимает: text (сообщение), context (блюдо), sessionId (ID юзера)
-    const sendMessageToAI = async (text, context, sessionId = 'default-user') => {
+    const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
         setIsLoading(true); // Включаем индикатор «бот думает»
         
         try {
@@ -27,6 +27,8 @@ export const useChatApi = (webhookUrl) => {
                     message: text,     // Текст от пользователя
                     context: context,  // Данные о блюде (контекст)
                     sessionId: sessionId  // Идентификатор сессии
+                    restaurantId: restaurantId, // <-- Новое поле
+                    guestId: guestId            // <-- Новое поле
                 }),
             });
             
