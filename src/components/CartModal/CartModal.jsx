@@ -185,7 +185,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
           <button 
             className={`${styles.orderBtn} ${!hasNewItems ? styles.billBtn : ''}`} 
             onClick={hasNewItems 
-              ? () => { onConfirmOrder(cartItems); setComment(''); } 
+              ? () => { onConfirmOrder(cartItems, comment); setComment(''); } 
               : () => { onRequestBill(); onClose(); }
             }
           >
