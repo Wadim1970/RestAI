@@ -306,6 +306,8 @@ const handleRequestBill = () => {
           sessionId={currentSessionId}
           messages={chatMessages}
           setMessages={setChatMessages}
+          restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
+          guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
         />
       </ThemeProvider>
     </BrandingProvider>
