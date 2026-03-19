@@ -196,11 +196,9 @@ useEffect(() => {
   };
 
     // 1. ДОБАВИЛИ ВТОРОЙ АРГУМЕНТ comment
-  const handleConfirmOrder = async (cartItems, comment = '') => {
-    // Считаем итоговую сумму заказа
+    const handleConfirmOrder = async (cartItems, comment = '') => {
     const totalAmount = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
 
-    // Формируем красивый и чистый массив блюд для колонки items (JSONB)
     const itemsToSave = cartItems.map(item => ({
       dish_id: item.id,
       name: item.dish_name,
@@ -208,18 +206,25 @@ useEffect(() => {
       count: item.count
     }));
 
+    // --- ДОБАВЛЯЕМ ВОТ ЭТОТ БЛОК ---
+    let sessionToSave = currentSessionId;
+    if (!sessionToSave) {
+      sessionToSave = `sess_${Date.now()}`; // Генерируем ID
+      setCurrentSessionId(sessionToSave); // Запоминаем для будущих чатов и дозаказов
+    }
+    // ------------------------------
+
     try {
-      // Отправляем заказ в Supabase
       const { error } = await supabase
         .from('orders')
         .insert([{
           guest_id: guestId, 
           restaurant_id: restaurantId || 'default', 
           restaurant_name: branding?.name || 'Ресторан',
-          session_id: currentSessionId, 
+          session_id: sessionToSave, // Используем гарантированный ID
           items: itemsToSave,
           total_amount: totalAmount,
-          comment: comment // 2. ИСПОЛЬЗУЕМ ПЕРЕДАННЫЙ КОММЕНТАРИЙ
+          comment: comment 
         }]);
 
       if (error) {
@@ -229,8 +234,6 @@ useEffect(() => {
       }
 
       console.log('✅ Заказ успешно отправлен на кухню (в БД)!');
-
-      // Если всё успешно, обновляем интерфейс (локально)
       setConfirmedOrders(prev => [...prev, ...cartItems]);
       setCart({}); 
       
