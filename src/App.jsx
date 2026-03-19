@@ -218,7 +218,7 @@ useEffect(() => {
           session_id: currentSessionId, // Временная сессия чата
           items: itemsToSave,
           total_amount: totalAmount,
-          comment: '' // Оставляем пустым (пока в корзине нет поля для комментария)
+          comment: orderComment // <-- Записываем реальный комментарий
         }]);
 
       if (error) {
