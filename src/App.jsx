@@ -195,11 +195,12 @@ useEffect(() => {
     });
   };
 
-   const handleConfirmOrder = async (cartItems) => {
-    // 1. Считаем итоговую сумму заказа
+    // 1. ДОБАВИЛИ ВТОРОЙ АРГУМЕНТ comment
+  const handleConfirmOrder = async (cartItems, comment = '') => {
+    // Считаем итоговую сумму заказа
     const totalAmount = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
 
-    // 2. Формируем красивый и чистый массив блюд для колонки items (JSONB)
+    // Формируем красивый и чистый массив блюд для колонки items (JSONB)
     const itemsToSave = cartItems.map(item => ({
       dish_id: item.id,
       name: item.dish_name,
@@ -208,32 +209,30 @@ useEffect(() => {
     }));
 
     try {
-      // 3. Отправляем заказ в Supabase
+      // Отправляем заказ в Supabase
       const { error } = await supabase
         .from('orders')
         .insert([{
-          guest_id: guestId, // Порядковый номер гостя (из нашего фонового генератора)
-          restaurant_id: restaurantId || 'default', // ID ресторана
+          guest_id: guestId, 
+          restaurant_id: restaurantId || 'default', 
           restaurant_name: branding?.name || 'Ресторан',
-          session_id: currentSessionId, // Временная сессия чата
+          session_id: currentSessionId, 
           items: itemsToSave,
           total_amount: totalAmount,
-          comment: orderComment // <-- Записываем реальный комментарий
+          comment: comment // 2. ИСПОЛЬЗУЕМ ПЕРЕДАННЫЙ КОММЕНТАРИЙ
         }]);
 
       if (error) {
         console.error("Ошибка записи заказа в БД:", error);
         alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
-        return; // Прерываем выполнение, корзину не очищаем!
+        return; 
       }
 
       console.log('✅ Заказ успешно отправлен на кухню (в БД)!');
 
-      // 4. Если всё успешно, обновляем интерфейс (локально)
+      // Если всё успешно, обновляем интерфейс (локально)
       setConfirmedOrders(prev => [...prev, ...cartItems]);
       setCart({}); 
-      // setChatMessages([]); <- Я рекомендую закомментировать или удалить эту строку, 
-      // чтобы история общения с ИИ не стиралась при оформлении заказа!
       
     } catch (err) {
       console.error("Системная ошибка при оформлении:", err);
