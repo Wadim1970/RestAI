@@ -144,6 +144,7 @@ useEffect(() => {
 
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isBillRequested, setIsBillRequested] = useState(false);
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState(() => {
@@ -254,7 +255,7 @@ const handleRequestBill = () => {
     localStorage.removeItem('chat_history');
     localStorage.removeItem('ai_chat_session'); 
 
-    alert('Счет запрошен! Скоро официант подойдет к вам.');
+    setIsBillRequested(true);
   };
   return (
     <BrandingProvider branding={branding} loading={brandingLoading}>
@@ -309,6 +310,35 @@ const handleRequestBill = () => {
           restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
         />
+               {/* КРАСИВОЕ ОКНО ВМЕСТО ALERT */}
+        {isBillRequested && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <div style={{
+              backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
+              width: '80%', maxWidth: '320px', textAlign: 'center',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '20px', color: '#111' }}>Официант в пути!</h3>
+              <p style={{ margin: '0 0 20px', color: '#666', fontSize: '15px' }}>
+                Счет скоро будет у вас на столе. Спасибо, что выбрали нас!
+              </p>
+              <button 
+                onClick={() => setIsBillRequested(false)}
+                style={{
+                  width: '100%', padding: '12px', backgroundColor: '#e21b1b',
+                  color: '#fff', border: 'none', borderRadius: '8px',
+                  fontSize: '16px', fontWeight: 'bold', cursor: 'pointer'
+                }}
+              >
+                Отлично
+              </button>
+            </div>
+          </div>
+        )}
       </ThemeProvider>
     </BrandingProvider>
   );
