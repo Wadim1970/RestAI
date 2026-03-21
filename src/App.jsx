@@ -223,6 +223,7 @@ useEffect(() => {
           restaurant_id: restaurantId || 'default', 
           restaurant_name: branding?.name || 'Ресторан',
           session_id: sessionToSave, // Используем гарантированный ID
+          table_number: tableNumber,
           items: itemsToSave,
           total_amount: totalAmount,
           comment: comment 
