@@ -145,6 +145,7 @@ useEffect(() => {
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
+  const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState(() => {
@@ -244,18 +245,49 @@ useEffect(() => {
     }
   };
 const handleRequestBill = () => {
-    // Очищаем локальные состояния
+    // Если есть подтвержденные заказы, предлагаем выбор. 
+    // Если нет (случайно нажал) - можем просто закрыть корзину или показать алерт
+    if (confirmedOrders.length > 0) {
+        setIsBillChoiceOpen(true);
+    } else {
+        alert("Вы еще ничего не заказали!");
+    }
+  };
+    const handleConfirmBillChoice = async (billType) => {
+    // billType будет 'personal' (за себя) или 'table' (за весь стол)
+    
+    // 1. Закрываем модалку выбора
+    setIsBillChoiceOpen(false);
+
+    // 2. Отправляем сигнал официанту (в будущем - через n8n в Телеграм)
+    try {
+        await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'request_bill',
+                type: billType,
+                tableNumber: tableNumber,
+                guestId: guestId,
+                restaurantId: restaurantId,
+                sessionId: currentSessionId
+            })
+        });
+    } catch (e) {
+        console.error("Не удалось отправить вебхук официанту, но продолжаем локально", e);
+    }
+
+    // 3. Очищаем локальные данные, так как гость уходит
     setCart({});
     setConfirmedOrders([]);
     setChatMessages([]);
     setCurrentSessionId(''); 
-
-    // Очищаем localStorage
     localStorage.removeItem('restaurant_cart');
     localStorage.removeItem('restaurant_orders');
     localStorage.removeItem('chat_history');
     localStorage.removeItem('ai_chat_session'); 
 
+    // 4. Показываем финальный красивый экран благодарности
     setIsBillRequested(true);
   };
   return (
@@ -311,7 +343,58 @@ const handleRequestBill = () => {
           restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
         />
-               {/* КРАСИВОЕ ОКНО ВМЕСТО ALERT */}
+          
+               {/* МОДАЛКА ВЫБОРА ТИПА СЧЕТА */}
+        {isBillChoiceOpen && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <div style={{
+              backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
+              width: '85%', maxWidth: '340px', textAlign: 'center',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+            }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>Как посчитать?</h3>
+              <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
+                Стол №{tableNumber || '?'}. Хотите оплатить только свои заказы или закрыть весь счет за стол?
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button 
+                  onClick={() => handleConfirmBillChoice('personal')}
+                  style={{
+                    padding: '14px', backgroundColor: '#f0f0f0', color: '#111', 
+                    border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600'
+                  }}
+                >
+                  Только за себя
+                </button>
+                <button 
+                  onClick={() => handleConfirmBillChoice('table')}
+                  style={{
+                    padding: '14px', backgroundColor: '#111', color: '#fff', 
+                    border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600'
+                  }}
+                >
+                  Оплатить весь стол
+                </button>
+                <button 
+                  onClick={() => setIsBillChoiceOpen(false)}
+                  style={{
+                    padding: '10px', background: 'none', color: '#999', 
+                    border: 'none', fontSize: '14px', marginTop: '4px'
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+       
+       {/* КРАСИВОЕ ОКНО ВМЕСТО ALERT */}
         {isBillRequested && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
