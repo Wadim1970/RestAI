@@ -146,6 +146,7 @@ useEffect(() => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
+  const [isProcessing, setIsProcessing] = useState(false);
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState(() => {
@@ -198,7 +199,11 @@ useEffect(() => {
   };
 
     // 1. ДОБАВИЛИ ВТОРОЙ АРГУМЕНТ comment
-    const handleConfirmOrder = async (cartItems, comment = '') => {
+      const handleConfirmOrder = async (cartItems, comment = '') => {
+    // 1. ПРОВЕРКА ЗАМКА: Если процесс уже идет, игнорируем клик
+    if (isProcessing) return; 
+    setIsProcessing(true); // Закрываем замок
+
     const totalAmount = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
 
     const itemsToSave = cartItems.map(item => ({
@@ -208,13 +213,11 @@ useEffect(() => {
       count: item.count
     }));
 
-    // --- ДОБАВЛЯЕМ ВОТ ЭТОТ БЛОК ---
     let sessionToSave = currentSessionId;
     if (!sessionToSave) {
-      sessionToSave = `sess_${Date.now()}`; // Генерируем ID
-      setCurrentSessionId(sessionToSave); // Запоминаем для будущих чатов и дозаказов
+      sessionToSave = `sess_${Date.now()}`; 
+      setCurrentSessionId(sessionToSave); 
     }
-    // ------------------------------
 
     try {
       const { error } = await supabase
@@ -223,7 +226,7 @@ useEffect(() => {
           guest_id: guestId, 
           restaurant_id: restaurantId || 'default', 
           restaurant_name: branding?.name || 'Ресторан',
-          session_id: sessionToSave, // Используем гарантированный ID
+          session_id: sessionToSave, 
           table_number: tableNumber,
           items: itemsToSave,
           total_amount: totalAmount,
@@ -242,6 +245,9 @@ useEffect(() => {
       
     } catch (err) {
       console.error("Системная ошибка при оформлении:", err);
+    } finally {
+      // 2. СНИМАЕМ ЗАМОК в любом случае (даже если была ошибка)
+      setIsProcessing(false);
     }
   };
 const handleRequestBill = () => {
@@ -253,13 +259,13 @@ const handleRequestBill = () => {
         alert("Вы еще ничего не заказали!");
     }
   };
-    const handleConfirmBillChoice = async (billType) => {
-    // billType будет 'personal' (за себя) или 'table' (за весь стол)
-    
-    // 1. Закрываем модалку выбора
-    setIsBillChoiceOpen(false);
+     const handleConfirmBillChoice = async (billType) => {
+    // 1. ПРОВЕРКА ЗАМКА
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-    // 2. Отправляем сигнал официанту (в будущем - через n8n в Телеграм)
+    setIsBillChoiceOpen(false); // Сразу прячем окно выбора
+
     try {
         await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
             method: 'POST',
@@ -275,20 +281,23 @@ const handleRequestBill = () => {
         });
     } catch (e) {
         console.error("Не удалось отправить вебхук официанту, но продолжаем локально", e);
+    } finally {
+        // Очищаем локальные данные, так как гость уходит
+        setCart({});
+        setConfirmedOrders([]);
+        setChatMessages([]);
+        setCurrentSessionId(''); 
+        localStorage.removeItem('restaurant_cart');
+        localStorage.removeItem('restaurant_orders');
+        localStorage.removeItem('chat_history');
+        localStorage.removeItem('ai_chat_session'); 
+
+        // Показываем финальный красивый экран благодарности
+        setIsBillRequested(true);
+        
+        // 2. СНИМАЕМ ЗАМОК
+        setIsProcessing(false);
     }
-
-    // 3. Очищаем локальные данные, так как гость уходит
-    setCart({});
-    setConfirmedOrders([]);
-    setChatMessages([]);
-    setCurrentSessionId(''); 
-    localStorage.removeItem('restaurant_cart');
-    localStorage.removeItem('restaurant_orders');
-    localStorage.removeItem('chat_history');
-    localStorage.removeItem('ai_chat_session'); 
-
-    // 4. Показываем финальный красивый экран благодарности
-    setIsBillRequested(true);
   };
   return (
     <BrandingProvider branding={branding} loading={brandingLoading}>
