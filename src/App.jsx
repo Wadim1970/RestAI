@@ -147,6 +147,10 @@ useEffect(() => {
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
   const [isProcessing, setIsProcessing] = useState(false);
+  const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
+  const [ratingService, setRatingService] = useState(0); // Оценка сервиса (0-5)
+  const [reviewComment, setReviewComment] = useState(''); // Текст отзыва
+  const [isReviewSubmitted, setIsReviewSubmitted] = useState(false); // Отправлен ли отзыв
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState(() => {
@@ -259,7 +263,7 @@ const handleRequestBill = () => {
         alert("Вы еще ничего не заказали!");
     }
   };
-     const handleConfirmBillChoice = async (billType) => {
+    const handleConfirmBillChoice = async (billType) => {
     // 1. ПРОВЕРКА ЗАМКА
     if (isProcessing) return;
     setIsProcessing(true);
@@ -296,6 +300,66 @@ const handleRequestBill = () => {
         setIsBillRequested(true);
         
         // 2. СНИМАЕМ ЗАМОК
+        setIsProcessing(false);
+    }
+  };
+    const handleSubmitReview = async () => {
+    // Если ничего ��е заполнили, просто закрываем окно
+    if (ratingFood === 0 && ratingService === 0 && reviewComment.trim() === '') {
+        setIsBillRequested(false);
+        return;
+    }
+
+    setIsProcessing(true); // Защита от двойного клика
+
+    try {
+        // Здесь мы сохраняем отзыв в Supabase
+        const { error } = await supabase
+            .from('reviews') // ВАЖНО: Эту таблицу нужно будет создать в Supabase!
+            .insert([{
+                restaurant_id: restaurantId,
+                guest_id: guestId,
+                table_number: tableNumber,
+                rating_food: ratingFood,
+                rating_service: ratingService,
+                comment: reviewComment,
+                session_id: currentSessionId
+            }]);
+
+        if (error) throw error;
+
+        // Опционально: Отправка вебхука в Телеграм владельцу
+        /*
+        fetch('ВАШ_URL_N8N_ДЛЯ_ОТЗЫВОВ', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'new_review',
+                table: tableNumber,
+                food: ratingFood,
+                service: ratingService,
+                text: reviewComment
+            })
+        });
+        */
+
+        setIsReviewSubmitted(true); // Показываем "Спасибо!"
+        
+        // Автоматически закрываем окно через 3 секунды
+        setTimeout(() => {
+            setIsBillRequested(false);
+            // Сбрасываем стейты на будущее
+            setRatingFood(0);
+            setRatingService(0);
+            setReviewComment('');
+            setIsReviewSubmitted(false);
+        }, 3000);
+
+    } catch (error) {
+        console.error("Ошибка при отправке отзыва:", error);
+        alert("Не удалось отправить отзыв, но спасибо за ваше время!");
+        setIsBillRequested(false);
+    } finally {
         setIsProcessing(false);
     }
   };
@@ -404,38 +468,108 @@ const handleRequestBill = () => {
         )}
        
        {/* КРАСИВОЕ ОКНО ВМЕСТО ALERT */}
+              {/* ФИНАЛЬНОЕ ОКНО С ОТЗЫВОМ */}
         {isBillRequested && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
           }}>
             <div style={{
-              backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
-              width: '80%', maxWidth: '320px', textAlign: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+              backgroundColor: '#fff', padding: '24px', borderRadius: '20px',
+              width: '100%', maxWidth: '360px', textAlign: 'center',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
             }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: '20px', color: '#111' }}>Официант в пути!</h3>
-              <p style={{ margin: '0 0 20px', color: '#666', fontSize: '15px' }}>
-                Счет скоро будет у вас на столе. Спасибо, что выбрали нас!
-              </p>
-              <button 
-                onClick={() => setIsBillRequested(false)}
-                style={{
-                  width: '100%', padding: '12px', backgroundColor: '#e21b1b',
-                  color: '#fff', border: 'none', borderRadius: '8px',
-                  fontSize: '16px', fontWeight: 'bold', cursor: 'pointer'
-                }}
-              >
-                Отлично
-              </button>
+              
+              {!isReviewSubmitted ? (
+                <>
+                  <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{ margin: '0 0 8px', fontSize: '22px', color: '#111' }}>Официант в пути!</h3>
+                    <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
+                      Пока мы несем счет, поделитесь впечатлениями. Это идет напрямую владельцу.
+                    </p>
+                  </div>
+
+                  {/* Оценка Кухни */}
+                  <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '15px', fontWeight: '600', color: '#333' }}>
+                      Как вам кухня?
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg 
+                          key={`food-${star}`} 
+                          onClick={() => setRatingFood(star)}
+                          style={{ cursor: 'pointer', width: '36px', height: '36px', fill: star <= ratingFood ? '#FFD700' : '#E0E0E0', transition: 'fill 0.2s' }}
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Оценка Сервиса */}
+                  <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '15px', fontWeight: '600', color: '#333' }}>
+                      Как вам обслуживание?
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg 
+                          key={`service-${star}`} 
+                          onClick={() => setRatingService(star)}
+                          style={{ cursor: 'pointer', width: '36px', height: '36px', fill: star <= ratingService ? '#FFD700' : '#E0E0E0', transition: 'fill 0.2s' }}
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Комментарий */}
+                  <textarea 
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Напишите пару слов..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box', height: '80px', padding: '12px',
+                      borderRadius: '12px', border: '1px solid #ddd', fontSize: '14px',
+                      resize: 'none', marginBottom: '20px', backgroundColor: '#f9f9f9'
+                    }}
+                  />
+
+                  {/* Кнопки */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button 
+                      onClick={handleSubmitReview}
+                      disabled={isProcessing}
+                      style={{
+                        padding: '14px', backgroundColor: '#111', color: '#fff', 
+                        border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '600',
+                        opacity: isProcessing ? 0.7 : 1
+                      }}
+                    >
+                      {isProcessing ? 'Отправка...' : (ratingFood || ratingService || reviewComment ? 'Отправить отзыв' : 'Пропустить')}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Экран благодарности после отправки */
+                <div style={{ padding: '20px 0' }}>
+                  <svg style={{ width: '60px', height: '60px', fill: '#4CAF50', marginBottom: '16px' }} viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                  <h3 style={{ margin: '0 0 10px', fontSize: '22px', color: '#111' }}>Спасибо!</h3>
+                  <p style={{ margin: '0', color: '#666', fontSize: '15px' }}>Ваше мнение очень важно для нас.</p>
+                </div>
+              )}
+
             </div>
           </div>
         )}
-      </ThemeProvider>
-    </BrandingProvider>
-  );
-}
 
 function App() {
   return (
