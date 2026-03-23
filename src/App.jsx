@@ -570,7 +570,10 @@ const handleRequestBill = () => {
             </div>
           </div>
         )}
-
+</ThemeProvider>
+    </BrandingProvider>
+  );
+}
 function App() {
   return (
     <HashRouter>
