@@ -7,21 +7,27 @@ export const useChatApi = (webhookUrl) => {
     const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
         setIsLoading(true);
         
-        // 🔥 Получаем preferences гостя из БД
-        let guestPreferences = null;
-        if (guestId) {
-            try {
-                const { data } = await supabase
-                    .from('guests')
-                    .select('preferences')
-                    .eq('id', guestId)
-                    .single();
-                
-                guestPreferences = data?.preferences;
-            } catch (err) {
-                console.warn('Не удалось загрузить preferences:', err);
-            }
-        }
+        // 🔥 Получаем preferences и visit_count гостя из БД
+let guestPreferences = null;
+if (guestId) {
+    try {
+        const { data } = await supabase
+            .from('guests')
+            .select('preferences, visit_count')
+            .eq('id', guestId)
+            .single();
+        
+        // Формируем объект с данными гостя
+        guestPreferences = {
+            ...(data?.preferences || {}),  // Разворачиваем существующие preferences (tags, comments)
+            visit_count: data?.visit_count || 0  // Добавляем счетчик визитов
+        };
+        
+        console.log('🔥 Preferences отправляются в AI:', guestPreferences);
+    } catch (err) {
+        console.warn('Не удалось загрузить preferences:', err);
+    }
+}
         
         try {
             // Выполняем запрос к n8n
