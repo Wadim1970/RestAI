@@ -235,7 +235,7 @@ useEffect(() => {
           items: itemsToSave,
           total_amount: totalAmount,
           comment: comment,
-          status: 'pending'
+          status: 'new'
         }]);
 
       if (error) {
