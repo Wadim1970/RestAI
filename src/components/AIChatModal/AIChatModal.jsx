@@ -27,7 +27,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       const fetchGreeting = async () => {
         // Отправляем маркер "ПРИВЕТСТВИЕ" при КАЖДОМ открытии чата
         // ИИ получит этот маркер + актуальный pageContext и выдаст нужную фразу
-        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, guestId, restaurantId);
+        const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, restaurantId, guestId);
         
         // Добавляем новый ответ ИИ в конец существующей истории (не очищая её)
         setMessages(prev => [...prev, { role: 'bot', text: aiGreeting }]);
@@ -72,7 +72,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       setMessages(newMessages); // Обновляем экран
 
       // Отправляем запрос в n8n (теперь с контекстом блюда и динамической сессией)
-      const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, guestId, restaurantId);
+      const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, restaurantId, guestId);
       
       // Добавляем ответ бота в историю
       setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
