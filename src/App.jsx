@@ -146,6 +146,7 @@ useEffect(() => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
+  const [tableTotalAmount, setTableTotalAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
   const [ratingService, setRatingService] = useState(0); // Оценка сервиса (0-5)
@@ -466,55 +467,68 @@ const handleConfirmBillChoice = async (billType) => {
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
         />
           
-               {/* МОДАЛКА ВЫБОРА ТИПА СЧЕТА */}
-        {isBillChoiceOpen && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <div style={{
-              backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
-              width: '85%', maxWidth: '340px', textAlign: 'center',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-            }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>Как посчитать?</h3>
-              <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
-                Стол №{tableNumber || '?'}. Хотите оплатить только свои заказы или закрыть весь счет за стол?
-              </p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button 
-                  onClick={() => handleConfirmBillChoice('personal')}
-                  style={{
-                    padding: '14px', backgroundColor: '#f0f0f0', color: '#111', 
-                    border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600'
-                  }}
-                >
-                  Только за себя
-                </button>
-                <button 
-                  onClick={() => handleConfirmBillChoice('table')}
-                  style={{
-                    padding: '14px', backgroundColor: '#111', color: '#fff', 
-                    border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600'
-                  }}
-                >
-                  Оплатить весь стол
-                </button>
-                <button 
-                  onClick={() => setIsBillChoiceOpen(false)}
-                  style={{
-                    padding: '10px', background: 'none', color: '#999', 
-                    border: 'none', fontSize: '14px', marginTop: '4px'
-                  }}
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+             {/* МОДАЛКА ВЫБОРА ТИПА СЧЕТА */}
+{isBillChoiceOpen && (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{
+      backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
+      width: '85%', maxWidth: '340px', textAlign: 'center',
+      boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+    }}>
+      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>Как посчитать?</h3>
+      <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
+        Хотите принести общий счет или раздельно?
+      </p>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Кнопка "Ваш счет" */}
+        <button 
+          onClick={() => handleConfirmBillChoice('personal')}
+          style={{
+            padding: '14px', backgroundColor: '#f0f0f0', color: '#111', 
+            border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+          }}
+        >
+          <span>Ваш счет</span>
+          <span style={{ fontSize: '18px', fontWeight: '700', color: '#48BF48' }}>
+            {confirmedOrders.reduce((sum, item) => sum + (item.cost_rub * item.count), 0)} ₽
+          </span>
+        </button>
+
+        {/* Кнопка "Общий счет" */}
+        <button 
+          onClick={() => handleConfirmBillChoice('table')}
+          style={{
+            padding: '14px', backgroundColor: '#111', color: '#fff', 
+            border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+          }}
+        >
+          <span>Общий счет за стол</span>
+          <span style={{ fontSize: '18px', fontWeight: '700' }}>
+            {tableTotalAmount} ₽
+          </span>
+        </button>
+
+        {/* Кнопка отмены */}
+        <button 
+          onClick={() => setIsBillChoiceOpen(false)}
+          style={{
+            padding: '10px', background: 'none', color: '#999', 
+            border: 'none', fontSize: '14px', marginTop: '4px'
+          }}
+        >
+          Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+)}
        
        {/* КРАСИВОЕ ОКНО ВМЕСТО ALERT */}
               {/* ФИНАЛЬНОЕ ОКНО С ОТЗЫВОМ */}
