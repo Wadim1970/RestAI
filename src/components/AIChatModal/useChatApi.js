@@ -1,77 +1,44 @@
-import { useState } from 'react'; // Подключаем хук для управления состоянием загрузки
-import { supabase } from '../../supabaseClient'; // или ваш путь к клиенту
+import { useState } from 'react';
+import { supabase } from '../../supabaseClient';
 
 export const useChatApi = (webhookUrl) => {
-    // isLoading будет true, когда мы отправили запрос и ждем ответа
     const [isLoading, setIsLoading] = useState(false);
 
-    // Основная функция для связи с n8n
-    // Принимает: text (сообщение), context (блюдо), sessionId (ID юзера)
     const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
-        setIsLoading(true); // Включаем индикатор «бот думает»
-
-        const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
-    setIsLoading(true);
-    
-    // 🔥 Получаем preferences гостя из БД
-    let guestPreferences = null;
-    if (guestId) {
-        try {
-            const { data } = await supabase
-                .from('guests')
-                .select('preferences')
-                .eq('id', guestId)
-                .single();
-            
-            guestPreferences = data?.preferences;
-        } catch (err) {
-            console.warn('Не удалось загрузить preferences:', err);
-        }
-    }
-    
-    try {
-        const response = await fetch(webhookUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                message: text,
-                context: context,
-                sessionId: sessionId,
-                restaurantId: restaurantId,
-                guestId: guestId,
-                preferences: guestPreferences // 🔥 Отправляем preferences в n8n
-            }),
-        });
+        setIsLoading(true);
         
-        // ... остальной код
-    }
-    // ...
-};
+        // 🔥 Получаем preferences гостя из БД
+        let guestPreferences = null;
+        if (guestId) {
+            try {
+                const { data } = await supabase
+                    .from('guests')
+                    .select('preferences')
+                    .eq('id', guestId)
+                    .single();
+                
+                guestPreferences = data?.preferences;
+            } catch (err) {
+                console.warn('Не удалось загрузить preferences:', err);
+            }
+        }
         
         try {
             // Выполняем запрос к n8n
             const response = await fetch(webhookUrl, {
-                method: 'POST', // Метод отправки данных
-                mode: 'cors',   // Разрешаем кросс-доменные запросы
+                method: 'POST',
+                mode: 'cors',
                 headers: {
-                    /* ПЛАН Б: Меняем application/json на text/plain.
-                       Это «успокаивает» Safari, так как такой запрос считается простым 
-                       и браузер не делает предварительную проверку (Preflight).
-                    */
                     'Content-Type': 'text/plain', 
-                    'Accept': 'application/json' // Говорим, что в ответ хотим получить JSON
+                    'Accept': 'application/json'
                 },
-                // Превращаем объект в строку. ВАЖНО: используем правильные имена переменных!
                 body: JSON.stringify({
-                    message: text,     // Текст от пользователя
-                    context: context,  // Данные о блюде (контекст)
-                    sessionId: sessionId,  // Идентификатор сессии
-                    restaurantId: restaurantId, // <-- Новое поле
-                    guestId: guestId            // <-- Новое поле
+                    message: text,
+                    context: context,
+                    sessionId: sessionId,
+                    restaurantId: restaurantId,
+                    guestId: guestId,
+                    preferences: guestPreferences // 🔥 Отправляем preferences в n8n
                 }),
             });
             
@@ -86,24 +53,18 @@ export const useChatApi = (webhookUrl) => {
             try {
                 // Пытаемся распарсить ответ как JSON
                 const data = JSON.parse(responseText);
-                // Ищем ответ в разных полях, которые может прислать n8n/AI Agent
                 return data.output || data.text || data.message || responseText;
             } catch (jsonError) {
-                // Если пришел не JSON, а просто текст — возвращаем как есть
                 return responseText;
             }
 
         } catch (error) {
-            // Логируем ошибку в консоль для отладки
             console.error("n8n Error:", error);
-            // Возвращаем текст-заглушку для пользователя
             return "Извините, я немного отвлекся. Повторите, пожалуйста!";
         } finally {
-            // В любом случае (успех или ошибка) выключаем загрузку
             setIsLoading(false);
         }
     };
 
-    // Возвращаем функцию и статус загрузки в компонент AIChatModal
     return { sendMessageToAI, isLoading };
 };
