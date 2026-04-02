@@ -264,46 +264,71 @@ const handleRequestBill = () => {
         alert("Вы еще ничего не заказали!");
     }
   };
-    const handleConfirmBillChoice = async (billType) => {
-    // 1. ПРОВЕРКА ЗАМКА
-    if (isProcessing) return;
-    setIsProcessing(true);
+const handleConfirmBillChoice = async (billType) => {
+  // 1. ПРОВЕРКА ЗАМКА
+  if (isProcessing) return;
+  setIsProcessing(true);
 
-    setIsBillChoiceOpen(false); // Сразу прячем окно выбора
+  setIsBillChoiceOpen(false); // Сразу прячем окно выбора
 
-    try {
-        await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'request_bill',
-                type: billType,
-                tableNumber: tableNumber,
-                guestId: guestId,
-                restaurantId: restaurantId,
-                sessionId: currentSessionId
-            })
-        });
-    } catch (e) {
-        console.error("Не удалось отправить вебхук официанту, но продолжаем локально", e);
-    } finally {
-        // Очищаем локальные данные, так как гость уходит
-        setCart({});
-        setConfirmedOrders([]);
-        setChatMessages([]);
-        setCurrentSessionId(''); 
-        localStorage.removeItem('restaurant_cart');
-        localStorage.removeItem('restaurant_orders');
-        localStorage.removeItem('chat_history');
-        localStorage.removeItem('ai_chat_session'); 
+  try {
+    // 🔥 ОБНОВЛЯЕМ СТАТУС ВСЕХ ЗАКАЗОВ ГОСТЯ НА 'paid'
+    console.log('💳 Обновляем статус заказов для guest_id:', guestId);
+    
+    if (guestId && currentSessionId) {
+      const { data: updatedOrders, error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('guest_id', guestId)
+        .eq('session_id', currentSessionId)
+        .in('status', ['new', 'cooking'])  // Обновляем только неоплаченные
+        .select();
 
-        // Показываем финальный красивый экран благодарности
-        setIsBillRequested(true);
-        
-        // 2. СНИМАЕМ ЗАМОК
-        setIsProcessing(false);
+      if (updateError) {
+        console.error('❌ Ошибка обновления статуса заказов:', updateError);
+      } else {
+        console.log('✅ Статус заказов обновлён на "paid":', updatedOrders);
+      }
     }
-  };
+
+    // Отправка вебхука официанту (опционально)
+    try {
+      await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request_bill',
+          type: billType,
+          tableNumber: tableNumber,
+          guestId: guestId,
+          restaurantId: restaurantId,
+          sessionId: currentSessionId
+        })
+      });
+    } catch (webhookError) {
+      console.error("Не удалось отправить вебхук официанту:", webhookError);
+    }
+
+  } catch (e) {
+    console.error("Ошибка при запросе счёта:", e);
+  } finally {
+    // Очищаем локальные данные, так как гость уходит
+    setCart({});
+    setConfirmedOrders([]);
+    setChatMessages([]);
+    setCurrentSessionId(''); 
+    localStorage.removeItem('restaurant_cart');
+    localStorage.removeItem('restaurant_orders');
+    localStorage.removeItem('chat_history');
+    localStorage.removeItem('ai_chat_session'); 
+
+    // Показываем финальный красивый экран благодарности
+    setIsBillRequested(true);
+    
+    // 2. СНИМАЕМ ЗАМОК
+    setIsProcessing(false);
+  }
+};
     const handleSubmitReview = async () => {
     // Если ничего ��е заполнили, просто закрываем окно
     if (ratingFood === 0 && ratingService === 0 && reviewComment.trim() === '') {
