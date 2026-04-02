@@ -255,15 +255,38 @@ useEffect(() => {
       setIsProcessing(false);
     }
   };
-const handleRequestBill = () => {
-    // Если есть подтвержденные заказы, предлагаем выбор. 
-    // Если нет (случайно нажал) - можем просто закрыть корзину или показать алерт
-    if (confirmedOrders.length > 0) {
-        setIsBillChoiceOpen(true);
-    } else {
-        alert("Вы еще ничего не заказали!");
+const handleRequestBill = async () => {
+  // Если есть подтвержденные заказы, предлагаем выбор
+  if (confirmedOrders.length > 0) {
+    // 🔥 ПОЛУЧАЕМ СУММУ ВСЕХ НЕОПЛАЧЕННЫХ ЗАКАЗОВ ЗА СТОЛОМ
+    if (restaurantId && tableNumber) {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('total_amount')
+          .eq('restaurant_id', restaurantId)
+          .eq('table_number', tableNumber)
+          .in('status', ['new', 'cooking']);
+        
+        if (error) {
+          console.error('Ошибка получения суммы стола:', error);
+        } else if (data) {
+          const tableTotal = data.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+          console.log('💰 Общий счет за стол:', tableTotal);
+          
+          // Сохраняем в state для использования в модалке
+          setTableTotalAmount(tableTotal);
+        }
+      } catch (err) {
+        console.error('Ошибка запроса суммы стола:', err);
+      }
     }
-  };
+    
+    setIsBillChoiceOpen(true);
+  } else {
+    alert("Вы еще ничего не заказали!");
+  }
+};
 const handleConfirmBillChoice = async (billType) => {
   // 1. ПРОВЕРКА ЗАМКА
   if (isProcessing) return;
