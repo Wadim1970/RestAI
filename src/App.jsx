@@ -234,7 +234,8 @@ useEffect(() => {
           table_number: tableNumber,
           items: itemsToSave,
           total_amount: totalAmount,
-          comment: comment 
+          comment: comment,
+          status: 'pending'
         }]);
 
       if (error) {
