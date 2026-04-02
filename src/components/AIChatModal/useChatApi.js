@@ -12,16 +12,17 @@ let guestPreferences = null;
 if (guestId) {
     try {
         const { data } = await supabase
-            .from('guests')
-            .select('preferences, visit_count')
-            .eq('id', guestId)
-            .single();
-        
-        // Формируем объект с данными гостя
-        guestPreferences = {
-            ...(data?.preferences || {}),  // Разворачиваем существующие preferences (tags, comments)
-            visit_count: data?.visit_count || 0  // Добавляем счетчик визитов
-        };
+    .from('guests')
+    .select('preferences, visit_count, avg_check')  // ← ДОБАВИЛИ avg_check
+    .eq('id', guestId)
+    .single();
+
+// Формируем объект с данными гостя
+guestPreferences = {
+    ...(data?.preferences || {}),
+    visit_count: data?.visit_count || 0,
+    avg_check: data?.avg_check || 0  // ← ДОБАВИЛИ
+};
         
         console.log('🔥 Preferences отправляются в AI:', guestPreferences);
     } catch (err) {
