@@ -1,4 +1,5 @@
 import { useState } from 'react'; // Подключаем хук для управления состоянием загрузки
+import { supabase } from '../../supabaseClient'; // или ваш путь к клиенту
 
 export const useChatApi = (webhookUrl) => {
     // isLoading будет true, когда мы отправили запрос и ждем ответа
@@ -8,6 +9,48 @@ export const useChatApi = (webhookUrl) => {
     // Принимает: text (сообщение), context (блюдо), sessionId (ID юзера)
     const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
         setIsLoading(true); // Включаем индикатор «бот думает»
+
+        const sendMessageToAI = async (text, context, sessionId = 'default-user', restaurantId = null, guestId = null) => {
+    setIsLoading(true);
+    
+    // 🔥 Получаем preferences гостя из БД
+    let guestPreferences = null;
+    if (guestId) {
+        try {
+            const { data } = await supabase
+                .from('guests')
+                .select('preferences')
+                .eq('id', guestId)
+                .single();
+            
+            guestPreferences = data?.preferences;
+        } catch (err) {
+            console.warn('Не удалось загрузить preferences:', err);
+        }
+    }
+    
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'text/plain',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                message: text,
+                context: context,
+                sessionId: sessionId,
+                restaurantId: restaurantId,
+                guestId: guestId,
+                preferences: guestPreferences // 🔥 Отправляем preferences в n8n
+            }),
+        });
+        
+        // ... остальной код
+    }
+    // ...
+};
         
         try {
             // Выполняем запрос к n8n
