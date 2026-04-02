@@ -4,10 +4,7 @@
     background: rgba(0, 0, 0, 0.7);
     z-index: 100000;
     display: flex;
-    /* ИЗМЕНЕНИЕ: Жесткое "нет" любым системным эффектам прокрутки */
     overscroll-behavior-y: none; 
-    
-    /* ИЗМЕНЕНИЕ: Блокируем системные жесты на оверлее */
     touch-action: none;
     flex-direction: column;
     justify-content: flex-end;
@@ -16,56 +13,63 @@
 .modal {
     width: 100%;
     max-width: 440px;
-    /* Вместо жестких 90vh делаем гибкую высоту с ограничением */
-    height: 99%;
-    max-height: 96.5%; /* Оставляем 8% зазора сверху */
+    /* УЛУЧШЕНИЕ: Адаптивная высота для разных экранов */
+    max-height: min(85vh, 700px);
     background: #FBFBF9;
-    border-radius: 20px 20px 0 0; /* Используем px для надежности на iOS */
+    border-radius: 20px 20px 0 0;
     display: flex;
     flex-direction: column;
     margin: 0 auto;
     font-family: var(--font-body, sans-serif);
-    /* Важно для iOS: предотвращаем вылет за пределы */
     position: relative;
     bottom: 0;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    will-change: transform;
+    /* Учитываем safe-area для iPhone X и новее */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .dragLine {
-    width: 23.09vw;
-    height: 1vw;
+    width: 60px;
+    height: 4px;
     background: #E5E0D4;
-    border-radius: 1vw;
-    margin: 3.8vw auto 0;
+    border-radius: 2px;
+    margin: 12px auto 0;
+    flex-shrink: 0;
 }
 
 .header {
-    padding: 5vw 5vw 2vw 5vw;
+    padding: 16px 20px 8px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
-.title { font-size: 6vw; font-weight: 700; margin: 0; }
+.title { 
+    font-size: clamp(18px, 6vw, 24px);
+    font-weight: 700; 
+    margin: 0; 
+}
 
 .closeBtn {
-  position: absolute;
-    top: 5.45vw; /* 12px от верха изображения */
-    right: 5.45vw; /* 12px от правого края изображения */
-    width: 24px; /* 34px */
-    height: 24px; /* 34px */
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 24px;
+    height: 24px;
     background: none;
     border: none;
     padding: 0;
     z-index: 12; 
-    
-    /* 4. Убираем "прилипание" к краям смартфона */
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
 }
 
 .closeBtn img {
-   width: 100%;
+    width: 100%;
     height: 100%;
     object-fit: contain;
 }
@@ -73,43 +77,58 @@
 .itemList {
     flex: 1;
     overflow-y: auto;
-    padding: 0 5vw;
-    
-   /* ИЗМЕНЕНИЕ: Запрещаем "проброс" скролла родителю при достижении верха */
+    padding: 0 20px;
+    min-height: 0;
     overscroll-behavior: contain; 
-    
-    /* ИЗМЕНЕНИЕ: Разрешаем ТОЛЬКО вертикальный скролл пальцем, 
-       это блокирует системные жесты обновления */
     touch-action: pan-y;
-    
-    /* Плавный "резиновый" скролл для старых версий iOS */
-    -webkit-overflow-scrolling: touch; 
+    -webkit-overflow-scrolling: touch;
 }
 
 .cartItem {
     display: flex;
     align-items: center;
-    padding: 3vw 0;
+    padding: 12px 0;
     border-bottom: 1px solid #eee;
+    gap: 12px;
 }
 
 .itemImg {
-    width: 13.64vw; /* 60px */
-    height: 13.64vw; /* 60px */
-    border-radius: 2.27vw; /* 10px */
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
     object-fit: cover;
+    flex-shrink: 0;
 }
 
-.itemInfo { flex: 1; margin-left: 3.4vw; }
-.itemName { font-size: 3.64vw; font-weight: 500; }
-.itemPrice { font-size: 3.4vw; color: #666; }
+.itemInfo { 
+    flex: 1;
+    min-width: 0;
+}
 
-.counter { display: flex; align-items: center; gap: 3vw; }
+.itemName { 
+    font-size: clamp(14px, 3.64vw, 16px);
+    font-weight: 500;
+    margin-bottom: 4px;
+    word-wrap: break-word;
+}
+
+.itemPrice { 
+    font-size: clamp(13px, 3.4vw, 15px);
+    color: #666; 
+}
+
+.counter { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
+    flex-shrink: 0;
+}
+
 .countBtn {
-    width: 8vw; 
-    height: 8vw;
-    min-width: 8vw;  /* Добавляем, чтобы кнопка не сжималась */
-    min-height: 8vw; /* Добавляем для iOS */
+    width: 32px; 
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     border-radius: 50%; 
     border: 1px solid #304D22;
     background: none; 
@@ -117,21 +136,31 @@
     display: flex; 
     align-items: center; 
     justify-content: center;
-    font-size: 5vw;
-    padding: 0;      /* Убираем лишние отступы Safari */
-    line-height: 1;  /* Центрируем символ внутри */
-    flex-shrink: 0;  /* Запрещаем flex-контейнеру сплющивать кнопку */
-    -webkit-appearance: none; /* Убираем системные стили Apple */
+    font-size: 18px;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+    -webkit-appearance: none;
+    cursor: pointer;
 }
 
-/* --- НОВЫЕ СТИЛИ ДЛЯ ИСТОРИИ ЗАКАЗА --- */
+.countNumber {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 24px;
+    text-align: center;
+}
+
+.newItemsSection {
+    /* Добавляем обертку для новых товаров */
+}
 
 .sectionDivider {
-    font-size: 3.5vw;
+    font-size: clamp(12px, 3.5vw, 14px);
     color: #999;
     text-transform: uppercase;
-    letter-spacing: 0.3vw;
-    margin: 8vw 0 4vw 0;
+    letter-spacing: 1px;
+    margin: 24px 0 12px 0;
     display: flex;
     align-items: center;
 }
@@ -141,55 +170,59 @@
     flex: 1;
     height: 1px;
     background: #eee;
-    margin-left: 3vw;
+    margin-left: 12px;
+}
+
+.confirmedSection {
+    /* Секция подтвержденных заказов */
 }
 
 .confirmedItem {
-    opacity: 0.6; /* Визуально отделяем уже заказанное */
+    opacity: 0.6;
 }
 
 .addMoreBtn {
     width: 100%;
-    margin: 4vw 0;
-    padding: 3.5vw;
+    margin: 16px 0;
+    padding: 12px;
     background: none;
     border: 1px dashed #48BF48;
     color: #48BF48;
-    border-radius: 3vw;
+    border-radius: 12px;
     font-weight: 600;
-    font-size: 3.8vw;
+    font-size: clamp(14px, 3.8vw, 16px);
+    cursor: pointer;
 }
 
 .emptyText {
     text-align: center;
-    padding: 15vw 0;
+    padding: 60px 0;
     color: #999;
-    font-size: 4vw;
+    font-size: clamp(14px, 4vw, 16px);
 }
 
-/* --- ФУТЕР И КНОПКИ --- */
-
 .footer {
-    padding: 5vw;
+    padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     background: #fff;
-    box-shadow: 0 -2vw 5vw rgba(0,0,0,0.05);
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+    flex-shrink: 0;
 }
 
 .commentField {
-   width: 100%; 
-    height: 20vw;
-    padding: 3vw; 
-    border-radius: 3vw;
+    width: 100%; 
+    height: 80px;
+    padding: 12px; 
+    border-radius: 12px;
     border: 1px solid #E5E0D4;
     background: #FBFBF9;
-    margin-bottom: 4vw;
+    margin-bottom: 12px;
     font-family: inherit;
     resize: none;
-    /* --- ДОБАВЬ ЭТИ СТРОКИ --- */
-    box-sizing: border-box; /* Чтобы padding не раздувал ширину */
+    box-sizing: border-box;
     display: block;
-    font-size: 16px;        /* Чтобы iPhone не зумил экран при нажатии */
-    outline: none;          /* Убирает синюю рамку при нажатии */
+    font-size: 16px;
+    outline: none;
 }
 
 .commentField:focus {
@@ -198,20 +231,26 @@
 }
 
 .totalRow {
-    display: flex; justify-content: space-between;
-    font-size: 5vw; font-weight: 700;
-    margin-bottom: 5vw;
+    display: flex; 
+    justify-content: space-between;
+    font-size: clamp(16px, 4.5vw, 20px);
+    font-weight: 700;
+    margin-bottom: 12px;
 }
 
 .orderBtn {
-    width: 100%; height: 13.64vw; /* 60px */
-    background: #48BF48; color: white;
-    border: none; border-radius: 6.82vw;
-    font-size: 4.5vw; font-weight: 700;
+    width: 100%; 
+    height: 52px;
+    background: #48BF48; 
+    color: white;
+    border: none; 
+    border-radius: 26px;
+    font-size: clamp(16px, 4.5vw, 18px);
+    font-weight: 700;
     transition: background 0.3s ease;
+    cursor: pointer;
 }
 
-/* Кнопка "Принести счет" */
 .billBtn {
     background: #304D22; 
 }
@@ -220,24 +259,34 @@
     transform: scale(0.98);
 }
 
-
-/* Анимация фона */
 .fadeOut {
-  opacity: 0;
-  transition: opacity 0.3s ease;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* Анимация ухода окна вниз */
 .slideDown {
-  transform: translateY(100%) !important;
-  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
 }
 
-/* Для плавного возврата если не дотянули свайп */
-.modal {
-  /* ... твои существующие стили ... */
-  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-  will-change: transform;
+/* МЕДИА-ЗАПРОСЫ для очень маленьких экранов */
+@media (max-height: 600px) {
+    .modal {
+        max-height: 90vh;
+    }
+    
+    .commentField {
+        height: 60px;
+    }
+    
+    .footer {
+        padding: 12px 20px;
+    }
 }
 
-
+/* Для больших планшетов */
+@media (min-width: 768px) {
+    .modal {
+        max-height: 600px;
+    }
+}
