@@ -1,0 +1,181 @@
+-- ============================================================
+-- ЧАСТЬ 1: ФУНКЦИЯ ПОЛНОГО ПЕРЕСЧЁТА PREFERENCES
+-- (Для ИИ-помощника гостя)
+-- ============================================================
+CREATE OR REPLACE FUNCTION update_guest_preferences(p_guest_id BIGINT)
+RETURNS VOID AS $$
+DECLARE
+  v_prefs JSONB;
+BEGIN
+  SELECT jsonb_build_object(
+    -- 1. Теги с подсчётом (для рекомендаций ИИ)
+    'tags', (
+      SELECT COALESCE(jsonb_object_agg(tag, cnt), '{}')
+      FROM (
+        SELECT tag, COUNT(*) AS cnt
+        FROM orders o
+        CROSS JOIN jsonb_array_elements(o.items) AS item
+        JOIN menu_items mi ON (item->>'dish_id')::uuid = mi.id
+        CROSS JOIN UNNEST(mi.tags) AS tag
+        WHERE o.guest_id = p_guest_id
+          AND o.status = 'paid'
+        GROUP BY tag
+        ORDER BY cnt DESC
+      ) t
+    ),
+
+    -- 2. Разделы меню (какие категории предпочитает)
+    'sections', (
+      SELECT COALESCE(jsonb_object_agg(section, cnt), '{}')
+      FROM (
+        SELECT mi.menu_section AS section, COUNT(*) AS cnt
+        FROM orders o
+        CROSS JOIN jsonb_array_elements(o.items) AS item
+        JOIN menu_items mi ON (item->>'dish_id')::uuid = mi.id
+        WHERE o.guest_id = p_guest_id
+          AND o.status = 'paid'
+        GROUP BY mi.menu_section
+        ORDER BY cnt DESC
+      ) t
+    ),
+
+    -- 3. Топ-5 любимых блюд (с именами и количеством)
+    'top_dishes', (
+      SELECT COALESCE(jsonb_agg(dish_obj ORDER BY times DESC), '[]')
+      FROM (
+        SELECT jsonb_build_object(
+          'dish_id', mi.id,
+          'name', mi.dish_name,
+          'times', COUNT(*)
+        ) AS dish_obj, COUNT(*) AS times
+        FROM orders o
+        CROSS JOIN jsonb_array_elements(o.items) AS item
+        JOIN menu_items mi ON (item->>'dish_id')::uuid = mi.id
+        WHERE o.guest_id = p_guest_id
+          AND o.status = 'paid'
+        GROUP BY mi.id, mi.dish_name
+        ORDER BY COUNT(*) DESC
+        LIMIT 5
+      ) t
+    ),
+
+    -- 4. Средний чек (округлённый)
+    'avg_check', (
+      SELECT COALESCE(ROUND(AVG(total_amount), 0), 0)
+      FROM orders 
+      WHERE guest_id = p_guest_id AND status = 'paid'
+    ),
+
+    -- 5. Общее количество оплаченных заказов
+    'total_orders', (
+      SELECT COUNT(*) 
+      FROM orders 
+      WHERE guest_id = p_guest_id AND status = 'paid'
+    ),
+
+    -- 6. Комментарии (последние 10)
+    'comments', (
+      SELECT COALESCE(jsonb_agg(comment ORDER BY created_at DESC), '[]')
+      FROM (
+        SELECT comment, created_at
+        FROM orders
+        WHERE guest_id = p_guest_id 
+          AND comment IS NOT NULL 
+          AND TRIM(comment) <> ''
+        ORDER BY created_at DESC
+        LIMIT 10
+      ) t
+    ),
+
+    -- 7. Дата последнего обновления
+    'last_computed_at', NOW()
+
+  ) INTO v_prefs;
+
+  -- Обновляем поле preferences в таблице guests
+  UPDATE guests
+  SET preferences = v_prefs
+  WHERE id = p_guest_id;
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- ЧАСТЬ 2: VIEW ДЛЯ ОФИЦИАНТА (КРАТКИЙ ОТЧЁТ)
+-- ============================================================
+CREATE OR REPLACE VIEW guest_summary AS
+SELECT 
+  g.id AS guest_id,
+  g.device_id,
+  g.visit_count,
+  g.created_at AS first_visit,
+  g.last_visit_at,
+  
+  -- Извлекаем топ-3 тега из preferences
+  (
+    SELECT string_agg(tag_name, ', ' ORDER BY tag_count DESC)
+    FROM (
+      SELECT 
+        key AS tag_name, 
+        value::int AS tag_count
+      FROM jsonb_each_text(COALESCE(g.preferences->'tags', '{}'::jsonb))
+      ORDER BY value::int DESC
+      LIMIT 3
+    ) top_tags
+  ) AS favorite_tags,
+  
+  -- Топ-1 любимое блюдо
+  (
+    SELECT jsonb_array_elements(COALESCE(g.preferences->'top_dishes', '[]'::jsonb))->>'name'
+    LIMIT 1
+  ) AS favorite_dish,
+  
+  -- Средний чек
+  COALESCE((g.preferences->>'avg_check')::numeric, 0) AS avg_check,
+  
+  -- Общее количество заказов
+  COALESCE((g.preferences->>'total_orders')::int, 0) AS total_orders,
+  
+  -- Классификация гостя
+  CASE 
+    WHEN g.visit_count >= 10 THEN '🌟 VIP'
+    WHEN g.visit_count >= 5 THEN '💎 Постоянный'
+    WHEN g.visit_count >= 2 THEN '👤 Вернулся'
+    ELSE '✨ Новичок'
+  END AS guest_type
+
+FROM guests g;
+
+-- Создаём индекс для быстрого поиска по guest_id
+CREATE INDEX IF NOT EXISTS idx_guests_preferences ON guests USING GIN (preferences);
+
+-- ============================================================
+-- ЧАСТЬ 3: ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ КРАТКОГО ОТЧЁТА
+-- (Вызывается из приложения официанта)
+-- ============================================================
+CREATE OR REPLACE FUNCTION get_guest_brief(p_guest_id BIGINT)
+RETURNS TABLE(
+  guest_id BIGINT,
+  visit_count INT,
+  guest_type TEXT,
+  favorite_tags TEXT,
+  favorite_dish TEXT,
+  avg_check NUMERIC,
+  total_orders INT,
+  last_visit TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    gs.guest_id,
+    gs.visit_count,
+    gs.guest_type,
+    gs.favorite_tags,
+    gs.favorite_dish,
+    gs.avg_check,
+    gs.total_orders,
+    gs.last_visit_at
+  FROM guest_summary gs
+  WHERE gs.guest_id = p_guest_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
