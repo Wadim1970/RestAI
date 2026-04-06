@@ -38,37 +38,69 @@ export default function MenuPage({
     const loadMoreTriggerRef = useRef(null); // 🆕 Ref для триггера подгрузки
 
     // Загрузка меню из Supabase
-    useEffect(() => {
-        async function fetchMenu() {
-            try {
-                const { data: menuItems, error } = await supabase
+    // Загрузка меню из Supabase
+useEffect(() => {
+    async function fetchMenu() {
+        try {
+            // 🆕 СНАЧАЛА ЗАГРУЖАЕМ ТОЛЬКО ДАННЫЕ (БЕЗ THUMBNAIL)
+            const { data: menuItems, error } = await supabase
+                .from('menu_items')
+                .select('id, dish_name, menu_section, section_order, cost_rub, image_url')
+                .order('section_order', { ascending: true }) 
+                .order('dish_name', { ascending: true }); 
+
+            if (error) throw error;
+
+            const items = Array.isArray(menuItems) ? menuItems : []; 
+            const grouped = items.reduce((acc, item) => {
+                const section = item.menu_section;
+                if (!acc[section]) acc[section] = [];
+                acc[section].push(item);
+                return acc;
+            }, {});
+            setGroupedMenu(grouped);
+            
+            const firstSection = Object.keys(grouped)[0];
+            if (firstSection) setActiveSection(firstSection);
+            
+            setLoading(false); // ✅ УБИРАЕМ ЛОАДЕР СРАЗУ
+
+            // 🆕 ЗАТЕМ ПОДГРУЖАЕМ THUMBNAIL ДЛЯ ПЕРВЫХ 2 СЕКЦИЙ
+            const sections = Object.keys(grouped);
+            const firstTwoSections = sections.slice(0, 2);
+            const firstDishIds = firstTwoSections
+                .flatMap(section => grouped[section])
+                .map(dish => dish.id);
+
+            if (firstDishIds.length > 0) {
+                const { data: thumbnails } = await supabase
                     .from('menu_items')
-                    .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail')
-                    .order('section_order', { ascending: true }) 
-                    .order('dish_name', { ascending: true }); 
+                    .select('id, image_url_thumbnail')
+                    .in('id', firstDishIds);
 
-                if (error) throw error;
-
-                const items = Array.isArray(menuItems) ? menuItems : []; 
-                const grouped = items.reduce((acc, item) => {
-                    const section = item.menu_section;
-                    if (!acc[section]) acc[section] = [];
-                    acc[section].push(item);
-                    return acc;
-                }, {});
-                setGroupedMenu(grouped);
-                
-                const firstSection = Object.keys(grouped)[0];
-                if (firstSection) setActiveSection(firstSection);
-
-            } catch (err) {
-                console.error('Ошибка Supabase:', err);
-            } finally {
-                setLoading(false);
+                if (thumbnails) {
+                    setGroupedMenu(prev => {
+                        const updated = { ...prev };
+                        thumbnails.forEach(thumb => {
+                            Object.keys(updated).forEach(section => {
+                                const dishIndex = updated[section].findIndex(d => d.id === thumb.id);
+                                if (dishIndex !== -1) {
+                                    updated[section][dishIndex].image_url_thumbnail = thumb.image_url_thumbnail;
+                                }
+                            });
+                        });
+                        return updated;
+                    });
+                }
             }
+
+        } catch (err) {
+            console.error('Ошибка Supabase:', err);
+            setLoading(false);
         }
-        fetchMenu();
-    }, []);
+    }
+    fetchMenu();
+}, []);
 
     // IntersectionObserver для активной секции
     useEffect(() => {
