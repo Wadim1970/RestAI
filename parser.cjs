@@ -4,6 +4,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const { createClient } = require('@supabase/supabase-js'); 
 const puppeteer = require('puppeteer');
+const sharp = require('sharp'); // ← ДОБАВЛЕНО
+const path = require('path');   // ← ДОБАВЛЕНО
 
 // ==========================================================
 //                 1. НАСТРОЙКИ КОНФИГУРАЦИИ
@@ -17,6 +19,64 @@ const TARGET_URL = 'https://www.syrovarnya.com/catalog/usacheva';
 const BASE_URL = 'https://www.syrovarnya.com';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ==========================================================
+//       НОВАЯ ФУНКЦИЯ: Создание и загрузка thumbnail
+// ==========================================================
+
+async function createAndUploadThumbnail(imageUrl, dishName) {
+    if (!imageUrl) return null;
+    
+    try {
+        // 1. Скачиваем оригинальное изображение
+        const response = await axios.get(imageUrl, { 
+            responseType: 'arraybuffer',
+            timeout: 10000 
+        });
+        
+        // 2. Уменьшаем до 300x300 с помощью Sharp
+        const thumbnailBuffer = await sharp(response.data)
+            .resize(300, 300, {
+                fit: 'cover',           // Обрезаем по центру
+                position: 'center'
+            })
+            .webp({ quality: 85 })      // Конвертируем в WebP для экономии
+            .toBuffer();
+        
+        // 3. Генерируем уникальное имя файла
+        const sanitizedName = dishName
+            .toLowerCase()
+            .replace(/[^a-z0-9а-яё]/gi, '_')
+            .substring(0, 50);
+        const fileName = `thumbnails/${RESTAURANT_ID}/${sanitizedName}_${Date.now()}.webp`;
+        
+        // 4. Загружаем в Supabase Storage
+        const { data, error } = await supabase.storage
+            .from('menu-images')  // ← Название bucket (создадим далее)
+            .upload(fileName, thumbnailBuffer, {
+                contentType: 'image/webp',
+                cacheControl: '31536000', // Кэш на 1 год
+                upsert: true
+            });
+        
+        if (error) {
+            console.error(`❌ Ошибка загрузки thumbnail для "${dishName}":`, error.message);
+            return null;
+        }
+        
+        // 5. Получаем публичную ссылку
+        const { data: publicUrlData } = supabase.storage
+            .from('menu-images')
+            .getPublicUrl(fileName);
+        
+        console.log(`   ✅ Thumbnail создан: ${dishName}`);
+        return publicUrlData.publicUrl;
+        
+    } catch (err) {
+        console.error(`❌ Ошибка создания thumbnail для "${dishName}":`, err.message);
+        return null;
+    }
+}
 
 // ==========================================================
 //                2. ФУНКЦИИ ПАРСИНГА ДЕТАЛЕЙ
@@ -176,15 +236,21 @@ async function parseMenu() {
             currentSectionPriority++;
         });
 
+        console.log(`\n\n📸 Начинаем обработку изображений и деталей...`);
         const finalMenu = [];
         for (let i = 0; i < itemsWithLinks.length; i++) {
             const item = itemsWithLinks[i];
-            process.stdout.write(`\rДетализация: ${i + 1}/${itemsWithLinks.length} - ${item.dish_name}`);
+            process.stdout.write(`\r🔄 Обработка: ${i + 1}/${itemsWithLinks.length} - ${item.dish_name}          `);
             
+            // Получаем детали блюда
             let details = item.detail_url ? await parseDetailsPage(item.detail_url, item.product_type) : {};
+            
+            // ← НОВОЕ: Генерируем thumbnail
+            const thumbnailUrl = await createAndUploadThumbnail(item.image_url, item.dish_name);
             
             finalMenu.push({
                 ...item,
+                image_url_thumbnail: thumbnailUrl, // ← НОВОЕ ПОЛЕ
                 description: details.description || null,
                 weight_g: details.weight_g || item.weight_g, 
                 nutritional_info: details.nutritional_info || null,
@@ -193,6 +259,7 @@ async function parseMenu() {
             });
         }
         
+        console.log(`\n`); // Перенос строки после прогресса
         await uploadToSuperbase(finalMenu);
 
     } catch (error) {
@@ -209,7 +276,7 @@ async function uploadToSuperbase(data) {
         await supabase.from('menu_items').delete().eq('restaurant_id', RESTAURANT_ID);
         const { error: insertError } = await supabase.from('menu_items').insert(dataToInsert); 
         if (insertError) console.error('ОШИБКА INSERT:', insertError);
-        else console.log(`\n✅ УСПЕХ! Данные (включая КБЖУ) обновлены.`);
+        else console.log(`\n✅ УСПЕХ! Данные (включая thumbnail) обновлены.`);
     } catch (e) {
         console.error('ОШИБКА ПОДКЛЮЧЕНИЯ:', e.message);
     }
