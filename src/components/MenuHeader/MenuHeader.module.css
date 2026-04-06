@@ -1,7 +1,5 @@
 /* src/components/MenuHeader/MenuHeader.module.css */
 
-/* src/components/MenuHeader/MenuHeader.module.css */
-
 :root {
     --color-primary: #304D22;
     --color-accent: #48BF48; 
@@ -13,7 +11,7 @@
     top: 0;
     width: 100%;
     max-width: 27.5rem;        /* 440px */
-    height: 4.875rem;          /* 78px */
+    height: 5.5rem;          /* 78px */
     z-index: 1000;
     
     left: 50%;                 /* Центрирование */
