@@ -197,11 +197,31 @@ useEffect(() => {
     const visibleSections = sections.slice(0, visibleSectionsCount); // 🆕 Только видимые секции
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
-    const handleOpenModal = (dish) => {
-        trackDishView(dish.dish_name);
+    const handleOpenModal = async (dish) => {
+    trackDishView(dish.dish_name);
+    
+    // 🆕 Если у блюда нет полных данных — загружаем их
+    if (!dish.description || !dish.ingredients) {
+        try {
+            const { data: fullDish, error } = await supabase
+                .from('menu_items')
+                .select('*')
+                .eq('id', dish.id)
+                .single();
+            
+            if (error) throw error;
+            
+            setSelectedDishForModal(fullDish);
+        } catch (err) {
+            console.error('Ошибка загрузки полных данных блюда:', err);
+            setSelectedDishForModal(dish); // Показываем хоть что-то
+        }
+    } else {
         setSelectedDishForModal(dish);
-        setIsModalOpen(true);
-    };
+    }
+    
+    setIsModalOpen(true);
+};
 
     const toggleDishSelection = (e, dishId) => {
         e.stopPropagation();
