@@ -14,15 +14,16 @@
 .menuContainer {
     max-width: 440px; 
     margin: 0 auto;
-    
     position: relative; 
     min-height: 100vh;
     overflow-y: visible; 
-    
     box-sizing: border-box; 
     z-index: 1; 
     
-    padding-top: 116px; 
+    /* БЫЛО: padding-top: 116px; */
+    /* СТАЛО: 116px + отступ для safe area */
+    padding-top: calc(116px + env(safe-area-inset-top));
+    
     padding-bottom: 175px; 
     padding-left: 22px; 
     padding-right: 22px;
