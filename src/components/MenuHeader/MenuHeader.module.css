@@ -8,7 +8,7 @@
 /* --- Главный контейнер хедера (Фиксированный) --- */
 .headerContainer {
     position: fixed;           /* Хедер всегда прижат к верху */
-    top: calc(env(safe-area-inset-top) - 60px);
+    top: calc(env(safe-area-inset-top) - 70px);
     width: 100%;
     max-width: 27.5rem;        /* 440px */
     
