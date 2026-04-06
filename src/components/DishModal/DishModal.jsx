@@ -66,23 +66,23 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat
       >
         <div className={styles.dragLine}></div>
 
-        <div className={styles.imageContainer}>
-          <img src={dish.image_url} alt={dish.dish_name} className={styles.mainImage} />
-          <button className={styles.closeBtn} onClick={handleClose}>
-            <img 
-  src={dish.image_url || dish.image_url_thumbnail || '/placeholder.png'} 
-  alt={dish.dish_name} 
-  className={styles.mainImage}
-  onError={(e) => {
-    console.error('❌ Ошибка загрузки:', e.target.src);
-    if (dish.image_url_thumbnail && e.target.src !== dish.image_url_thumbnail) {
-      e.target.src = dish.image_url_thumbnail;
-    } else {
-      e.target.style.display = 'none';
-    }
-  }}
-/>
-          </button>
+       <div className={styles.imageContainer}>
+  <img 
+    src={dish.image_url_thumbnail || dish.image_url} 
+    alt={dish.dish_name} 
+    className={styles.mainImage}
+    onError={(e) => {
+      console.error('❌ Ошибка загрузки изображения');
+      if (e.target.src.includes('thumbnail') && dish.image_url) {
+        e.target.src = dish.image_url;
+      } else {
+        e.target.style.display = 'none';
+      }
+    }}
+  />
+  <button className={styles.closeBtn} onClick={handleClose}>
+    <img src="/icons/icon-on.png" alt="Close" className={styles.closeButtonIcon} />
+  </button>
           <div className={styles.priceTag}>
             <div className={styles.priceText}>{dish.cost_rub} ₽</div>
             <div className={styles.weightText}>
