@@ -121,7 +121,11 @@
     height: 100%; /* На всю высоту кнопки */
     object-fit: contain; /* Сохраняем пропорции иконки */
 }
-
+.closeButtonIcon {
+    width: 24px !important;
+    height: 24px !important;
+    object-fit: contain !important;
+}
 /* Плашка с ценой на картинке */
 .priceTag {
     position: absolute; /* Поверх изображения */
