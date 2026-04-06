@@ -1,7 +1,5 @@
 /* src/components/MenuHeader/MenuHeader.module.css */
 
-/* src/components/MenuHeader/MenuHeader.module.css */
-
 :root {
     --color-primary: #304D22;
     --color-accent: #48BF48; 
@@ -33,7 +31,7 @@
     -webkit-backface-visibility: hidden;
     
     /* ДОБАВЛЕНО: Отступ сверху для кнопок на iPhone */
-    padding-top: calc(env(safe-area-inset-top) - 30px);
+    padding-top: calc(env(safe-area-inset-top) - 50px);
 }
 
 /* --- Слайдер разделов --- */
