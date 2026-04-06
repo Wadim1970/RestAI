@@ -22,7 +22,7 @@
     
     /* БЫЛО: padding-top: 116px; */
     /* СТАЛО: 116px + отступ для safe area */
-    padding-top: calc(116px + env(safe-area-inset-top));
+    padding-top: 116px;
     
     padding-bottom: 175px; 
     padding-left: 22px; 
