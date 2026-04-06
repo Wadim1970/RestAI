@@ -183,3 +183,22 @@
     font-size: 16px;
     color: var(--color-primary);
 }
+
+/* --- Триггер подгрузки --- */
+.loadMoreTrigger {
+    width: 100%;
+    min-height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.loadingIndicator {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-primary);
+    padding: 10px 20px;
+    background-color: rgba(72, 191, 72, 0.1);
+    border-radius: 20px;
+}
