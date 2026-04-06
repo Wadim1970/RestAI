@@ -155,9 +155,7 @@
 .content {
     text-align: center; /* Выравнивание всего текста по центру */
     padding: 0 2.73vw; /* 12px отступы по бокам */
-    max-height: 50vh; /* ✅ ДОБАВИТЬ */
-    overflow-y: auto; /* ✅ ДОБАВИТЬ */
-    -webkit-overflow-scrolling: touch; /* ✅ ДОБАВИТЬ для iOS */
+    
 }
 
 /* Заголовки секций (Описание, Состав и т.д.) */
