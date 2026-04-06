@@ -30,15 +30,14 @@
     perspective: 1000px;
     -webkit-backface-visibility: hidden;
     
-    /* ДОБАВЛЕНО: Отступ сверху для кнопок на iPhone */
-    padding-top: calc(env(safe-area-inset-top) - 90px);
+    
 }
 
 /* --- Слайдер разделов --- */
 .categorySlider {
     position: absolute;
     /* УСТАНАВЛИВАЕМ ОТСТУП СВЕРХУ 30px (1.875rem) */
-    top: calc(1.875rem + env(safe-area-inset-top));
+    top: calc(1.875rem + env(safe-area-inset-top) - 20px);
     width: 100%;
     height: 2.125rem;          /* Высота самого слайдера равна высоте кнопок (34px) */
     
