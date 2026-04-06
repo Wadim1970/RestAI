@@ -10,7 +10,7 @@
 /* --- Главный контейнер футера --- */
 .footerContainer {
     position: fixed;           /* Фиксируем футер, чтобы он всегда был виден */
-    bottom: calc(env(safe-area-inset-bottom) - 45px);
+    bottom: calc(env(safe-area-inset-bottom) - 55px);
     width: 100%;               /* Растягиваем на всю ширину */
     max-width: 27.5rem;        /* Ограничиваем максимальную ширину (440px) */
     
