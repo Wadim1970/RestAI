@@ -7,6 +7,36 @@
     --color-price-bg: #E5E0D4; /* Фоновый цвет для цен (если используется) */
 }
 
+.footerContainer {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 440px;
+    
+    /* Добавляем отступ снизу для безопасной зоны (нижняя полоска на iPhone) */
+    padding-bottom: env(safe-area-inset-bottom);
+    
+    background: linear-gradient(
+        to top,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 1) 70%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    z-index: 99;
+}
+
+.buttonArea {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 20px 22px;
+    background-color: var(--color-background);
+}
+
+/* Остальные стили без изменений */
+
 /* --- Главный контейнер футера --- */
 .footerContainer {
     position: fixed;           /* Фиксируем футер, чтобы он всегда был виден */
