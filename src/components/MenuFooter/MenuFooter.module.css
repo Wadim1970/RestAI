@@ -8,17 +8,15 @@
 }
 
 /* --- Главный контейнер футера --- */
+/* --- Главный контейнер футера --- */
 .footerContainer {
     position: fixed;           /* Фиксируем футер, чтобы он всегда был виден */
-    bottom: calc(env(safe-area-inset-bottom) - 45px);
+    bottom: 0;                 /* Прижимаем к самому низу экрана */
     width: 100%;               /* Растягиваем на всю ширину */
     max-width: 27.5rem;        /* Ограничиваем максимальную ширину (440px) */
-    
-    /* ИЗМЕНЕНО: Динамическая высота с учетом safe area */
-    height: calc(6.375rem + env(safe-area-inset-bottom));
-    
+    height: 6.375rem;          /* Фиксированная высота футера (102px) */
     z-index: 1000;             /* Поверх всех остальных элементов */
-    
+
     left: 50%;                 /* Центрируем по горизонтали */
     transform: translateX(-50%) translateZ(0); /* Сдвиг на половину ширины влево для точного центра */
     -webkit-transform: translateX(-50%) translateZ(0); /* Поддержка для Safari */
@@ -26,15 +24,12 @@
     /* Эффект матового стекла (blur) */
     -webkit-backdrop-filter: blur(4px) saturate(100%) contrast(100%);
     backdrop-filter: blur(4px) saturate(100%) contrast(100%);
-    
-    background-color: rgba(255, 255, 255, 0.1); /* Полупрозрачный белый фон для эффекта стекла */
+
+    background-color: rgba(255, 255, 255, 0.3); /* Полупрозрачный белый фон для эффекта стекла */
     border-top: 1px solid rgba(48, 77, 34, 0.4); /* Тонкая рамка сверху */
-    
+
     perspective: 1000px;       /* Улучшает рендеринг 3D трансформаций */
     -webkit-backface-visibility: hidden; /* Убирает мерцание в Safari при анимациях */
-    
-    /* ДОБАВЛЕНО: Отступ снизу для кнопок на iPhone */
-    /*padding-bottom: env(safe-area-inset-bottom);*/
 }
 
 /* --- Контейнер для кнопок --- */
@@ -42,7 +37,7 @@
     display: flex;             /* Используем Flexbox для выравнивания в ряд */
     justify-content: space-between; /* Распределяем элементы по всей ширине */
     gap: 0.9375rem;            /* Фиксированный зазор между кнопками 15px */
-    
+
     padding-top: 1rem;         /* Отступ сверху 16px */
     padding-left: 1.375rem;    /* Отступ слева от края экрана 22px */
     padding-right: 1.375rem;   /* Отступ справа от края экрана 22px */
