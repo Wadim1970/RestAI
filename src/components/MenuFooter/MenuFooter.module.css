@@ -7,43 +7,16 @@
     --color-price-bg: #E5E0D4; /* Фоновый цвет для цен (если используется) */
 }
 
-.footerContainer {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 440px;
-    
-    /* Добавляем отступ снизу для безопасной зоны (нижняя полоска на iPhone) */
-    padding-bottom: env(safe-area-inset-bottom);
-    
-    background: linear-gradient(
-        to top,
-        rgba(255, 255, 255, 1) 0%,
-        rgba(255, 255, 255, 1) 70%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    z-index: 99;
-}
-
-.buttonArea {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    padding: 20px 22px;
-    background-color: var(--color-background);
-}
-
-/* Остальные стили без изменений */
-
 /* --- Главный контейнер футера --- */
 .footerContainer {
     position: fixed;           /* Фиксируем футер, чтобы он всегда был виден */
     bottom: 0;                 /* Прижимаем к самому низу экрана */
     width: 100%;               /* Растягиваем на всю ширину */
     max-width: 27.5rem;        /* Ограничиваем максимальную ширину (440px) */
-    height: 6.375rem;          /* Фиксированная высота футера (102px) */
+    
+    /* ИЗМЕНЕНО: Динамическая высота с учетом safe area */
+    height: calc(6.375rem + env(safe-area-inset-bottom)); /* 102px + отступ iPhone */
+    
     z-index: 1000;             /* Поверх всех остальных элементов */
     
     left: 50%;                 /* Центрируем по горизонтали */
@@ -59,6 +32,9 @@
     
     perspective: 1000px;       /* Улучшает рендеринг 3D трансформаций */
     -webkit-backface-visibility: hidden; /* Убирает мерцание в Safari при анимациях */
+    
+    /* ДОБАВЛЕНО: Отступ снизу для кнопок на iPhone */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* --- Контейнер для кнопок --- */
