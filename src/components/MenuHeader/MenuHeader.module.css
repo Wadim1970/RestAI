@@ -1,40 +1,11 @@
 /* src/components/MenuHeader/MenuHeader.module.css */
 
+/* src/components/MenuHeader/MenuHeader.module.css */
+
 :root {
     --color-primary: #304D22;
     --color-accent: #48BF48; 
 }
-
-.header {
-    position: fixed;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 440px;
-    background-color: var(--color-background);
-    z-index: 100;
-    
-    /* Добавляем отступ сверху для безопасной зоны iPhone */
-    padding-top: env(safe-area-inset-top);
-    
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.navContainer {
-    display: flex;
-    gap: 16px;
-    padding: 16px 22px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.navContainer::-webkit-scrollbar {
-    display: none;
-}
-
-/* Остальные стили без изменений */
 
 /* --- Главный контейнер хедера (Фиксированный) --- */
 .headerContainer {
@@ -42,7 +13,10 @@
     top: 0;
     width: 100%;
     max-width: 27.5rem;        /* 440px */
-    height: 4.875rem;          /* НОВАЯ ВЫСОТА: было 7.25rem, стало 78px (в rem) */
+    
+    /* ИЗМЕНЕНО: Динамическая высота с учетом safe area */
+    height: calc(4.875rem + env(safe-area-inset-top)); /* 78px + отступ iPhone */
+    
     z-index: 1000;
     
     left: 50%;                 /* Центрирование */
@@ -57,6 +31,9 @@
     
     perspective: 1000px;
     -webkit-backface-visibility: hidden;
+    
+    /* ДОБАВЛЕНО: Отступ сверху для кнопок на iPhone */
+    padding-top: env(safe-area-inset-top);
 }
 
 /* --- Слайдер разделов --- */
@@ -85,7 +62,7 @@
     display: none;
 }
 
-/* Фикс отступов слайдера (по 22px по бокам для первой и последней кнопки) */
+/* Фик�� отступов слайдера (по 22px по бокам для первой и последней кнопки) */
 .categorySlider::before,
 .categorySlider::after {
     content: '';
