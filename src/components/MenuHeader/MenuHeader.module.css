@@ -5,6 +5,37 @@
     --color-accent: #48BF48; 
 }
 
+.header {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 440px;
+    background-color: var(--color-background);
+    z-index: 100;
+    
+    /* Добавляем отступ сверху для безопасной зоны iPhone */
+    padding-top: env(safe-area-inset-top);
+    
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navContainer {
+    display: flex;
+    gap: 16px;
+    padding: 16px 22px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.navContainer::-webkit-scrollbar {
+    display: none;
+}
+
+/* Остальные стили без изменений */
+
 /* --- Главный контейнер хедера (Фиксированный) --- */
 .headerContainer {
     position: fixed;           /* Хедер всегда прижат к верху */
@@ -27,8 +58,6 @@
     perspective: 1000px;
     -webkit-backface-visibility: hidden;
 }
-
-/* ЛОГОТИП УДАЛЕН (блок .logoArea больше не нужен) */
 
 /* --- Слайдер разделов --- */
 .categorySlider {
