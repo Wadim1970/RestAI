@@ -33,7 +33,7 @@
     -webkit-backface-visibility: hidden;
     
     /* ДОБАВЛЕНО: Отступ сверху для кнопок на iPhone */
-    padding-top: env(safe-area-inset-top);
+    /*padding-top: env(safe-area-inset-top);*/
 }
 
 /* --- Слайдер разделов --- */
