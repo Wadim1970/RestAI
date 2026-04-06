@@ -15,7 +15,7 @@
     max-width: 27.5rem;        /* Ограничиваем максимальную ширину (440px) */
     
     /* ИЗМЕНЕНО: Динамическая высота с учетом safe area */
-    height: 6.375rem; /* 102px /
+    height: calc(6.375rem + env(safe-area-inset-bottom));
     
     z-index: 1000;             /* Поверх всех остальных элементов */
     
@@ -34,7 +34,7 @@
     -webkit-backface-visibility: hidden; /* Убирает мерцание в Safari при анимациях */
     
     /* ДОБАВЛЕНО: Отступ снизу для кнопок на iPhone */
-    padding-bottom: env(safe-area-inset-bottom);
+    /*padding-bottom: env(safe-area-inset-bottom);*/
 }
 
 /* --- Контейнер для кнопок --- */
