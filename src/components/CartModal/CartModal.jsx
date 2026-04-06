@@ -55,10 +55,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   // Блокировка скролла body при открытой модалке
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       setIsClosing(false);
-    } else {
-      document.body.style.overflow = 'unset';
     }
   }, [isOpen]);
 
