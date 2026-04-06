@@ -167,9 +167,16 @@ useEffect(() => {
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
     const handleOpenModal = async (dish) => {
+    console.log('🔍 Открываем модалку для:', dish.dish_name);
+    console.log('🖼️ image_url:', dish.image_url);
+    
     trackDishView(dish.dish_name);
     
-    // 🆕 Если у блюда нет полных данных — загружаем их
+    // Сразу показываем модалку с тем, что есть
+    setSelectedDishForModal(dish);
+    setIsModalOpen(true);
+    
+    // 🆕 ЗАТЕМ (в фоне) догружаем полные данные, если нужно
     if (!dish.description || !dish.ingredients) {
         try {
             const { data: fullDish, error } = await supabase
@@ -180,16 +187,14 @@ useEffect(() => {
             
             if (error) throw error;
             
+            console.log('✅ Полные данные загружены:', fullDish);
+            
+            // Обновляем данные в модалке без закрытия
             setSelectedDishForModal(fullDish);
         } catch (err) {
             console.error('Ошибка загрузки полных данных блюда:', err);
-            setSelectedDishForModal(dish); // Показываем хоть что-то
         }
-    } else {
-        setSelectedDishForModal(dish);
     }
-    
-    setIsModalOpen(true);
 };
 
     const toggleDishSelection = (e, dishId) => {
