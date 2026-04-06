@@ -17,36 +17,39 @@ export default function MenuPage({
     updateCart, 
     confirmedOrders = [], 
     onConfirmOrder,
-    onOpenChat,      // Функция для открытия чата (приходит из App.jsx)
-    trackDishView,    // Функция для логирования просмотров блюд
-    onRequestBill // 1. ДОБАВИТЬ ЭТОТ ПРОПС СЮДА
+    onOpenChat,
+    trackDishView,
+    onRequestBill
 }) {
-    const [groupedMenu, setGroupedMenu] = useState({}); // Меню, разбитое по категориям
-    const [loading, setLoading] = useState(true); // Состояние загрузки данных
-    const [activeSection, setActiveSection] = useState(''); // Текущий активный раздел (для навигации и контекста)
+    const [groupedMenu, setGroupedMenu] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState('');
+    
+    // 🆕 НОВОЕ: Управление видимыми секциями
+    const [visibleSectionsCount, setVisibleSectionsCount] = useState(2); // Показываем первые 2 секции
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-    // Состояния для модальных окон
-    const [selectedDishForModal, setSelectedDishForModal] = useState(null); // Выбранное блюдо для показа в модалке
-    const [isModalOpen, setIsModalOpen] = useState(false); // Открыта ли модалка блюда
-    const [isCartOpen, setIsCartOpen] = useState(false); // Открыта ли корзина
+    const [selectedDishForModal, setSelectedDishForModal] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
-    const sectionRefs = useRef({}); // Ссылки на DOM-узлы каждой секции для плавного скролла
-    const isScrollingRef = useRef(false); // Флаг, чтобы не менять активную секцию во время программного скролла
+    const sectionRefs = useRef({});
+    const isScrollingRef = useRef(false);
+    const loadMoreTriggerRef = useRef(null); // 🆕 Ref для триггера подгрузки
 
-    // Эффект для загрузки меню из Supabase при первом рендере
+    // Загрузка меню из Supabase
     useEffect(() => {
         async function fetchMenu() {
             try {
                 const { data: menuItems, error } = await supabase
                     .from('menu_items')
-                    .select('*')
+                    .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail')
                     .order('section_order', { ascending: true }) 
                     .order('dish_name', { ascending: true }); 
 
                 if (error) throw error;
 
                 const items = Array.isArray(menuItems) ? menuItems : []; 
-                // Группируем блюда по их названию раздела (menu_section)
                 const grouped = items.reduce((acc, item) => {
                     const section = item.menu_section;
                     if (!acc[section]) acc[section] = [];
@@ -55,61 +58,102 @@ export default function MenuPage({
                 }, {});
                 setGroupedMenu(grouped);
                 
-                // Устанавливаем самый первый раздел как активный по умолчанию
                 const firstSection = Object.keys(grouped)[0];
                 if (firstSection) setActiveSection(firstSection);
 
             } catch (err) {
                 console.error('Ошибка Supabase:', err);
             } finally {
-                setLoading(false); // Выключаем индикатор загрузки
+                setLoading(false);
             }
         }
         fetchMenu();
     }, []);
 
-    // Эффект IntersectionObserver: следит за тем, какой раздел сейчас на экране
+    // IntersectionObserver для активной секции
     useEffect(() => {
         if (loading || Object.keys(groupedMenu).length === 0) return;
 
         const options = {
-            root: null, // Следим относительно всего экрана
-            rootMargin: '-160px 0px -70% 0px', // Зона срабатывания (учитываем высоту хедера)
+            root: null,
+            rootMargin: '-160px 0px -70% 0px',
             threshold: 0
         };
 
         const observer = new IntersectionObserver((entries) => {
-            if (isScrollingRef.current) return; // Если мы сами крутим экран кнопкой — игнорируем
+            if (isScrollingRef.current) return;
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
-                    // Обновляем состояние активной секции (это и будет наш контекст для чата)
                     setActiveSection(entry.target.getAttribute('data-section'));
                 }
             });
         }, options);
 
-        // Находим все секции меню и подписываем наблюдателя на каждую
         const sectionsElements = document.querySelectorAll(`section.${styles.menuSection}`);
         sectionsElements.forEach((section) => observer.observe(section));
 
-        return () => observer.disconnect(); // Очистка при размонтировании
-    }, [loading, groupedMenu]);
+        return () => observer.disconnect();
+    }, [loading, groupedMenu, visibleSectionsCount]); // 🆕 Добавили visibleSectionsCount
 
-    // Обработка клика по кнопке категории в хедере
+    // 🆕 IntersectionObserver для подгрузки следующих секций
+    useEffect(() => {
+        if (loading || Object.keys(groupedMenu).length === 0) return;
+
+        const sections = Object.keys(groupedMenu);
+        
+        // Если все секции уже видны — не создаём observer
+        if (visibleSectionsCount >= sections.length) {
+            return;
+        }
+
+        const options = {
+            root: null,
+            rootMargin: '200px', // Подгружаем за 200px до конца
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting && !isLoadingMore) {
+                    console.log('🔄 Подгружаем следующую секцию...');
+                    setIsLoadingMore(true);
+                    
+                    // Добавляем ещё одну секцию с небольшой задержкой
+                    setTimeout(() => {
+                        setVisibleSectionsCount(prev => Math.min(prev + 1, sections.length));
+                        setIsLoadingMore(false);
+                    }, 300);
+                }
+            });
+        }, options);
+
+        if (loadMoreTriggerRef.current) {
+            observer.observe(loadMoreTriggerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loading, groupedMenu, visibleSectionsCount, isLoadingMore]);
+
     const handleSectionClick = (sectionName) => {
         isScrollingRef.current = true;
         setActiveSection(sectionName); 
         
+        // 🆕 Если кликнули на секцию, которая ещё не загружена — показываем её
+        const sections = Object.keys(groupedMenu);
+        const sectionIndex = sections.indexOf(sectionName);
+        if (sectionIndex >= visibleSectionsCount) {
+            setVisibleSectionsCount(sectionIndex + 1);
+        }
+        
         const element = sectionRefs.current[sectionName];
         if (element) {
-            const yOffset = -150; // Смещение, чтобы заголовок не прятался под хедером
+            const yOffset = -150;
             const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-            window.scrollTo({ top: y, behavior: 'smooth' }); // Плавная прокрутка
-            setTimeout(() => { isScrollingRef.current = false; }, 1000); // Разблокируем observer после анимации
+            window.scrollTo({ top: y, behavior: 'smooth' });
+            setTimeout(() => { isScrollingRef.current = false; }, 1000);
         }
     };
 
-    // Собираем массив товаров для отображения в корзине
     const cartItems = groupedMenu && Object.keys(groupedMenu).length > 0 
     ? Object.values(groupedMenu).flat().filter(dish => cart && cart[dish.id]).map(dish => ({
         ...dish,
@@ -117,33 +161,31 @@ export default function MenuPage({
       }))
     : [];
 
-    const sections = Object.keys(groupedMenu || {}); // Список всех имен секций
-    const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0; // Есть ли что-то в корзине или чеке
+    const sections = Object.keys(groupedMenu || {});
+    const visibleSections = sections.slice(0, visibleSectionsCount); // 🆕 Только видимые секции
+    const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
-    // Обработчик открытия подробного окна блюда
     const handleOpenModal = (dish) => {
-        trackDishView(dish.dish_name); // Сохраняем имя блюда в историю просмотров для ИИ
-        setSelectedDishForModal(dish); // Устанавливаем блюдо для модалки
-        setIsModalOpen(true); // Открываем окно
+        trackDishView(dish.dish_name);
+        setSelectedDishForModal(dish);
+        setIsModalOpen(true);
     };
 
-    // Добавление/удаление блюда в корзину кнопкой-галочкой на карточке
-    // Добавление/удаление блюда в корзину кнопкой-галочкой на карточке
-const toggleDishSelection = (e, dishId) => {
-    e.stopPropagation(); // Чтобы не открылась модалка самого блюда
-    const currentCount = cart[dishId] || 0;
-    if (currentCount > 0) {
-        updateCart(-currentCount, dishId); // ✅ ИСПРАВЛЕНО: (delta, dishId)
-    } else {
-        updateCart(1, dishId); // ✅ ИСПРАВЛЕНО: (delta, dishId)
-    }
-};
+    const toggleDishSelection = (e, dishId) => {
+        e.stopPropagation();
+        const currentCount = cart[dishId] || 0;
+        if (currentCount > 0) {
+            updateCart(-currentCount, dishId);
+        } else {
+            updateCart(1, dishId);
+        }
+    };
 
     if (loading) return <div className={styles.loader}>Загрузка...</div>;
 
     return (
         <>
-            {/* Хедер с навигацией по категориям */}
+            {/* Хедер показывает ВСЕ секции, но прокрутка подгружает их по мере необходимости */}
             <MenuHeader 
                 sections={sections} 
                 activeSection={activeSection} 
@@ -152,12 +194,13 @@ const toggleDishSelection = (e, dishId) => {
 
             <main className={styles.menuContainer}> 
                 <div className={styles.menuContent}>
-                    {sections.map(sectionName => (
+                    {/* 🆕 Рендерим только видимые секции */}
+                    {visibleSections.map(sectionName => (
                         <section 
                             key={sectionName} 
                             className={styles.menuSection} 
                             ref={el => sectionRefs.current[sectionName] = el}
-                            data-section={sectionName} // Атрибут для отслеживания через IntersectionObserver
+                            data-section={sectionName}
                         >
                             <h2>{sectionName}</h2>
                             <div className={styles.dishGrid}>
@@ -167,11 +210,18 @@ const toggleDishSelection = (e, dishId) => {
                                             className={styles.dishImageContainer}
                                             onClick={() => handleOpenModal(dish)}
                                         >
-                                            {dish.image_url && <img src={dish.image_url} alt={dish.dish_name} className={styles.dishImage} loading="lazy" />}
+                                            {dish.image_url && (
+                                                <img 
+                                                    src={dish.image_url_thumbnail || dish.image_url} 
+                                                    alt={dish.dish_name} 
+                                                    className={styles.dishImage} 
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
+                                            )}
                                             <div className={styles.priceTag}>
                                                 <p className={styles.dishPrice}>{dish.cost_rub} ₽</p>
                                             </div>
-                                            {/* Кнопка быстрого добавления */}
                                             <button 
                                                 className={`${styles.selectButton} ${cart[dish.id] ? styles.selected : ''}`}
                                                 onClick={(e) => toggleDishSelection(e, dish.id)}
@@ -185,30 +235,32 @@ const toggleDishSelection = (e, dishId) => {
                             </div>
                         </section>
                     ))}
+                    
+                    {/* 🆕 Триггер для подгр��зки следующих секций */}
+                    {visibleSectionsCount < sections.length && (
+                        <div ref={loadMoreTriggerRef} className={styles.loadMoreTrigger}>
+                            {isLoadingMore && <div className={styles.loadingIndicator}>Загрузка...</div>}
+                        </div>
+                    )}
                 </div>
             </main>
 
-            {/* Футер с кнопкой вызова ИИ чата */}
             <MenuFooter 
                 orderActive={isOrderActive} 
-                // ИЗМЕНЕНО: При клике на чат в футере передаем null (нет блюда) и activeSection (текущий раздел меню)
                 onChatClick={() => onOpenChat(null, activeSection)} 
                 onOrderClick={() => setIsCartOpen(true)}
                 onCallClick={() => console.log("вызов официанта")}
             />
 
-            {/* Модальное окно с деталями блюда */}
             <DishModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 dish={selectedDishForModal}
                 currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
                 updateCart={updateCart}
-                // Прокидываем функцию открытия чата внутрь модалки блюда (там dish передастся автоматически)
                 onOpenChat={onOpenChat} 
             />
 
-            {/* Модальное окно корзины */}
             <CartModal 
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
