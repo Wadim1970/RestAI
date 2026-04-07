@@ -12,7 +12,7 @@ const path = require('path');   // ← ДОБАВЛЕНО
 // ==========================================================
 
 const SUPABASE_URL = 'https://utdfzrpkoscyikitceow.supabase.co'; 
-const SUPABASE_KEY = 'sb_secret_eas5r2icy294EMvBE_iv0A_2PdYWApT'; 
+const SUPABASE_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; 
 
 const RESTAURANT_ID = 'dd89773c-0952-4fd1-9510-514094a928ee'; 
 const TARGET_URL = 'https://www.syrovarnya.com/catalog/usacheva'; 
