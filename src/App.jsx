@@ -425,6 +425,7 @@ const handleConfirmBillChoice = async (billType) => {
             path="/menu" 
             element={
               <MenuPage 
+                restaurantId={restaurantId}
                 cart={cart} 
                 updateCart={updateCart} 
                 confirmedOrders={confirmedOrders}
