@@ -12,7 +12,8 @@ import CartModal from './CartModal/CartModal';
 // Компонент иконки "галочка" для выбранных блюд
 const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
 
-export default function MenuPage({ 
+export default function MenuPage({
+    restaurantId,
     cart = {}, 
     updateCart, 
     confirmedOrders = [], 
@@ -42,10 +43,12 @@ export default function MenuPage({
 // Загрузка меню из Supabase
 useEffect(() => {
     async function fetchMenu() {
+        if (!restaurantId) return;
         try {
             const { data: menuItems, error } = await supabase
                 .from('menu_items')
                 .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail')
+                .eq('restaurant_id', restaurantId)
                 .order('section_order', { ascending: true }) 
                 .order('dish_name', { ascending: true }); 
 
@@ -70,7 +73,7 @@ useEffect(() => {
         }
     }
     fetchMenu();
-}, []);
+}, [restaurantId]);
     // IntersectionObserver для активной секции
     useEffect(() => {
         if (loading || Object.keys(groupedMenu).length === 0) return;
