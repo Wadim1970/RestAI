@@ -107,7 +107,9 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat
                 ))}
               </div>
               <h3 className={styles.alcoholSectionLabel}>Вкус</h3>
-              <p className={styles.alcoholText}>{dish.ingredients}</p>
+              <p className={styles.alcoholText}>
+  {Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : dish.ingredients}
+</p>
               <h3 className={styles.alcoholSectionLabel}>Аромат</h3>
               <p className={styles.alcoholText}>{dish.specific_details}</p>
               <h3 className={styles.alcoholSectionLabel}>Рекомендации к употреблению:</h3>
