@@ -241,7 +241,7 @@ useEffect(() => {
                                         >
                                             {dish.image_url && (
                                                 <img 
-                                                    src={dish.image_url_thumbnail || dish.image_url} 
+                                                    src={dish.image_url} 
                                                     alt={dish.dish_name} 
                                                     className={styles.dishImage} 
                                                     loading="lazy"
