@@ -75,40 +75,23 @@ useEffect(() => {
       }
 
       try {
-        // 2. Ищем гостя в базе данных по device_id
-        const { data: existingGuest, error: searchError } = await supabase
-          .from('guests')
-          .select('id, visit_count')
-          .eq('device_id', deviceId)
-          .maybeSingle(); // Используем maybeSingle вместо single, чтобы не кидало ошибку, если гостя нет
+        // Атомарная регистрация визита одним запросом (register_guest_visit):
+        // раньше здесь было "прочитать visit_count -> посчитать +1 в браузере ->
+        // записать" в два похода, из-за чего два почти одновременных вызова
+        // (React StrictMode дважды подряд вызывает эффект, два таба на одном
+        // устройстве) читали одно и то же старое значение и теряли инкремент.
+        // INSERT ... ON CONFLICT ... SET visit_count = visit_count + 1 в самой
+        // базе исключает эту гонку.
+        const { data, error } = await supabase.rpc('register_guest_visit', {
+          p_device_id: deviceId,
+        })
 
-        if (existingGuest) {
-          // 3А. ГОСТЬ НАЙДЕН: Обновляем счетчик визитов и дату
-          await supabase
-            .from('guests')
-            .update({ 
-              visit_count: existingGuest.visit_count + 1,
-              last_visit_at: new Date().toISOString() 
-            })
-            .eq('id', existingGuest.id);
-            
-          setGuestId(existingGuest.id); // Сохраняем ID гостя в стейт
-          console.log(`С возвращением! Гость №${existingGuest.id}, визит: ${existingGuest.visit_count + 1}`);
+        if (error) throw error
 
-        } else {
-          // 3Б. ГОСТЬ НОВЫЙ: Создаем запись в таблице
-          // visit_count (1) и даты проставятся базой автоматически согласно вашей схеме SQL
-          const { data: newGuest, error: insertError } = await supabase
-            .from('guests')
-            .insert([{ device_id: deviceId }]) 
-            .select('id')
-            .single();
-
-          if (newGuest) {
-            setGuestId(newGuest.id);
-            console.log(`Создан новый гость №${newGuest.id}`);
-          }
-          if (insertError) console.error("Ошибка создания гостя:", insertError);
+        const guest = data?.[0]
+        if (guest) {
+          setGuestId(guest.id)
+          console.log(`Гость №${guest.id}, визит: ${guest.visit_count}`)
         }
       } catch (err) {
         console.error("Системная ошибка при инициализации гостя:", err);
