@@ -250,7 +250,12 @@ const handleRequestBill = async () => {
           .select('total_amount')
           .eq('restaurant_id', restaurantId)
           .eq('table_number', tableNumber)
-          .in('status', ['new', 'cooking']);
+          .in('status', ['new', 'cooking'])
+          // Защитный пояс: в норме на стол одновременно 1-2 неоплаченных
+          // заказа, но запрос сам по себе от этого не застрахован (если
+          // статус когда-то "зависнет" из-за бага — не даём накопиться
+          // без границы).
+          .limit(20);
         
         if (error) {
           console.error('Ошибка получения суммы стола:', error);
