@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import MainScreen from './components/MainScreen'; 
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
+import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
@@ -74,6 +75,7 @@ useEffect(() => {
   // --- ФОНОВАЯ ИДЕНТИФИКАЦИЯ И РЕГИСТРАЦИЯ ГОСТЯ ---
   // ========================================================
   const [guestId, setGuestId] = useState(null); // Здесь будет храниться порядковый номер гостя (id из БД)
+  const [seatNumber, setSeatNumber] = useState(null); // Место этого устройства в общем заказе стола (из place_guest_order)
 
   useEffect(() => {
     const initializeGuest = async () => {
@@ -134,6 +136,7 @@ useEffect(() => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
+  const [isSplitBillOpen, setIsSplitBillOpen] = useState(false); // Экран разделения счёта по местам
   const [tableTotalAmount, setTableTotalAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
@@ -223,6 +226,7 @@ useEffect(() => {
       }
 
       console.log('✅ Заказ успешно отправлен на кухню:', data?.[0]);
+      if (data?.[0]?.seat_number != null) setSeatNumber(data[0].seat_number);
       setConfirmedOrders(prev => [...prev, ...cartItems]);
       setCart({});
 
@@ -270,71 +274,84 @@ const handleRequestBill = async () => {
     alert("Вы еще ничего не заказали!");
   }
 };
-const handleConfirmBillChoice = async (billType) => {
-  // 1. ПРОВЕРКА ЗАМКА
+// Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
+// данные и показываем экран благодарности. Оплата (какие места помечены
+// paid) к этому моменту уже проведена вызывающей функцией.
+const finishGuestSession = async (billType) => {
+  try {
+    await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'request_bill',
+        type: billType,
+        tableNumber: tableNumber,
+        guestId: guestId,
+        restaurantId: restaurantId,
+        sessionId: currentSessionId
+      })
+    });
+  } catch (webhookError) {
+    console.error("Не удалось отправить вебхук официанту:", webhookError);
+  }
+
+  setCart({});
+  setConfirmedOrders([]);
+  setChatMessages([]);
+  setCurrentSessionId('');
+  localStorage.removeItem('restaurant_cart');
+  localStorage.removeItem('restaurant_orders');
+  localStorage.removeItem('chat_history');
+  localStorage.removeItem('ai_chat_session');
+
+  setIsBillRequested(true);
+};
+
+// "Ваш счёт" — платит ТОЛЬКО за место этого устройства, не трогая
+// остальных гостей за столом (в отличие от старой версии, которая по
+// ошибке закрывала весь стол вне зависимости от выбора).
+const handlePayOwnSeat = async () => {
   if (isProcessing) return;
   setIsProcessing(true);
-
-  setIsBillChoiceOpen(false); // Сразу прячем окно выбора
+  setIsBillChoiceOpen(false);
 
   try {
-    // Заказ теперь общий на весь стол (place_guest_order), а не один на
-    // guest_id+session_id создавшего его гостя — тем более что в него
-    // могут дописывать позиции разные устройства. Закрываем тем же ключом,
-    // которым handleRequestBill уже считает сумму счёта: стол целиком.
-    console.log('💳 Обновляем статус заказов для стола:', tableNumber);
-
-    if (restaurantId && tableNumber) {
-      const { data: updatedOrders, error: updateError } = await supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .eq('restaurant_id', restaurantId)
-        .eq('table_number', tableNumber)
-        .in('status', ['new', 'cooking'])  // Обновляем только неоплаченные
-        .select();
-
-      if (updateError) {
-        console.error('❌ Ошибка обновления статуса заказов:', updateError);
-      } else {
-        console.log('✅ Статус заказов обновлён на "paid":', updatedOrders);
-      }
-    }
-
-    // Отправка вебхука официанту (опционально)
-    try {
-      await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'request_bill',
-          type: billType,
-          tableNumber: tableNumber,
-          guestId: guestId,
-          restaurantId: restaurantId,
-          sessionId: currentSessionId
-        })
+    if (restaurantId && tableNumber && seatNumber != null) {
+      const { error } = await supabase.rpc('pay_table_seats', {
+        p_restaurant_id: restaurantId,
+        p_table_number: String(tableNumber),
+        p_seat_numbers: [seatNumber],
       });
-    } catch (webhookError) {
-      console.error("Не удалось отправить вебхук официанту:", webhookError);
+      if (error) console.error('❌ Ошибка оплаты своего места:', error);
     }
-
+    await finishGuestSession('personal');
   } catch (e) {
-    console.error("Ошибка при запросе счёта:", e);
+    console.error("Ошибка при оплате своего места:", e);
   } finally {
-    // Очищаем локальные данные, так как гость уходит
-    setCart({});
-    setConfirmedOrders([]);
-    setChatMessages([]);
-    setCurrentSessionId(''); 
-    localStorage.removeItem('restaurant_cart');
-    localStorage.removeItem('restaurant_orders');
-    localStorage.removeItem('chat_history');
-    localStorage.removeItem('ai_chat_session'); 
+    setIsProcessing(false);
+  }
+};
 
-    // Показываем финальный красивый экран благодарности
-    setIsBillRequested(true);
-    
-    // 2. СНИМАЕМ ЗАМОК
+// "Общий счёт за стол" — гость должен явно выбрать это, прежде чем
+// увидеть чужие корзины: сам список корзин показывает SplitBillModal,
+// а не эта функция.
+const handleOpenSplitBill = () => {
+  setIsBillChoiceOpen(false);
+  setIsSplitBillOpen(true);
+};
+
+const handleSplitBillClose = () => {
+  setIsSplitBillOpen(false);
+};
+
+// Оплата выбранных мест уже проведена внутри SplitBillModal (pay_table_seats) —
+// здесь только завершаем сессию гостя на этом устройстве.
+const handleSplitBillPaid = async () => {
+  setIsSplitBillOpen(false);
+  setIsProcessing(true);
+  try {
+    await finishGuestSession('table');
+  } finally {
     setIsProcessing(false);
   }
 };
@@ -452,7 +469,16 @@ const handleConfirmBillChoice = async (billType) => {
           restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
         />
-          
+
+        <SplitBillModal
+          isOpen={isSplitBillOpen}
+          onClose={handleSplitBillClose}
+          restaurantId={restaurantId}
+          tableNumber={tableNumber}
+          mySeatNumber={seatNumber}
+          onPaid={handleSplitBillPaid}
+        />
+
              {/* МОДАЛКА ВЫБОРА ТИПА СЧЕТА */}
 {isBillChoiceOpen && (
   <div style={{
@@ -472,8 +498,8 @@ const handleConfirmBillChoice = async (billType) => {
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* Кнопка "Ваш счет" */}
-        <button 
-          onClick={() => handleConfirmBillChoice('personal')}
+        <button
+          onClick={handlePayOwnSeat}
           style={{
             padding: '14px', backgroundColor: '#f0f0f0', color: '#111', 
             border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
@@ -487,8 +513,8 @@ const handleConfirmBillChoice = async (billType) => {
         </button>
 
         {/* Кнопка "Общий счет" */}
-        <button 
-          onClick={() => handleConfirmBillChoice('table')}
+        <button
+          onClick={handleOpenSplitBill}
           style={{
             padding: '14px', backgroundColor: '#111', color: '#fff', 
             border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
