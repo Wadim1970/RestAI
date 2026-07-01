@@ -23,8 +23,6 @@ guestPreferences = {
     visit_count: data?.visit_count || 0,
     avg_check: data?.avg_check || 0  // ← ДОБАВИЛИ
 };
-        
-        console.log('🔥 Preferences отправляются в AI:', guestPreferences);
     } catch (err) {
         console.warn('Не удалось загрузить preferences:', err);
     }
