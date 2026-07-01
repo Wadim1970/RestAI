@@ -99,6 +99,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_order_id uuid;
+  v_table_id uuid;
   v_all_paid boolean;
 BEGIN
   IF p_seat_numbers IS NULL OR array_length(p_seat_numbers, 1) IS NULL THEN
@@ -107,7 +108,7 @@ BEGIN
 
   -- Заказ уже существует к этому моменту (иначе платить нечего) —
   -- FOR UPDATE тут корректно сериализует конкурентные вызовы этой функции.
-  SELECT id INTO v_order_id
+  SELECT id, table_id INTO v_order_id, v_table_id
   FROM public.orders
   WHERE restaurant_id = p_restaurant_id::text
     AND table_number = p_table_number
@@ -149,6 +150,17 @@ BEGIN
 
   IF v_all_paid THEN
     UPDATE public.orders SET status = 'paid' WHERE id = v_order_id;
+
+    -- Официант, закрывая стол вручную, всегда делает и то, и другое разом
+    -- (AllOrdersScreen: clearTable() + updateTableSessionStatus(table.id,'free')) —
+    -- без этого шага стол visually остаётся "занят" даже после полной оплаты
+    -- гостями, а клик по нему в TablesScreen ищет активный заказ
+    -- (.not('status','eq','paid')) и молча ничего не находит.
+    IF v_table_id IS NOT NULL THEN
+      UPDATE public.table_sessions
+      SET status = 'free', is_active = false, ended_at = now()
+      WHERE table_id = v_table_id AND is_active = true;
+    END IF;
   END IF;
 
   RETURN QUERY SELECT v_order_id, v_all_paid;
