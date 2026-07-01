@@ -8,6 +8,17 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
 import { supabase } from './supabaseClient';
 
+// Общий источник device_id и для register_guest_visit, и для place_guest_order —
+// одно устройство должно всегда попадать в одно и то же место (seat) за столом.
+function getOrCreateDeviceId() {
+  let deviceId = localStorage.getItem('restai_device_id');
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem('restai_device_id', deviceId);
+  }
+  return deviceId;
+}
+
  // Получаем ID ресторана из URL параметров или localStorage
  function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
@@ -66,13 +77,7 @@ useEffect(() => {
 
   useEffect(() => {
     const initializeGuest = async () => {
-      // 1. Проверяем или генерируем device_id
-      let deviceId = localStorage.getItem('restai_device_id');
-      
-      if (!deviceId) {
-        deviceId = crypto.randomUUID(); // Генерируем уникальный ID силами браузера
-        localStorage.setItem('restai_device_id', deviceId);
-      }
+      const deviceId = getOrCreateDeviceId();
 
       try {
         // Атомарная регистрация визита одним запросом (register_guest_visit):
@@ -186,52 +191,41 @@ useEffect(() => {
     });
   };
 
-    // 1. ДОБАВИЛИ ВТОРОЙ АРГУМЕНТ comment
-      const handleConfirmOrder = async (cartItems, comment = '') => {
+  const handleConfirmOrder = async (cartItems, comment = '') => {
     // 1. ПРОВЕРКА ЗАМКА: Если процесс уже идет, игнорируем клик
-    if (isProcessing) return; 
+    if (isProcessing) return;
     setIsProcessing(true); // Закрываем замок
 
-    const totalAmount = cartItems.reduce((sum, item) => sum + (item.cost_rub * item.count), 0);
-
-    const itemsToSave = cartItems.map(item => ({
-      dish_id: item.id,
-      name: item.dish_name,
-      price: item.cost_rub,
-      count: item.count
+    // Не создаём заказ сами (JSONB-блоб + придуманная клиентом цена) —
+    // place_guest_order сама находит/открывает общий заказ этого стола,
+    // назначает место по device_id и берёт цену из menu_items. Один и тот
+    // же order_id получат все устройства за этим столом (официант видит
+    // единый заказ), а order_items/order_guests — та же модель, что уже
+    // использует Waiter-app.
+    const itemsToSend = cartItems.map(item => ({
+      item_id: item.id,
+      quantity: item.count
     }));
 
-    let sessionToSave = currentSessionId;
-    if (!sessionToSave) {
-      sessionToSave = `sess_${Date.now()}`; 
-      setCurrentSessionId(sessionToSave); 
-    }
-
     try {
-      const { error } = await supabase
-        .from('orders')
-        .insert([{
-          guest_id: guestId, 
-          restaurant_id: restaurantId || 'default', 
-          restaurant_name: branding?.name || 'Ресторан',
-          session_id: sessionToSave, 
-          table_number: tableNumber,
-          items: itemsToSave,
-          total_amount: totalAmount,
-          comment: comment,
-          status: 'new'
-        }]);
+      const { data, error } = await supabase.rpc('place_guest_order', {
+        p_restaurant_id: restaurantId,
+        p_table_number: String(tableNumber),
+        p_device_id: getOrCreateDeviceId(),
+        p_items: itemsToSend,
+        p_comment: comment || null
+      });
 
       if (error) {
         console.error("Ошибка записи заказа в БД:", error);
         alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
-        return; 
+        return;
       }
 
-      console.log('✅ Заказ успешно отправлен на кухню (в БД)!');
+      console.log('✅ Заказ успешно отправлен на кухню:', data?.[0]);
       setConfirmedOrders(prev => [...prev, ...cartItems]);
-      setCart({}); 
-      
+      setCart({});
+
     } catch (err) {
       console.error("Системная ошибка при оформлении:", err);
     } finally {
@@ -284,15 +278,18 @@ const handleConfirmBillChoice = async (billType) => {
   setIsBillChoiceOpen(false); // Сразу прячем окно выбора
 
   try {
-    // 🔥 ОБНОВЛЯЕМ СТАТУС ВСЕХ ЗАКАЗОВ ГОСТЯ НА 'paid'
-    console.log('💳 Обновляем статус заказов для guest_id:', guestId);
-    
-    if (guestId && currentSessionId) {
+    // Заказ теперь общий на весь стол (place_guest_order), а не один на
+    // guest_id+session_id создавшего его гостя — тем более что в него
+    // могут дописывать позиции разные устройства. Закрываем тем же ключом,
+    // которым handleRequestBill уже считает сумму счёта: стол целиком.
+    console.log('💳 Обновляем статус заказов для стола:', tableNumber);
+
+    if (restaurantId && tableNumber) {
       const { data: updatedOrders, error: updateError } = await supabase
         .from('orders')
         .update({ status: 'paid' })
-        .eq('guest_id', guestId)
-        .eq('session_id', currentSessionId)
+        .eq('restaurant_id', restaurantId)
+        .eq('table_number', tableNumber)
         .in('status', ['new', 'cooking'])  // Обновляем только неоплаченные
         .select();
 
