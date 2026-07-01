@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 
 // Дефолтные значения
 const DEFAULT_BRANDING = {
@@ -28,15 +27,13 @@ export const useBrandingConfig = (restaurantId) => {
     const fetchBranding = async () => {
       try {
         setLoading(true);
-        const { data, error: fetchError } = await supabase
-          .from('restaurants')
-          .select(
-            'name, branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font, font_url_header, font_url_body'
-          )
-          .eq('restaurantId', restaurantId)
-          .single();
-
-        if (fetchError) throw fetchError;
+        // Идёт через /api/branding (кэшируется на Vercel Edge), а не напрямую
+        // в Supabase — брендинг одинаков для всех гостей ресторана и почти
+        // не меняется, незачем грузить его заново при каждом заходе.
+        const res = await fetch(`/api/branding?restaurantId=${encodeURIComponent(restaurantId)}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Ошибка загрузки брендинга');
+        const { data } = json;
 
         if (data) {
           setBranding({

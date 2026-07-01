@@ -45,16 +45,15 @@ useEffect(() => {
     async function fetchMenu() {
         if (!restaurantId) return;
         try {
-            const { data: menuItems, error } = await supabase
-                .from('menu_items')
-                .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail')
-                .eq('restaurant_id', restaurantId)
-                .order('section_order', { ascending: true }) 
-                .order('dish_name', { ascending: true }); 
+            // Идёт через /api/menu (кэшируется на Vercel Edge), а не напрямую
+            // в Supabase — меню одинаково для всех гостей ресторана, незачем
+            // грузить его заново при каждом заходе каждого гостя.
+            const res = await fetch(`/api/menu?restaurantId=${encodeURIComponent(restaurantId)}`);
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Ошибка загрузки меню');
+            const menuItems = json.items;
 
-            if (error) throw error;
-
-            const items = Array.isArray(menuItems) ? menuItems : []; 
+            const items = Array.isArray(menuItems) ? menuItems : [];
             const grouped = items.reduce((acc, item) => {
                 const section = item.menu_section;
                 if (!acc[section]) acc[section] = [];
