@@ -48,8 +48,18 @@ BEGIN;
 ALTER TABLE public.order_guests
   ADD COLUMN IF NOT EXISTS device_id text;
 
-ALTER TABLE public.order_guests
-  ADD CONSTRAINT order_guests_order_device_unique UNIQUE (order_id, device_id);
+-- ADD CONSTRAINT не поддерживает IF NOT EXISTS в Postgres (в отличие от
+-- ADD COLUMN) — без этой обёртки повторный запуск миграции падает, если
+-- constraint уже создан прошлым запуском.
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'order_guests_order_device_unique'
+  ) THEN
+    ALTER TABLE public.order_guests
+      ADD CONSTRAINT order_guests_order_device_unique UNIQUE (order_id, device_id);
+  END IF;
+END $do$;
 
 -- 2. Сама функция
 CREATE OR REPLACE FUNCTION public.place_guest_order(
