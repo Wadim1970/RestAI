@@ -76,6 +76,13 @@ BEGIN
     RAISE EXCEPTION 'Пустой список блюд';
   END IF;
 
+  -- Защита от клиентского бага, который уже встречался: String(null) в JS
+  -- даёт текст "null", а не пустую строку/NULL — без этой проверки cast
+  -- ниже в integer падает с сырой, непонятной ошибкой Postgres (22P02).
+  IF p_table_number IS NULL OR btrim(p_table_number) = '' OR p_table_number = 'null' THEN
+    RAISE EXCEPTION 'Не удалось определить номер стола';
+  END IF;
+
   -- Стол этого ресторана
   SELECT id INTO v_table_id
   FROM public.tables
