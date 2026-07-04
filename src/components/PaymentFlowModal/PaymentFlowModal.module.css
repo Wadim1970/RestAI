@@ -1,0 +1,155 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 360px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #111;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.stubBadge {
+  margin: 0 20px 8px;
+  padding: 4px 10px;
+  align-self: flex-start;
+  background: #fff4e0;
+  color: #9a6a00;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.body {
+  padding: 4px 20px;
+  overflow-y: auto;
+}
+
+.itemRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px dashed #eee;
+}
+
+.infoText {
+  padding: 16px 20px;
+  text-align: center;
+  color: #777;
+  font-size: 14px;
+}
+
+.footer {
+  padding: 12px 20px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 14px;
+}
+
+.primaryBtn {
+  width: 100%;
+  padding: 14px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondaryBtn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: none;
+  color: #999;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sbpBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+}
+
+.qrStub {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 2px dashed #bbb;
+  border-radius: 12px;
+  color: #888;
+  font-size: 14px;
+  background: #fafafa;
+}
+
+.sbpLink {
+  color: #2b7cff;
+  font-size: 14px;
+  text-decoration: underline;
+  text-align: center;
+}
+
+.sbpAmount {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}

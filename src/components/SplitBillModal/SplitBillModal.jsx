@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import styles from './SplitBillModal.module.css';
 
-// Открывается только после явного выбора гостя "Общий счёт за стол" —
-// до этого момента гость не видит чужие корзины (get_table_bill не
-// вызывается больше нигде). Показывает корзину каждого места за столом,
-// даёт выбрать, за кого гость готов заплатить (например, только за свою
-// семью в большой компании), и проводит оплату выбранных мест.
-const SplitBillModal = ({ isOpen, onClose, restaurantId, tableNumber, mySeatNumber, onPaid }) => {
+// Открывается только после явного выбора гостя "За весь стол" — до этого
+// момента гость не видит чужие корзины (get_table_bill не вызывается больше
+// нигде). Показывает корзину каждого места за столом, даёт выбрать, за кого
+// гость готов заплатить (например, только за свою семью в большой компании),
+// и ВОЗВРАЩАЕТ выбранные места через onConfirm. Саму оплату (и пометку paid)
+// делает уже поток чек -> СБП -> подтверждение, а не эта модалка — чтобы места
+// не помечались оплаченными до реальной оплаты.
+const SplitBillModal = ({ isOpen, onClose, restaurantId, tableNumber, mySeatNumber, onConfirm }) => {
   const [loading, setLoading] = useState(false);
   const [seats, setSeats] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
 
   useEffect(() => {
@@ -78,31 +79,12 @@ const SplitBillModal = ({ isOpen, onClose, restaurantId, tableNumber, mySeatNumb
     .filter(s => selected.has(s.seatNumber))
     .reduce((sum, s) => sum + s.subtotal, 0);
 
-  const handleConfirm = async () => {
-    if (submitting || selected.size === 0) return;
-    setSubmitting(true);
-    setErrorText('');
-
-    try {
-      const { error } = await supabase.rpc('pay_table_seats', {
-        p_restaurant_id: restaurantId,
-        p_table_number: String(tableNumber),
-        p_seat_numbers: [...selected],
-      });
-
-      if (error) {
-        console.error('Ошибка оплаты выбранных мест:', error);
-        setErrorText('Не удалось провести оплату. Попробуйте ещё раз.');
-        setSubmitting(false);
-        return;
-      }
-
-      onPaid();
-    } catch (err) {
-      console.error('Системная ошибка при оплате:', err);
-      setErrorText('Не удалось провести оплату. Попробуйте ещё раз.');
-      setSubmitting(false);
-    }
+  const handleConfirm = () => {
+    if (selected.size === 0) return;
+    // Раньше здесь сразу шёл pay_table_seats. Теперь модалка только ВЫБИРАЕТ
+    // места и отдаёт их наверх — оплата (и пометка paid) идёт дальше в потоке
+    // чек -> СБП -> подтверждение, чтобы ничего не закрывалось до денег.
+    onConfirm([...selected]);
   };
 
   if (!isOpen) return null;
@@ -172,10 +154,10 @@ const SplitBillModal = ({ isOpen, onClose, restaurantId, tableNumber, mySeatNumb
             </div>
             <button
               className={styles.confirmBtn}
-              disabled={selected.size === 0 || submitting}
+              disabled={selected.size === 0}
               onClick={handleConfirm}
             >
-              {submitting ? 'Оплата...' : 'Оплатить выбранное'}
+              Перейти к оплате
             </button>
           </div>
         )}

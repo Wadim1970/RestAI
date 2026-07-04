@@ -4,6 +4,7 @@ import MainScreen from './components/MainScreen';
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
+import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
@@ -135,8 +136,10 @@ useEffect(() => {
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
-  const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // НОВЫЙ: Модалка выбора типа счета
-  const [isSplitBillOpen, setIsSplitBillOpen] = useState(false); // Экран разделения счёта по местам
+  const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
+  const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор оплаты: за себя / за весь стол
+  const [isSplitBillOpen, setIsSplitBillOpen] = useState(false);   // Экран выбора корзин по местам
+  const [payFlowSeats, setPayFlowSeats] = useState(null);          // Места для оплаты -> открывает поток чек/СБП
   const [tableTotalAmount, setTableTotalAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
@@ -318,36 +321,47 @@ const finishGuestSession = async (billType) => {
   setIsBillRequested(true);
 };
 
-// "Ваш счёт" — платит ТОЛЬКО за место этого устройства, не трогая
-// остальных гостей за столом (в отличие от старой версии, которая по
-// ошибке закрывала весь стол вне зависимости от выбора).
-const handlePayOwnSeat = async () => {
+// ── Ветка 1: позвать официанта со счётом ────────────────────────────────
+// Оплаты нет. Меняем статус активной сессии стола на 'bill_requested' —
+// у официанта карточка мгновенно станет "Ждут счёт" (Realtime). Гость
+// расплатится с официантом, тот закроет стол сам.
+const handleCallWaiter = async () => {
   if (isProcessing) return;
   setIsProcessing(true);
   setIsBillChoiceOpen(false);
 
   try {
-    if (restaurantId && tableNumber && seatNumber != null) {
-      const { error } = await supabase.rpc('pay_table_seats', {
+    if (restaurantId && tableNumber) {
+      const { error } = await supabase.rpc('request_bill', {
         p_restaurant_id: restaurantId,
         p_table_number: String(tableNumber),
-        p_seat_numbers: [seatNumber],
       });
-      if (error) console.error('❌ Ошибка оплаты своего места:', error);
+      if (error) console.error('Ошибка запроса счёта:', error);
     }
-    await finishGuestSession('personal');
-  } catch (e) {
-    console.error("Ошибка при оплате своего места:", e);
+    await finishGuestSession('waiter');
   } finally {
     setIsProcessing(false);
   }
 };
 
-// "Общий счёт за стол" — гость должен явно выбрать это, прежде чем
-// увидеть чужие корзины: сам список корзин показывает SplitBillModal,
-// а не эта функция.
-const handleOpenSplitBill = () => {
+// ── Ветка 2: гость платит сам ───────────────────────────────────────────
+// Сначала выбор "за себя / за весь стол".
+const handleChoosePay = () => {
   setIsBillChoiceOpen(false);
+  setIsPayChoiceOpen(true);
+};
+
+// "За себя" — только своё место. Не помечаем paid сразу: ведём в поток
+// чек -> СБП -> подтверждение (pay_table_seats пройдёт уже там).
+const handleSelfPayOwn = () => {
+  setIsPayChoiceOpen(false);
+  if (seatNumber != null) setPayFlowSeats([seatNumber]);
+};
+
+// "За весь стол" — открываем выбор корзин. SplitBillModal теперь только
+// ВЫБИРАЕТ места и возвращает их, оплата идёт дальше в потоке чек/СБП.
+const handleOpenSplitBill = () => {
+  setIsPayChoiceOpen(false);
   setIsSplitBillOpen(true);
 };
 
@@ -355,13 +369,19 @@ const handleSplitBillClose = () => {
   setIsSplitBillOpen(false);
 };
 
-// Оплата выбранных мест уже проведена внутри SplitBillModal (pay_table_seats) —
-// здесь только завершаем сессию гостя на этом устройстве.
-const handleSplitBillPaid = async () => {
+// Гость выбрал места в SplitBillModal -> ведём в поток оплаты по этим местам.
+const handleSplitBillConfirm = (seats) => {
   setIsSplitBillOpen(false);
+  if (seats && seats.length > 0) setPayFlowSeats(seats);
+};
+
+// Оплата (мок-успех) прошла внутри PaymentFlowModal, места уже помечены paid —
+// закрываем поток и завершаем сессию гостя.
+const handlePayFlowPaid = async () => {
+  setPayFlowSeats(null);
   setIsProcessing(true);
   try {
-    await finishGuestSession('table');
+    await finishGuestSession('payment');
   } finally {
     setIsProcessing(false);
   }
@@ -487,10 +507,19 @@ const handleSplitBillPaid = async () => {
           restaurantId={restaurantId}
           tableNumber={tableNumber}
           mySeatNumber={seatNumber}
-          onPaid={handleSplitBillPaid}
+          onConfirm={handleSplitBillConfirm}
         />
 
-             {/* МОДАЛКА ВЫБОРА ТИПА СЧЕТА */}
+        <PaymentFlowModal
+          isOpen={payFlowSeats !== null}
+          onClose={() => setPayFlowSeats(null)}
+          restaurantId={restaurantId}
+          tableNumber={tableNumber}
+          seatNumbers={payFlowSeats || []}
+          onPaid={handlePayFlowPaid}
+        />
+
+             {/* ВЕРХНИЙ ВЫБОР: позвать официанта / оплатить самому */}
 {isBillChoiceOpen && (
   <div style={{
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -502,47 +531,110 @@ const handleSplitBillPaid = async () => {
       width: '85%', maxWidth: '340px', textAlign: 'center',
       boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
     }}>
-      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>Как посчитать?</h3>
+      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>Счёт</h3>
       <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
-        Хотите принести общий счет или раздельно?
+        Как вам удобно рассчитаться?
       </p>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Кнопка "Ваш счет" */}
+        {/* Позвать официанта */}
         <button
-          onClick={handlePayOwnSeat}
+          onClick={handleCallWaiter}
+          disabled={isProcessing}
           style={{
-            padding: '14px', backgroundColor: '#f0f0f0', color: '#111', 
+            padding: '14px', backgroundColor: '#f0f0f0', color: '#111',
             border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
           }}
         >
-          <span>Ваш счет</span>
+          <span>Позвать официанта со счётом</span>
+          <span style={{ fontSize: '13px', fontWeight: '400', color: '#666' }}>
+            официант принесёт счёт к столу
+          </span>
+        </button>
+
+        {/* Оплатить самому */}
+        <button
+          onClick={handleChoosePay}
+          disabled={isProcessing}
+          style={{
+            padding: '14px', backgroundColor: '#111', color: '#fff',
+            border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+          }}
+        >
+          <span>Оплатить самому (СБП)</span>
+          <span style={{ fontSize: '13px', fontWeight: '400', color: '#ccc' }}>
+            оплата в приложении
+          </span>
+        </button>
+
+        <button
+          onClick={() => setIsBillChoiceOpen(false)}
+          style={{
+            padding: '10px', background: 'none', color: '#999',
+            border: 'none', fontSize: '14px', marginTop: '4px'
+          }}
+        >
+          Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+             {/* ВЫБОР ОПЛАТЫ: за себя / за весь стол */}
+{isPayChoiceOpen && (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{
+      backgroundColor: '#fff', padding: '24px', borderRadius: '16px',
+      width: '85%', maxWidth: '340px', textAlign: 'center',
+      boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+    }}>
+      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>За кого платите?</h3>
+      <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
+        Можно оплатить только свой заказ или выбрать корзины за столом.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Только за себя */}
+        <button
+          onClick={handleSelfPayOwn}
+          style={{
+            padding: '14px', backgroundColor: '#f0f0f0', color: '#111',
+            border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+          }}
+        >
+          <span>Только за себя</span>
           <span style={{ fontSize: '18px', fontWeight: '700', color: '#48BF48' }}>
             {confirmedOrders.reduce((sum, item) => sum + (item.cost_rub * item.count), 0)} ₽
           </span>
         </button>
 
-        {/* Кнопка "Общий счет" */}
+        {/* За весь стол */}
         <button
           onClick={handleOpenSplitBill}
           style={{
-            padding: '14px', backgroundColor: '#111', color: '#fff', 
+            padding: '14px', backgroundColor: '#111', color: '#fff',
             border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
           }}
         >
-          <span>Общий счет за стол</span>
+          <span>За весь стол</span>
           <span style={{ fontSize: '18px', fontWeight: '700' }}>
             {tableTotalAmount} ₽
           </span>
         </button>
 
-        {/* Кнопка отмены */}
-        <button 
-          onClick={() => setIsBillChoiceOpen(false)}
+        <button
+          onClick={() => setIsPayChoiceOpen(false)}
           style={{
-            padding: '10px', background: 'none', color: '#999', 
+            padding: '10px', background: 'none', color: '#999',
             border: 'none', fontSize: '14px', marginTop: '4px'
           }}
         >
