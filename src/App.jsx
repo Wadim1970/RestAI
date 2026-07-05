@@ -301,25 +301,10 @@ const handleRequestBill = async () => {
 };
 // Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
 // данные и показываем экран благодарности. Оплата (какие места помечены
-// paid) к этому моменту уже проведена вызывающей функцией.
-const finishGuestSession = async (billType) => {
-  try {
-    await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'request_bill',
-        type: billType,
-        tableNumber: tableNumber,
-        guestId: guestId,
-        restaurantId: restaurantId,
-        sessionId: currentSessionId
-      })
-    });
-  } catch (webhookError) {
-    console.error("Не удалось отправить вебхук официанту:", webhookError);
-  }
-
+// paid) и уведомление официанта (статус стола через RPC) к этому моменту
+// уже сделаны вызывающей функцией — отдельный вебхук на n8n больше не нужен
+// (раньше он POST-ил на заглушку-URL и просто 404-ил, добавляя задержку).
+const finishGuestSession = async () => {
   setCart({});
   setConfirmedOrders([]);
   setChatMessages([]);
