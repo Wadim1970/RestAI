@@ -137,7 +137,8 @@ useEffect(() => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
-  const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор оплаты: за себя / за весь стол
+  const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор: за себя / за весь стол
+  const [billMode, setBillMode] = useState('pay');                 // 'waiter' | 'pay' — ветка, из которой пришли в выбор
   const [isSplitBillOpen, setIsSplitBillOpen] = useState(false);   // Экран выбора корзин по местам
   const [payFlowSeats, setPayFlowSeats] = useState(null);          // Места для оплаты -> открывает поток чек/СБП
   const [tableTotalAmount, setTableTotalAmount] = useState(0);
@@ -321,20 +322,34 @@ const finishGuestSession = async (billType) => {
   setIsBillRequested(true);
 };
 
-// ── Ветка 1: позвать официанта со счётом ────────────────────────────────
-// Оплаты нет. Меняем статус активной сессии стола на 'bill_requested' —
-// у официанта карточка мгновенно станет "Ждут счёт" (Realtime). Гость
-// расплатится с официантом, тот закроет стол сам.
-const handleCallWaiter = async () => {
+// Верхний выбор ведёт в один и тот же экран "за себя / за весь стол", но
+// помнит ветку: официанту тоже важно знать тип счёта (общий/раздельный).
+const handleChooseCallWaiter = () => {
+  setBillMode('waiter');
+  setIsBillChoiceOpen(false);
+  setIsPayChoiceOpen(true);
+};
+
+const handleChoosePay = () => {
+  setBillMode('pay');
+  setIsBillChoiceOpen(false);
+  setIsPayChoiceOpen(true);
+};
+
+// Ветка "позвать официанта": оплаты нет. RPC request_bill ставит статус
+// стола 'bill_requested' и тип счёта — официант мгновенно видит
+// "Ждут счёт · раздельный/общий" (Realtime). Гость платит официанту.
+const callWaiterWithBill = async (billType) => {
   if (isProcessing) return;
   setIsProcessing(true);
-  setIsBillChoiceOpen(false);
+  setIsPayChoiceOpen(false);
 
   try {
     if (restaurantId && tableNumber) {
       const { error } = await supabase.rpc('request_bill', {
         p_restaurant_id: restaurantId,
         p_table_number: String(tableNumber),
+        p_bill_type: billType,
       });
       if (error) console.error('Ошибка запроса счёта:', error);
     }
@@ -344,23 +359,18 @@ const handleCallWaiter = async () => {
   }
 };
 
-// ── Ветка 2: гость платит сам ───────────────────────────────────────────
-// Сначала выбор "за себя / за весь стол".
-const handleChoosePay = () => {
-  setIsBillChoiceOpen(false);
-  setIsPayChoiceOpen(true);
-};
-
-// "За себя" — только своё место. Не помечаем paid сразу: ведём в поток
-// чек -> СБП -> подтверждение (pay_table_seats пройдёт уже там).
-const handleSelfPayOwn = () => {
+// "За себя": в ветке официанта -> раздельный счёт; в ветке оплаты -> поток
+// чек/СБП по своему месту (paid проставится только после подтверждения).
+const handlePayChoiceOwn = () => {
+  if (billMode === 'waiter') { callWaiterWithBill('personal'); return; }
   setIsPayChoiceOpen(false);
   if (seatNumber != null) setPayFlowSeats([seatNumber]);
 };
 
-// "За весь стол" — открываем выбор корзин. SplitBillModal теперь только
-// ВЫБИРАЕТ места и возвращает их, оплата идёт дальше в потоке чек/СБП.
-const handleOpenSplitBill = () => {
+// "За весь стол": в ветке официанта -> общий счёт; в ветке оплаты -> выбор
+// корзин (SplitBillModal), затем поток чек/СБП.
+const handlePayChoiceTable = () => {
+  if (billMode === 'waiter') { callWaiterWithBill('table'); return; }
   setIsPayChoiceOpen(false);
   setIsSplitBillOpen(true);
 };
@@ -539,7 +549,7 @@ const handlePayFlowPaid = async () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* Позвать официанта */}
         <button
-          onClick={handleCallWaiter}
+          onClick={handleChooseCallWaiter}
           disabled={isProcessing}
           style={{
             padding: '14px', backgroundColor: '#f0f0f0', color: '#111',
@@ -595,37 +605,41 @@ const handlePayFlowPaid = async () => {
       width: '85%', maxWidth: '340px', textAlign: 'center',
       boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
     }}>
-      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>За кого платите?</h3>
+      <h3 style={{ margin: '0 0 16px', fontSize: '20px', color: '#111' }}>
+        {billMode === 'waiter' ? 'Какой счёт принести?' : 'За кого платите?'}
+      </h3>
       <p style={{ margin: '0 0 24px', color: '#666', fontSize: '15px' }}>
-        Можно оплатить только свой заказ или выбрать корзины за столом.
+        {billMode === 'waiter'
+          ? 'Официант принесёт общий или раздельный счёт.'
+          : 'Можно оплатить только свой заказ или выбрать корзины за столом.'}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Только за себя */}
+        {/* За себя / раздельный */}
         <button
-          onClick={handleSelfPayOwn}
+          onClick={handlePayChoiceOwn}
           style={{
             padding: '14px', backgroundColor: '#f0f0f0', color: '#111',
             border: '1px solid #ddd', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
           }}
         >
-          <span>Только за себя</span>
+          <span>{billMode === 'waiter' ? 'Мой счёт (раздельный)' : 'Только за себя'}</span>
           <span style={{ fontSize: '18px', fontWeight: '700', color: '#48BF48' }}>
             {confirmedOrders.reduce((sum, item) => sum + (item.cost_rub * item.count), 0)} ₽
           </span>
         </button>
 
-        {/* За весь стол */}
+        {/* За весь стол / общий */}
         <button
-          onClick={handleOpenSplitBill}
+          onClick={handlePayChoiceTable}
           style={{
             padding: '14px', backgroundColor: '#111', color: '#fff',
             border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
           }}
         >
-          <span>За весь стол</span>
+          <span>{billMode === 'waiter' ? 'Общий счёт за стол' : 'За весь стол'}</span>
           <span style={{ fontSize: '18px', fontWeight: '700' }}>
             {tableTotalAmount} ₽
           </span>
