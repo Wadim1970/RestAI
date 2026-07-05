@@ -34,13 +34,23 @@ function getOrCreateDeviceId() {
     const tableFromUrl = params.get('table'); // Ищем параметр &table=9
     
     if (idFromUrl) {
+      const prevId = localStorage.getItem('restaurant_id');
       setRestaurantId(idFromUrl);
       localStorage.setItem('restaurant_id', idFromUrl);
-      
+
       // 3. Если в ссылке есть номер стола, тоже сохраняем его
       if (tableFromUrl) {
         setTableNumber(tableFromUrl);
         localStorage.setItem('table_number', tableFromUrl);
+      } else {
+        // Ссылка с restaurant_id, но без &table (переход/перезагрузка/PWA
+        // start_url). Не теряем ранее сохранённый стол ТОГО ЖЕ ресторана —
+        // иначе корзина выживает, а стол пропадает, и "Отправить на кухню"
+        // упирается в "не удалось определить столик".
+        const savedTable = localStorage.getItem('table_number');
+        if (savedTable && prevId === idFromUrl) {
+          setTableNumber(savedTable);
+        }
       }
     } else {
       // 4. Если зашли без параметров (например, обновили страницу), берем из памяти
