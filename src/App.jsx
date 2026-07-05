@@ -416,18 +416,18 @@ const handlePayFlowPaid = async () => {
     setIsProcessing(true); // Защита от двойного клика
 
     try {
-        // Здесь мы сохраняем отзыв в Supabase
-        const { error } = await supabase
-            .from('reviews') // ВАЖНО: Эту таблицу нужно будет создать в Supabase!
-            .insert([{
-                restaurant_id: restaurantId,
-                guest_id: guestId,
-                table_number: tableNumber,
-                rating_food: ratingFood,
-                rating_service: ratingService,
-                comment: reviewComment,
-                session_id: currentSessionId
-            }]);
+        // Отзыв — только через проверяющий RPC submit_review: он пускает
+        // отзыв, лишь если с этого устройства реально был заказ за этим
+        // столом. Прямая анонимная вставка в reviews закрыта (анти-накрутка).
+        const { error } = await supabase.rpc('submit_review', {
+            p_restaurant_id: restaurantId,
+            p_table_number: String(tableNumber),
+            p_device_id: getOrCreateDeviceId(),
+            p_rating_food: ratingFood,
+            p_rating_service: ratingService,
+            p_comment: reviewComment,
+            p_session_id: currentSessionId,
+        });
 
         if (error) throw error;
 
