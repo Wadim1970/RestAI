@@ -58,12 +58,22 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
     setPaying(true);
     setErrorText('');
 
+    // Страховка от зависания: если ответ не пришёл за 12 сек (сеть/бэкенд
+    // подвисли — в БД при этом никакой блокировки нет), прерываем запрос и
+    // даём повторить, а не крутим "Подтверждаем..." бесконечно.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+
     try {
-      const { error } = await supabase.rpc('pay_table_seats', {
-        p_restaurant_id: restaurantId,
-        p_table_number: String(tableNumber),
-        p_seat_numbers: seatNumbers,
-      });
+      const { error } = await supabase
+        .rpc('pay_table_seats', {
+          p_restaurant_id: restaurantId,
+          p_table_number: String(tableNumber),
+          p_seat_numbers: seatNumbers,
+        })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timer);
 
       if (error) {
         console.error('Ошибка отметки оплаты:', error);
@@ -74,8 +84,13 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
 
       onPaid();
     } catch (e) {
+      clearTimeout(timer);
       console.error('Системная ошибка оплаты:', e);
-      setErrorText('Не удалось подтвердить оплату. Попробуйте ещё раз.');
+      setErrorText(
+        e?.name === 'AbortError'
+          ? 'Оплата не подтвердилась — сеть подвисла. Попробуйте ещё раз.'
+          : 'Не удалось подтвердить оплату. Попробуйте ещё раз.'
+      );
       setPaying(false);
     }
   };

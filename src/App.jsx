@@ -301,25 +301,10 @@ const handleRequestBill = async () => {
 };
 // Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
 // данные и показываем экран благодарности. Оплата (какие места помечены
-// paid) к этому моменту уже проведена вызывающей функцией.
-const finishGuestSession = async (billType) => {
-  try {
-    await fetch('ТУТ_БУДЕТ_URL_ВАШЕГО_N8N_WEBHOOKA', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'request_bill',
-        type: billType,
-        tableNumber: tableNumber,
-        guestId: guestId,
-        restaurantId: restaurantId,
-        sessionId: currentSessionId
-      })
-    });
-  } catch (webhookError) {
-    console.error("Не удалось отправить вебхук официанту:", webhookError);
-  }
-
+// paid) и уведомление официанта (статус стола через RPC) к этому моменту
+// уже сделаны вызывающей функцией — отдельный вебхук на n8n больше не нужен
+// (раньше он POST-ил на заглушку-URL и просто 404-ил, добавляя задержку).
+const finishGuestSession = async () => {
   setCart({});
   setConfirmedOrders([]);
   setChatMessages([]);
@@ -406,10 +391,26 @@ const handlePayFlowPaid = async () => {
     setIsProcessing(false);
   }
 };
+    // Полное завершение сеанса гостя после счёта/оплаты. Продолжать заказ в
+    // том же сеансе нельзя: устаревшее состояние клиента детерминированно
+    // ломает повторную оплату (виснет "Подтверждаем..." — с перезагрузкой ок,
+    // без неё виснет). Уводим на чистый старт БЕЗ стола (window.location.replace
+    // = свежий клиент, как ручная перезагрузка), чтобы для нового заказа гость
+    // заново отсканировал QR-код стола.
+    const endGuestSession = () => {
+      localStorage.removeItem('restaurant_cart');
+      localStorage.removeItem('restaurant_orders');
+      localStorage.removeItem('chat_history');
+      localStorage.removeItem('ai_chat_session');
+      localStorage.removeItem('table_number');
+      const rid = localStorage.getItem('restaurant_id') || restaurantId || '';
+      window.location.replace(rid ? `/?restaurant_id=${encodeURIComponent(rid)}` : '/');
+    };
+
     const handleSubmitReview = async () => {
-    // Если ничего ��е заполнили, просто закрываем окно
+    // Если ничего не заполнили — просто завершаем сеанс (без стола, требуем QR)
     if (ratingFood === 0 && ratingService === 0 && reviewComment.trim() === '') {
-        setIsBillRequested(false);
+        endGuestSession();
         return;
     }
 
@@ -447,21 +448,16 @@ const handlePayFlowPaid = async () => {
         */
 
         setIsReviewSubmitted(true); // Показываем "Спасибо!"
-        
-        // Автоматически закрываем окно через 3 секунды
+
+        // Показали "Спасибо!" 3 сек и завершаем сеанс (уводим на чистый старт).
         setTimeout(() => {
-            setIsBillRequested(false);
-            // Сбрасываем стейты на будущее
-            setRatingFood(0);
-            setRatingService(0);
-            setReviewComment('');
-            setIsReviewSubmitted(false);
+            endGuestSession();
         }, 3000);
 
     } catch (error) {
         console.error("Ошибка при отправке отзыва:", error);
         alert("Не удалось отправить отзыв, но спасибо за ваше время!");
-        setIsBillRequested(false);
+        endGuestSession();
     } finally {
         setIsProcessing(false);
     }
