@@ -70,8 +70,9 @@ const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
         zIndex: 1 
       }}
     >
-      {/* Компонент с самим тегом <video> */}
-      <VideoBackground />
+      {/* Компонент с самим тегом <video>. По окончании — сразу в меню,
+          видео больше не крутится по кругу. */}
+      <VideoBackground onEnded={handleOpenMenu} />
 
       {/* ЭКРАН СТАРТА (Затемнение и кнопка Play) */}
       {!isStarted && (

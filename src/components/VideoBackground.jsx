@@ -3,13 +3,16 @@ import React from 'react';
 
 const VIDEO_SOURCE = "/VIDEO-2025-12-07-21-42-11.mp4";
 
-const VideoBackground = () => {
+// Раньше было loop — крутилось по кругу. Теперь проигрывается один раз за
+// сеанс, а по окончании onEnded уводит гостя дальше (в меню) — не нужно
+// пересматривать одно и то же видео, если задержался на этом экране.
+const VideoBackground = ({ onEnded }) => {
   return (
-    <video 
+    <video
       className="avatar-video"
-      autoPlay 
-      loop 
+      autoPlay
       playsInline
+      onEnded={onEnded}
       // ВНИМАНИЕ: Атрибут 'muted' отсутствует, чтобы включить звук
       src={VIDEO_SOURCE}
     />

@@ -1,0 +1,83 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+.header {
+  padding: 24px 20px 12px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 20px;
+}
+
+.viewfinder {
+  position: relative;
+  width: 80vw;
+  max-width: 320px;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #111;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.corner {
+  width: 70%;
+  height: 70%;
+  border: 3px solid rgba(72, 191, 72, 0.8);
+  border-radius: 12px;
+}
+
+.errorBox {
+  text-align: center;
+}
+
+.errorText {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.retryBtn {
+  padding: 10px 20px;
+  background: #48bf48;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}

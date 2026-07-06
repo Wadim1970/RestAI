@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'; 
 import { HashRouter, Routes, Route } from 'react-router-dom'; 
-import MainScreen from './components/MainScreen'; 
+import MainScreen from './components/MainScreen';
+import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
@@ -25,6 +26,11 @@ function getOrCreateDeviceId() {
  function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null); // 1. Добавляем стейт для номера столика
+  // Пока эффект ниже не отработал — ещё не знаем, известен ли стол из
+  // URL/localStorage. Без этого флага HomeGate на первом рендере успевал
+  // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
+  // известен (tableNumber стартует с null, эффект выставляет его чуть позже).
+  const [entryResolved, setEntryResolved] = useState(false);
 
   // Получаем ID ресторана и номер столика из URL параметров или localStorage
   useEffect(() => {
@@ -70,7 +76,20 @@ function getOrCreateDeviceId() {
         // Номер стола не задаем, так как это прямой заход не из-за столика
       }
     }
+
+    setEntryResolved(true);
   }, []);
+
+  // Сканер внутри приложения (GuestScanner) вызывает это при успешном скане
+  // QR стола — тот же путь сохранения, что и для стола из URL выше, чтобы
+  // дальше всё (заказ, счёт, RPC) работало одинаково независимо от того,
+  // как стол стал известен.
+  const handleTableScanned = (rid, table) => {
+    setRestaurantId(rid);
+    setTableNumber(table);
+    localStorage.setItem('restaurant_id', rid);
+    localStorage.setItem('table_number', table);
+  };
 
   // Загружаем брендинг для текущего ресторана
   const { branding, loading: brandingLoading } = useBrandingConfig(restaurantId);
@@ -466,9 +485,21 @@ const handlePayFlowPaid = async () => {
     <BrandingProvider branding={branding} loading={brandingLoading}>
       <ThemeProvider>
         <Routes>
-          <Route 
-            path="/" 
-            element={<MainScreen onChatModeToggle={handleToggleChatMode} isChatOpen={isChatOpen} />} 
+          <Route
+            path="/"
+            element={
+              entryResolved ? (
+                <HomeGate
+                  restaurantId={restaurantId}
+                  tableNumber={tableNumber}
+                  onScanned={handleTableScanned}
+                  onChatModeToggle={handleToggleChatMode}
+                  isChatOpen={isChatOpen}
+                />
+              ) : (
+                <div style={{ position: 'fixed', inset: 0, background: '#000' }} />
+              )
+            }
           />
           <Route 
             path="/menu" 
