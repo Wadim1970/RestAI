@@ -4,9 +4,15 @@ import styles from './InstallPromo.module.css'
 
 const HIDE_KEY = 'restai_hide_install_promo'
 
-export default function InstallPromo({ isIOS, canInstall, onInstallClick, onContinue }) {
+export default function InstallPromo({ isIOS, isAndroid, canInstall, onInstallClick, onContinue }) {
   const [rulesOpen, setRulesOpen] = useState(false)
   const [neverAgain, setNeverAgain] = useState(false)
+  // Chrome решает сам, когда прислать нативную подсказку (beforeinstallprompt) —
+  // по внутренней эвристике вовлечённости, это не гарантировано даже на
+  // технически готовой странице. Кнопка на Android поэтому есть ВСЕГДА: если
+  // нативная подсказка подоспела — жмём её; если нет — показываем свой
+  // запасной путь через меню самого браузера, который работает без условий.
+  const [showManualAndroidHint, setShowManualAndroidHint] = useState(false)
 
   const handleContinue = () => {
     // На iOS факт установки из Safari не увидеть (изолированное хранилище) —
@@ -15,6 +21,14 @@ export default function InstallPromo({ isIOS, canInstall, onInstallClick, onCont
       localStorage.setItem(HIDE_KEY, '1')
     }
     onContinue()
+  }
+
+  const handleAndroidClick = () => {
+    if (canInstall) {
+      onInstallClick()
+    } else {
+      setShowManualAndroidHint(true)
+    }
   }
 
   return (
@@ -30,13 +44,23 @@ export default function InstallPromo({ isIOS, canInstall, onInstallClick, onCont
         Правила участия
       </button>
 
-      {canInstall && (
-        <button className={styles.installBtn} onClick={onInstallClick}>
-          Установить приложение
-        </button>
+      {isAndroid && (
+        <>
+          <button className={styles.installBtn} onClick={handleAndroidClick}>
+            Установить приложение
+          </button>
+          {showManualAndroidHint && (
+            <div className={styles.iosHint}>
+              <p className={styles.iosHintText}>
+                Откройте меню браузера <MenuDotsIcon /> в правом верхнем углу
+                и выберите «Установить приложение» (или «Добавить на главный экран»)
+              </p>
+            </div>
+          )}
+        </>
       )}
 
-      {!canInstall && isIOS && (
+      {isIOS && (
         <div className={styles.iosHint}>
           <p className={styles.iosHintText}>
             Нажмите <ShareIcon /> внизу экрана, затем «На экран «Домой»
@@ -83,6 +107,25 @@ function ShareIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+// Иконка "три точки" (меню браузера) — узнаваемый ориентир для Android,
+// аналогично ShareIcon для iOS.
+function MenuDotsIcon() {
+  return (
+    <svg
+      className={styles.shareIcon}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="12" cy="5" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="12" cy="19" r="2" />
     </svg>
   )
 }
