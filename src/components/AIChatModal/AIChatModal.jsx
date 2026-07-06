@@ -14,6 +14,40 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
 
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
 
+  // Эффект "печати": ответ уже пришёл целиком, но на экране открывается
+  // постепенно, по несколько символов за тик — визуально как живой чат.
+  const [typingText, setTypingText] = useState(null); // полный текст текущего "печатаемого" сообщения
+  const [typedLength, setTypedLength] = useState(0); // сколько символов уже показано
+  const typingIntervalRef = useRef(null);
+
+  const typeOutMessage = (text) => {
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+    }
+    setTypingText(text);
+    setTypedLength(0);
+    typingIntervalRef.current = setInterval(() => {
+      setTypedLength(prev => {
+        const next = prev + 3;
+        if (next >= text.length) {
+          clearInterval(typingIntervalRef.current);
+          typingIntervalRef.current = null;
+          setMessages(m => [...m, { role: 'bot', text }]);
+          setTypingText(null);
+          return 0;
+        }
+        return next;
+      });
+    }, 20);
+  };
+
+  // Не даём интервалу пережить размонтирование компонента
+  useEffect(() => {
+    return () => {
+      if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+    };
+  }, []);
+
   // Функция, которая принудительно прокручивает контейнер вниз
   const scrollToBottom = () => {
     // scrollIntoView плавно двигает экран к элементу messagesEndRef
@@ -28,9 +62,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         // Отправляем маркер "ПРИВЕТСТВИЕ" при КАЖДОМ открытии чата
         // ИИ получит этот маркер + актуальный pageContext и выдаст нужную фразу
         const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, restaurantId, guestId);
-        
-        // Добавляем новый ответ ИИ в конец существующей истории (не очищая её)
-        setMessages(prev => [...prev, { role: 'bot', text: aiGreeting }]);
+
+        // Показываем ответ ИИ эффектом печати, в историю попадёт по завершении
+        typeOutMessage(aiGreeting);
       };
       fetchGreeting();
     }
@@ -50,7 +84,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
     if (viewMode === 'text') {
       scrollToBottom(); // Как только массив messages изменился — скроллим вниз
     }
-  }, [messages, isLoading, viewMode]); // Триггеры: новые сообщения, статус "печатает" или смена режима
+  }, [messages, isLoading, viewMode, typedLength]); // Триггеры: новые сообщения, статус "печатает", смена режима, рост печатаемого текста
 
   // Функция авто-роста поля ввода
   useEffect(() => {
@@ -73,9 +107,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
 
       // Отправляем запрос в n8n (теперь с контекстом блюда и динамической сессией)
       const aiResponse = await sendMessageToAI(userText, pageContext, sessionId, restaurantId, guestId);
-      
-      // Добавляем ответ бота в историю
-      setMessages(prev => [...prev, { role: 'bot', text: aiResponse }]);
+
+      // Показываем ответ эффектом печати, в историю попадёт по завершении
+      typeOutMessage(aiResponse);
     } else {
       // Если текста нет — переключаем видео/текст
       setViewMode(prev => prev === 'text' ? 'video' : 'text');
@@ -119,6 +153,13 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
                 {msg.text}
               </div>
             ))}
+
+            {/* Сообщение, которое сейчас "печатается" символ за символом */}
+            {typingText !== null && (
+              <div className={styles['modal-botMessage']}>
+                {typingText.slice(0, typedLength)}
+              </div>
+            )}
 
             {/* Индикатор того, что бот думает (показываем только когда уже есть сообщения) */}
             {isLoading && messages.length > 0 && (
