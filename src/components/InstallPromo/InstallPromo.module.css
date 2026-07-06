@@ -1,0 +1,106 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #0d1b0a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+  color: #fff;
+}
+
+.logo {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.motivation {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #d8ded4;
+  max-width: 320px;
+}
+
+.rulesLink {
+  background: none;
+  border: none;
+  color: #9fd88a;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 28px;
+}
+
+.installBtn {
+  width: 100%;
+  max-width: 320px;
+  padding: 15px;
+  background: #48bf48;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.iosHint {
+  width: 100%;
+  max-width: 320px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.iosHintText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.shareIcon {
+  color: #48bf48;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.continueBtn {
+  background: none;
+  border: none;
+  color: #b7bfc7;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.neverAgain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #9aa3ab;
+  cursor: pointer;
+}
