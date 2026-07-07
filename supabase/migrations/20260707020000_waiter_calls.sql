@@ -32,7 +32,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.waiter_calls (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  restaurant_id    uuid NOT NULL REFERENCES public.restaurants(id),
+  restaurant_id    uuid NOT NULL REFERENCES public.restaurants("restaurantId"),
   table_id         uuid NOT NULL REFERENCES public.tables(id),
   table_number     text NOT NULL,
   target_waiter_id uuid NULL REFERENCES public.waiters(id),
