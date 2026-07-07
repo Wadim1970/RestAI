@@ -51,14 +51,10 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
 
                 {/* 3. Кнопка Вызова официанта — колокольчик качается, пока вызов не принят */}
                 <div className={styles.navItem}>
-                    <button
-                        className={`${styles.navButton} ${styles.callButton}`}
-                        onClick={onCallClick}
-                        disabled={isCallPending}
-                    >
+                    <button className={`${styles.navButton} ${styles.callButton}`} onClick={onCallClick}>
                         <Bell isRinging={isCallPending} />
                     </button>
-                    <span className={styles.label}>{isCallPending ? 'Официант уже в курсе' : 'Вызов официанта'}</span>
+                    <span className={styles.label}>Вызов официанта</span>
                 </div>
 
             </div>
