@@ -64,8 +64,8 @@
 /* Контейнер для главного изображения блюда */
 .imageContainer {
     position: relative; /* Для позиционирования крестика и ценника внутри */
-    width: 90vw !important; /* Ширина 90% от ширины экрана */
-    height: 90vw !important; /* Высота равна ширине для идеального квадрата */
+    width: calc(100vw - 60px) !important; /* Те же 30px с каждой стороны, что и отступ сверху у .overlay */
+    height: calc(100vw - 60px) !important; /* Высота равна ширине для идеального квадрата */
     margin: 2.73vw auto 0 auto !important; /* 12px сверху и центрирование */
     border-radius: 2.27vw !important; /* Скругление углов 10px */
     overflow: hidden !important; /* Скрываем края картинки, выходящие за скругления */
@@ -158,8 +158,8 @@
 /* Контейнер для текстовой информации */
 .content {
     text-align: center; /* Выравнивание всего текста по центру */
-    padding: 0 2.73vw; /* 12px отступы по бокам */
-    
+    padding: 0 30px; /* Те же 30px, что и у картинки — текст вровень с ней */
+
 }
 
 /* Заголовки секций (Описание, Состав и т.д.) */
@@ -305,7 +305,7 @@
 /* Стили для алкогольной продукции */
 .alcoholContent {
     text-align: left !important; /* Выравнивание влево */
-    padding: 0 !important; /* Убираем отступы */
+    /* Отступы больше не обнуляем — наследуются от .content (те же 30px, что и у картинки) */
 }
 
 /* Контейнер алкогольного описания */
@@ -317,8 +317,6 @@
 .alcoholTitle {
     font-size: 5.45vw; /* 24px */
     font-weight: 600; /* Полужирный */
-    margin-left: 5vw; /* 22px отступ слева */
-    width: 87.5vw; /* Ограничение ширины текста */
     line-height: 1.2; /* Интервал */
     margin-bottom: 4.55vw; /* 20px до начала характеристик */
 }
@@ -332,7 +330,6 @@
 .specRow {
     display: flex; /* В одну линию */
     justify-content: space-between; /* Ключ слева, значение справа */
-    padding: 0 5vw; /* 22px отступы по краям */
     margin-bottom: 1.82vw; /* 8px между строками */
 }
 
@@ -353,7 +350,6 @@
 .alcoholSectionLabel {
     font-size: 3.64vw; /* 16px */
     font-weight: 700; /* Жирный */
-    margin-left: 5vw; /* 22px отступ */
     margin-top: 4.55vw; /* 20px сверху */
     margin-bottom: 1.82vw; /* 8px снизу */
 }
@@ -362,7 +358,5 @@
 .alcoholText {
     font-size: 3.64vw; /* 16px */
     font-weight: 300; /* Тонкий */
-    margin-left: 5vw; /* 22px отступ */
-    width: 88.64vw; /* Ширина блока текста */
     line-height: 1.4; /* Интервал */
 }
