@@ -20,7 +20,9 @@ export default function MenuPage({
     onConfirmOrder,
     onOpenChat,
     trackDishView,
-    onRequestBill
+    onRequestBill,
+    onCallWaiter,
+    isCallPending = false
 }) {
     const [groupedMenu, setGroupedMenu] = useState({});
     const [loading, setLoading] = useState(true);
@@ -277,7 +279,8 @@ useEffect(() => {
                 orderActive={isOrderActive} 
                 onChatClick={() => onOpenChat(null, activeSection)} 
                 onOrderClick={() => setIsCartOpen(true)}
-                onCallClick={() => console.log("вызов официанта")}
+                onCallClick={onCallWaiter}
+                isCallPending={isCallPending}
             />
 
             <DishModal 

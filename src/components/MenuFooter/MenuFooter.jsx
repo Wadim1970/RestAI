@@ -15,12 +15,16 @@ const Basket = ({ isActive }) => (
     />
 );
 
-const Bell = () => (
-    <img src="/icons/free-icon-notification-bell.png" alt="Звонок" className={styles.callIcon} />
+const Bell = ({ isRinging }) => (
+    <img
+        src="/icons/free-icon-notification-bell.png"
+        alt="Звонок"
+        className={`${styles.callIcon} ${isRinging ? styles.callIconRinging : ''}`}
+    />
 );
 
-export default function MenuFooter({ orderActive = false, onChatClick, onOrderClick, onCallClick }) {
- 
+export default function MenuFooter({ orderActive = false, onChatClick, onOrderClick, onCallClick, isCallPending = false }) {
+
     return (
         <footer className={styles.footerContainer}>
             <div className={styles.buttonArea}>
@@ -35,8 +39,8 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
 
                 {/* 2. Кнопка Заказа (Корзина) */}
                 <div className={styles.navItem}>
-                    <button 
-                        className={`${styles.navButton} ${styles.orderButton} ${orderActive ? styles.active : ''}`} 
+                    <button
+                        className={`${styles.navButton} ${styles.orderButton} ${orderActive ? styles.active : ''}`}
                         onClick={onOrderClick}
                         disabled={!orderActive}
                     >
@@ -45,10 +49,10 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
                     <span className={styles.label}>Заказ</span>
                 </div>
 
-                {/* 3. Кнопка Вызова официанта */}
+                {/* 3. Кнопка Вызова официанта — колокольчик качается, пока вызов не принят */}
                 <div className={styles.navItem}>
                     <button className={`${styles.navButton} ${styles.callButton}`} onClick={onCallClick}>
-                        <Bell />
+                        <Bell isRinging={isCallPending} />
                     </button>
                     <span className={styles.label}>Вызов официанта</span>
                 </div>

@@ -143,4 +143,19 @@
 .callIcon {
     width: 2.25rem;            /* Ширина иконки вызова 36px */
     height: 2.25rem;           /* Высота иконки вызова 36px */
+    transform-origin: 50% 0%;  /* Качается от "точки подвеса" сверху, как настоящий колокольчик */
+}
+
+/* Пока вызов не принят официантом — колокольчик покачивается влево-вправо */
+.callIconRinging {
+    animation: bellRing 1s ease-in-out infinite;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(16deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(9deg); }
+    60% { transform: rotate(-6deg); }
+    75% { transform: rotate(3deg); }
 }
