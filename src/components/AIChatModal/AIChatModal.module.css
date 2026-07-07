@@ -24,6 +24,29 @@
     transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
+/* Индикатор свайпа вниз (как в DishModal/CartModal) — виден в обоих режимах */
+.dragLine {
+    position: relative;
+    z-index: 200;
+    width: 60px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 2px;
+    margin: 12px auto 0;
+    flex-shrink: 0;
+}
+
+/* Анимация закрытия: подложка гаснет, окно уезжает вниз */
+.fadeOut {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.slideDown {
+    transform: translateY(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
 /* ПЕРВАЯ КНОПКА: Крестик закрытия */
 .modal-closeBtn {
     position: absolute; /* Ставим в конкретную точку */

@@ -12,7 +12,83 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
   const textAreaRef = useRef(null); // Ссылка на поле ввода для изменения высоты
   const messagesEndRef = useRef(null); // Ссылка на невидимый элемент в конце чата для автоскролла
 
+  // Свайп вниз для закрытия — тот же паттерн, что в DishModal/CartModal
+  const [isClosing, setIsClosing] = useState(false); // Стейт для анимации закрытия
+  const touchStart = useRef(null); // Координата Y начала касания
+  const touchEnd = useRef(null); // Координата Y конца/движения касания
+  const modalRef = useRef(null); // Ссылка на само окно (чтобы его двигать)
+  const chatHistoryRef = useRef(null); // Ссылка на скроллящуюся историю чата
+  const minSwipeDistance = 150; // Минимальный свайп в пикселях для закрытия окна
+
   const { sendMessageToAI, isLoading } = useChatApi('https://restai.space/webhook/44a4dd94-18f4-43ec-bbcd-a71c1e30308f');
+
+  // Функция запуска анимации и закрытия
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 300);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+    }
+  }, [isOpen]);
+
+  // Начало касания
+  const onTouchStart = (e) => {
+    touchStart.current = e.targetTouches[0].clientY;
+    touchEnd.current = e.targetTouches[0].clientY;
+  };
+
+  // Движение пальца — тянем модалку визуально, только если история уже
+  // проскроллена до самого верха (или мы в видео-режиме, где скролла нет)
+  const onTouchMove = (e) => {
+    touchEnd.current = e.targetTouches[0].clientY;
+    const distance = touchEnd.current - touchStart.current;
+    const atTop = !chatHistoryRef.current || chatHistoryRef.current.scrollTop <= 0;
+
+    if (distance > 0 && atTop && modalRef.current) {
+      modalRef.current.style.transform = `translateY(${distance}px)`;
+      modalRef.current.style.transition = 'none';
+    }
+  };
+
+  // Окончание касания
+  const onTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
+    const distance = touchEnd.current - touchStart.current;
+    const atTop = !chatHistoryRef.current || chatHistoryRef.current.scrollTop <= 0;
+
+    if (distance > minSwipeDistance && atTop) {
+      handleClose();
+    } else if (modalRef.current) {
+      modalRef.current.style.transform = 'translateY(0)';
+      modalRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    }
+
+    touchStart.current = null;
+    touchEnd.current = null;
+  };
+
+  // Не даём системному pull-to-refresh сработать поверх нашего жеста,
+  // когда история уже в самом верху и палец тянет вниз
+  useEffect(() => {
+    const listEl = chatHistoryRef.current;
+    if (!isOpen || !listEl) return;
+
+    const handleSystemScroll = (e) => {
+      const distance = e.touches[0].clientY - touchStart.current;
+      if (distance > 0 && listEl.scrollTop <= 0) {
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+
+    listEl.addEventListener('touchmove', handleSystemScroll, { passive: false });
+    return () => listEl.removeEventListener('touchmove', handleSystemScroll);
+  }, [isOpen, viewMode]);
 
   // Эффект "печати": ответ уже пришёл целиком, но на экране открывается
   // постепенно, по несколько символов за тик — визуально как живой чат.
@@ -117,9 +193,18 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
   };
 
   return (
-    <div className={styles['modal-overlay']}> {/* Темная подложка */}
-      <div className={styles['modal-glassContainer']}> {/* Основное окно */}
-        
+    <div className={`${styles['modal-overlay']} ${isClosing ? styles.fadeOut : ''}`}> {/* Темная подложка */}
+      <div
+        ref={modalRef}
+        className={`${styles['modal-glassContainer']} ${isClosing ? styles.slideDown : ''}`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      > {/* Основное окно */}
+
+        {/* Индикатор свайпа вниз для закрытия */}
+        <div className={styles.dragLine}></div>
+
         {/* Видео-аватар */}
         {viewMode === 'video' && (
           <div className={styles['videoWrapper']}>
@@ -132,13 +217,13 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         )}
 
         {/* Кнопка закрытия модалки */}
-        <button className={styles['modal-closeBtn']} onClick={onClose}>
+        <button className={styles['modal-closeBtn']} onClick={handleClose}>
           <img src="/icons/icon-on.png" alt="Закрыть" />
         </button>
 
         {/* Область переписки */}
         {viewMode === 'text' && (
-          <div className={styles['modal-chatHistory']}>
+          <div className={styles['modal-chatHistory']} ref={chatHistoryRef}>
             {/* Если сообщений еще нет и идет загрузка самого первого ответа */}
             {messages.length === 0 && isLoading && (
               <div className={styles['modal-botMessage']}>Подключаюсь к меню...</div>
