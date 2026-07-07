@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom'; 
 import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
@@ -27,6 +27,8 @@ function getOrCreateDeviceId() {
   const [restaurantId, setRestaurantId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null); // 1. Добавляем стейт для номера столика
   const [callStatus, setCallStatus] = useState('idle'); // 'idle' | 'pending' | 'acknowledged' — вызов официанта
+  const activeCallIdRef = useRef(null); // id текущего вызова — нужен для отмены
+  const activeCallChannelRef = useRef(null); // realtime-канал текущего вызова
   // Пока эффект ниже не отработал — ещё не знаем, известен ли стол из
   // URL/localStorage. Без этого флага HomeGate на первом рендере успевал
   // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
@@ -323,9 +325,31 @@ const handleRequestBill = async () => {
 // Живой вызов официанта (кнопка-колокольчик в MenuFooter). RPC сама решает
 // адресата (конкретный официант, если ровно один закреплён за столом
 // сегодня, иначе — все на смене в ресторане) и возвращает id вызова —
-// подписываемся на него, чтобы узнать момент отклика.
+// подписываемся на него, чтобы узнать момент отклика. Повторное нажатие,
+// пока вызов ещё не принят — отмена (гость не может отменить ПРИНЯТЫЙ
+// вызов, только висящий в ожидании).
 const handleCallWaiter = async () => {
-  if (callStatus === 'pending' || !restaurantId || !tableNumber) return;
+  if (!restaurantId || !tableNumber) return;
+
+  if (callStatus === 'pending') {
+    const callId = activeCallIdRef.current;
+    if (activeCallChannelRef.current) {
+      supabase.removeChannel(activeCallChannelRef.current);
+      activeCallChannelRef.current = null;
+    }
+    activeCallIdRef.current = null;
+    setCallStatus('idle');
+    if (callId) {
+      try {
+        await supabase.rpc('cancel_waiter_call', { p_call_id: callId });
+      } catch (err) {
+        console.error('Ошибка отмены вызова:', err);
+      }
+    }
+    return;
+  }
+
+  if (callStatus === 'acknowledged') return; // ждём, пока тост сам погаснет
 
   try {
     const { data: callId, error } = await supabase.rpc('call_waiter', {
@@ -338,6 +362,7 @@ const handleCallWaiter = async () => {
       return;
     }
 
+    activeCallIdRef.current = callId;
     setCallStatus('pending');
 
     const channel = supabase
@@ -348,10 +373,14 @@ const handleCallWaiter = async () => {
         if (payload.new.status === 'acknowledged') {
           setCallStatus('acknowledged');
           supabase.removeChannel(channel);
+          activeCallChannelRef.current = null;
+          activeCallIdRef.current = null;
           setTimeout(() => setCallStatus('idle'), 4000);
         }
       })
       .subscribe();
+
+    activeCallChannelRef.current = channel;
   } catch (err) {
     console.error('Системная ошибка при вызове официанта:', err);
   }
