@@ -26,6 +26,7 @@ function getOrCreateDeviceId() {
  function AppContent() {
   const [restaurantId, setRestaurantId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null); // 1. Добавляем стейт для номера столика
+  const [callStatus, setCallStatus] = useState('idle'); // 'idle' | 'pending' | 'acknowledged' — вызов официанта
   // Пока эффект ниже не отработал — ещё не знаем, известен ли стол из
   // URL/localStorage. Без этого флага HomeGate на первом рендере успевал
   // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
@@ -318,6 +319,44 @@ const handleRequestBill = async () => {
     alert("Вы еще ничего не заказали!");
   }
 };
+
+// Живой вызов официанта (кнопка-колокольчик в MenuFooter). RPC сама решает
+// адресата (конкретный официант, если ровно один закреплён за столом
+// сегодня, иначе — все на смене в ресторане) и возвращает id вызова —
+// подписываемся на него, чтобы узнать момент отклика.
+const handleCallWaiter = async () => {
+  if (callStatus === 'pending' || !restaurantId || !tableNumber) return;
+
+  try {
+    const { data: callId, error } = await supabase.rpc('call_waiter', {
+      p_restaurant_id: restaurantId,
+      p_table_number: String(tableNumber),
+    });
+
+    if (error) {
+      console.error('Ошибка вызова официанта:', error);
+      return;
+    }
+
+    setCallStatus('pending');
+
+    const channel = supabase
+      .channel(`waiter_call:${callId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `id=eq.${callId}`,
+      }, (payload) => {
+        if (payload.new.status === 'acknowledged') {
+          setCallStatus('acknowledged');
+          supabase.removeChannel(channel);
+          setTimeout(() => setCallStatus('idle'), 4000);
+        }
+      })
+      .subscribe();
+  } catch (err) {
+    console.error('Системная ошибка при вызове официанта:', err);
+  }
+};
+
 // Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
 // данные и показываем экран благодарности. Оплата (какие места помечены
 // paid) и уведомление официанта (статус стола через RPC) к этому моменту
@@ -510,7 +549,9 @@ const handlePayFlowPaid = async () => {
                 updateCart={updateCart} 
                 confirmedOrders={confirmedOrders}
                 onConfirmOrder={handleConfirmOrder}
-                onRequestBill={handleRequestBill} 
+                onRequestBill={handleRequestBill}
+                onCallWaiter={handleCallWaiter}
+                isCallPending={callStatus === 'pending'}
                 onOpenChat={(dish, currentSection) => {
                   // Генерируем сессию ТОЛЬКО если ее еще нет
                   if (!currentSessionId) {
@@ -565,6 +606,23 @@ const handlePayFlowPaid = async () => {
           seatNumbers={payFlowSeats || []}
           onPaid={handlePayFlowPaid}
         />
+
+        {/* Официант откликнулся на вызов — показываем на несколько секунд и гасим сами */}
+        {callStatus === 'acknowledged' && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.45)', zIndex: 999999, padding: '1rem',
+          }}>
+            <div style={{
+              background: '#FBFBF9', borderRadius: '1rem', padding: '1.5rem 2rem',
+              textAlign: 'center', fontFamily: 'var(--font-heading, sans-serif)',
+              fontWeight: 700, fontSize: '1.1rem', color: '#304D22', maxWidth: '20rem',
+            }}>
+              Официант уже спешит к вам
+            </div>
+          </div>
+        )}
 
              {/* ВЕРХНИЙ ВЫБОР: позвать официанта / оплатить самому */}
 {isBillChoiceOpen && (
