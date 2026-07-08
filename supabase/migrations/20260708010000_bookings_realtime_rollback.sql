@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS public.bookings;
+ALTER TABLE public.bookings REPLICA IDENTITY DEFAULT;
+
+COMMIT;
