@@ -381,6 +381,20 @@ const handleCallWaiter = async () => {
       .subscribe();
 
     activeCallChannelRef.current = channel;
+
+    // Push — дополнительный канал поверх Realtime, специально для случая,
+    // когда приложение официанта полностью свёрнуто (тогда ни звук, ни
+    // сама подписка выше не сработают — JS страницы не выполняется).
+    // Best-effort: если запрос не дойдёт, живой канал всё равно отработает,
+    // пока официант не свернул приложение целиком.
+    const waiterApiUrl = import.meta.env.VITE_WAITER_API_URL;
+    if (waiterApiUrl) {
+      fetch(`${waiterApiUrl.replace(/\/$/, '')}/api/send-waiter-call-push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId }),
+      }).catch(() => {});
+    }
   } catch (err) {
     console.error('Системная ошибка при вызове официанта:', err);
   }
