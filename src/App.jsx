@@ -386,6 +386,45 @@ const handleCallWaiter = async () => {
   }
 };
 
+// Пока гость ждёт ответа, телефон может заблокироваться/уйти в фон —
+// Realtime-соединение вкладки браузер мог оборвать, и UPDATE-событие
+// об отклике официанта до неё уже не долетит (тот же класс бага, что
+// был у официанта с пропущенными вызовами, только тут наоборот — гость
+// не узнаёт, что вызов приняли, колокольчик трепыхается бесконечно).
+// При возврате видимости — сверяем статус вызова напрямую, а не ждём
+// событие.
+useEffect(() => {
+  const checkCallStatus = async () => {
+    const callId = activeCallIdRef.current;
+    if (!callId || callStatus !== 'pending') return;
+    try {
+      const { data, error } = await supabase
+        .from('waiter_calls')
+        .select('status')
+        .eq('id', callId)
+        .single();
+
+      if (!error && data?.status === 'acknowledged') {
+        setCallStatus('acknowledged');
+        if (activeCallChannelRef.current) {
+          supabase.removeChannel(activeCallChannelRef.current);
+          activeCallChannelRef.current = null;
+        }
+        activeCallIdRef.current = null;
+        setTimeout(() => setCallStatus('idle'), 4000);
+      }
+    } catch (err) {
+      console.error('Ошибка проверки статуса вызова:', err);
+    }
+  };
+
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') checkCallStatus();
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, [callStatus]);
+
 // Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
 // данные и показываем экран благодарности. Оплата (какие места помечены
 // paid) и уведомление официанта (статус стола через RPC) к этому моменту
