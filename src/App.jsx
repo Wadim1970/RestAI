@@ -757,7 +757,6 @@ const handlePayFlowPaid = async () => {
             isOpen={isCabinetOpen}
             onOpen={() => setIsCabinetOpen(true)}
             onClose={handleCabinetClose}
-            guestId={guestId}
             deviceId={getOrCreateDeviceId()}
             registrationContext={cabinetRegistrationContext}
           />
