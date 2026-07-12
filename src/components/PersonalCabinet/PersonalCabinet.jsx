@@ -142,7 +142,27 @@ export default function PersonalCabinet({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Не удалось подтвердить код');
 
-      setProfile((prev) => ({ ...prev, name: name.trim(), phone, points: data.points ?? prev?.points }));
+      // register_guest_and_credit_quiz сохраняет только имя+телефон — день
+      // рождения и нелюбимые продукты (гость мог заполнить их в той же
+      // форме) досохраняем отдельным вызовом, иначе они потеряются.
+      const { error: profileError } = await supabase.rpc('update_guest_profile', {
+        p_device_id: deviceId,
+        p_name: name.trim(),
+        p_birthday_day: birthdayDay ? Number(birthdayDay) : null,
+        p_birthday_month: birthdayMonth ? Number(birthdayMonth) : null,
+        p_dislikes: dislikes.trim() || null,
+      });
+      if (profileError) console.error('Не удалось сохранить доп. поля профиля:', profileError);
+
+      setProfile((prev) => ({
+        ...prev,
+        name: name.trim(),
+        phone,
+        points: data.points ?? prev?.points,
+        birthday_day: birthdayDay ? Number(birthdayDay) : null,
+        birthday_month: birthdayMonth ? Number(birthdayMonth) : null,
+        dislikes: dislikes.trim() || null,
+      }));
       setSmsStep('idle');
       setSmsCode('');
 
