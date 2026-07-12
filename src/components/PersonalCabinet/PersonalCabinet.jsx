@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useSwipeLeftOpen } from '../../hooks/useSwipeLeftOpen';
+import { useSwipeRightClose } from '../../hooks/useSwipeRightClose';
 import styles from './PersonalCabinet.module.css';
 
 const WAITER_API_URL = import.meta.env.VITE_WAITER_API_URL;
@@ -53,6 +54,7 @@ export default function PersonalCabinet({
       if (cancelled) return;
       if (error) {
         console.error('Не удалось загрузить профиль гостя:', error);
+        setError('Не удалось загрузить профиль, попробуйте закрыть и открыть кабинет снова');
         return;
       }
       const row = data?.[0];
@@ -88,6 +90,10 @@ export default function PersonalCabinet({
     setSuccessMessage('');
     onClose();
   };
+
+  // Свайп вправо по открытой панели закрывает её — тот же жест, что
+  // useSwipeLeftOpen на флажке, но в обратную сторону.
+  const closeSwipeHandlers = useSwipeRightClose(handleClose);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -201,7 +207,7 @@ export default function PersonalCabinet({
 
       {isOpen && (
         <div className={styles.overlay}>
-          <div className={styles.panel}>
+          <div className={styles.panel} {...closeSwipeHandlers}>
             <button className={styles.closeBtn} onClick={handleClose} aria-label="Закрыть">✕</button>
 
             <div className={styles.pointsBlock}>
