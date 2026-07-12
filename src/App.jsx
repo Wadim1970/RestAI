@@ -6,6 +6,8 @@ import MenuPage from './components/MenuPage';
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
+import QuizModal from './components/QuizModal/QuizModal';
+import PersonalCabinet from './components/PersonalCabinet/PersonalCabinet';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
@@ -174,6 +176,16 @@ useEffect(() => {
   const [isSplitBillOpen, setIsSplitBillOpen] = useState(false);   // Экран выбора корзин по местам
   const [payFlowSeats, setPayFlowSeats] = useState(null);          // Места для оплаты -> открывает поток чек/СБП
   const [tableTotalAmount, setTableTotalAmount] = useState(0);
+  // Викторина-гейт перед экраном чек/оплата ('pay') или перед оценкой
+  // ресторана ('waiter') — стоит МЕЖДУ выбором способа рассчитаться и
+  // самим экраном, а не поверх него. pendingAfterQuizRef хранит то
+  // действие, которое викторина отложила (открыть оплату / показать
+  // отзыв), и выполняется один раз, когда викторина завершается любым
+  // из трёх путей (отказ / неверный ответ / успешная регистрация).
+  const [quizTrigger, setQuizTrigger] = useState(null); // 'pay' | 'waiter' | null
+  const pendingAfterQuizRef = useRef(null);
+  const [isCabinetOpen, setIsCabinetOpen] = useState(false);
+  const [cabinetRegistrationContext, setCabinetRegistrationContext] = useState(null); // { questionId, selectedIndex } | null
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
   const [ratingService, setRatingService] = useState(0); // Оценка сервиса (0-5)
@@ -488,7 +500,11 @@ const callWaiterWithBill = async (billType) => {
       });
       if (error) console.error('Ошибка запроса счёта:', error);
     }
-    await finishGuestSession('waiter');
+    // Официант уже вызван — пока он несёт счёт, показываем викторину.
+    // Экран с оценкой ресторана (finishGuestSession) откроется, когда
+    // викторина завершится (в любом из трёх исходов).
+    pendingAfterQuizRef.current = () => finishGuestSession('waiter');
+    setQuizTrigger('waiter');
   } finally {
     setIsProcessing(false);
   }
@@ -499,7 +515,11 @@ const callWaiterWithBill = async (billType) => {
 const handlePayChoiceOwn = () => {
   if (billMode === 'waiter') { callWaiterWithBill('personal'); return; }
   setIsPayChoiceOpen(false);
-  if (seatNumber != null) setPayFlowSeats([seatNumber]);
+  if (seatNumber != null) {
+    // Чек формируется — сначала викторина, поток оплаты откроется по её завершении.
+    pendingAfterQuizRef.current = () => setPayFlowSeats([seatNumber]);
+    setQuizTrigger('pay');
+  }
 };
 
 // "За весь стол": в ветке официанта -> общий счёт; в ветке оплаты -> выбор
@@ -514,10 +534,44 @@ const handleSplitBillClose = () => {
   setIsSplitBillOpen(false);
 };
 
-// Гость выбрал места в SplitBillModal -> ведём в поток оплаты по этим местам.
+// Гость выбрал места в SplitBillModal -> сначала викторина, затем поток
+// оплаты по этим местам.
 const handleSplitBillConfirm = (seats) => {
   setIsSplitBillOpen(false);
-  if (seats && seats.length > 0) setPayFlowSeats(seats);
+  if (seats && seats.length > 0) {
+    pendingAfterQuizRef.current = () => setPayFlowSeats(seats);
+    setQuizTrigger('pay');
+  }
+};
+
+// Викторина закрылась без регистрации (отказ / неверный ответ / вопросов
+// не осталось) -> выполняем то, что было отложено (открыть оплату или
+// показать экран отзыва), как будто викторины и не было.
+const handleQuizDone = () => {
+  setQuizTrigger(null);
+  const next = pendingAfterQuizRef.current;
+  pendingAfterQuizRef.current = null;
+  if (next) next();
+};
+
+// Верный ответ -> без промежуточных окон сразу переключаем на личный
+// кабинет с баннером регистрации поверх него (там же телефон/имя/SMS).
+const handleQuizCorrectAnswer = (questionId, selectedIndex) => {
+  setQuizTrigger(null);
+  setCabinetRegistrationContext({ questionId, selectedIndex });
+  setIsCabinetOpen(true);
+};
+
+// Кабинет закрылся. Если он был открыт из викторины (registrationContext) —
+// неважно, успела ли пройти регистрация или гость просто закрыл окно —
+// возвращаемся туда, куда вели до викторины. Если кабинет открыли вручную
+// свайпом — это обычное закрытие, откладывать нечего.
+const handleCabinetClose = () => {
+  setIsCabinetOpen(false);
+  if (cabinetRegistrationContext) {
+    setCabinetRegistrationContext(null);
+    handleQuizDone();
+  }
 };
 
 // Оплата (мок-успех) прошла внутри PaymentFlowModal, места уже помечены paid —
@@ -688,6 +742,26 @@ const handlePayFlowPaid = async () => {
           seatNumbers={payFlowSeats || []}
           onPaid={handlePayFlowPaid}
         />
+
+        <QuizModal
+          isOpen={quizTrigger !== null}
+          trigger={quizTrigger}
+          guestId={guestId}
+          onDone={handleQuizDone}
+          onCorrectAnswer={handleQuizCorrectAnswer}
+        />
+
+        {/* Флажок-свайп личного кабинета виден только внутри сеанса за столиком */}
+        {tableNumber && (
+          <PersonalCabinet
+            isOpen={isCabinetOpen}
+            onOpen={() => setIsCabinetOpen(true)}
+            onClose={handleCabinetClose}
+            guestId={guestId}
+            deviceId={getOrCreateDeviceId()}
+            registrationContext={cabinetRegistrationContext}
+          />
+        )}
 
         {/* Официант откликнулся на вызов — показываем на несколько секунд и гасим сами */}
         {callStatus === 'acknowledged' && (

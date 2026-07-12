@@ -1,0 +1,254 @@
+/* ── Постоянный флажок на краю экрана (как МЕНЮ в Waiter-app) ── */
+.edgeTab {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-accent, #48BF48);
+    width: 25px;
+    border-radius: 12px 0 0 12px;
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5000;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.edgeTabText {
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 800;
+    font-size: 11px;
+    color: #fff;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    letter-spacing: 0.5px;
+}
+
+/* ── Полноэкранная панель ── */
+.overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000000;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.panel {
+    width: 100%;
+    max-width: 440px;
+    height: 100%;
+    background: var(--color-background, #ffffff);
+    display: flex;
+    flex-direction: column;
+    margin-left: auto;
+    padding: 24px 20px;
+    padding-top: calc(24px + env(safe-area-inset-top));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    font-family: var(--font-body, sans-serif);
+    box-sizing: border-box;
+    position: relative;
+    animation: slideInRight 0.25s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.closeBtn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    padding: 4px;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.pointsBlock {
+    text-align: center;
+    padding: 24px 0 20px;
+    margin-top: 12px;
+    flex-shrink: 0;
+}
+
+.pointsValue {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--color-primary, #304D22);
+    line-height: 1;
+}
+
+.pointsLabel {
+    font-size: 14px;
+    color: #888;
+    margin-top: 6px;
+}
+
+.registrationBanner {
+    background: var(--color-price-bg, #E5E0D4);
+    color: var(--color-primary, #304D22);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fieldLabel {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-primary, #304D22);
+    margin-top: 14px;
+}
+
+.fieldHint {
+    font-size: 12px;
+    color: #999;
+    margin-top: -2px;
+    margin-bottom: 2px;
+}
+
+.input,
+.textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: var(--font-body, sans-serif);
+    background: #fff;
+    color: #222;
+}
+
+.input:focus,
+.textarea:focus,
+.phoneInput:focus,
+.birthdayInput:focus {
+    outline: none;
+    border-color: var(--color-accent, #48BF48);
+}
+
+.textarea {
+    min-height: 64px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.phoneRow {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.phonePrefix {
+    padding: 12px 0 12px 14px;
+    font-size: 16px;
+    color: #222;
+    font-family: var(--font-body, sans-serif);
+}
+
+.phoneInput {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    padding: 12px 14px 12px 4px;
+    font-size: 16px;
+    font-family: var(--font-body, sans-serif);
+    background: transparent;
+    color: #222;
+}
+
+.birthdayRow {
+    display: flex;
+    gap: 10px;
+}
+
+.birthdayInput {
+    width: 70px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: var(--font-body, sans-serif);
+    text-align: center;
+    color: #222;
+}
+
+.error {
+    color: #d63333;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+.success {
+    color: #2e9e4a;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+.saveBtn {
+    width: 100%;
+    height: 52px;
+    margin-top: 22px;
+    background: #ccc;
+    color: #fff;
+    border: none;
+    border-radius: 26px;
+    font-size: 17px;
+    font-weight: 700;
+    font-family: var(--font-heading, sans-serif);
+    cursor: not-allowed;
+    flex-shrink: 0;
+}
+
+.saveBtnActive {
+    background: var(--color-accent, #48BF48);
+    cursor: pointer;
+}
+
+.saveBtnActive:active {
+    transform: scale(0.98);
+}
+
+.secondaryBtn {
+    width: 100%;
+    height: 44px;
+    margin-top: 10px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    font-family: var(--font-body, sans-serif);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.smsHint {
+    font-size: 14px;
+    color: #666;
+    margin: 4px 0 12px;
+    text-align: center;
+}
