@@ -19,7 +19,6 @@ export default function PersonalCabinet({
   isOpen,
   onOpen,
   onClose,
-  guestId,
   deviceId,
   registrationContext, // { questionId, selectedIndex } | null — задаёт вызывающая сторона
   onRegistrationComplete, // (points) => void
@@ -40,27 +39,36 @@ export default function PersonalCabinet({
   const swipeHandlers = useSwipeLeftOpen(onOpen);
 
   useEffect(() => {
-    if (!isOpen || !guestId) return;
+    if (!isOpen || !deviceId) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from('guests')
-        .select('name, phone, points, birthday_day, birthday_month, dislikes')
-        .eq('id', guestId)
-        .single();
-      if (cancelled || !data) return;
-      setProfile(data);
-      setName(data.name || '');
-      setPhoneDigits((data.phone || '').replace(/\D/g, '').slice(-10));
-      setBirthdayDay(data.birthday_day ? String(data.birthday_day) : '');
-      setBirthdayMonth(data.birthday_month ? String(data.birthday_month) : '');
-      setDislikes(data.dislikes || '');
+      // get_guest_profile (SECURITY DEFINER) — не читаем guests напрямую:
+      // это единственное место, где клиенту нужен доступ к профилю гостя,
+      // и прямой .from('guests').select(...) здесь упирался в RLS (весь
+      // остальной доступ к guests в проекте идёт через RPC), из-за чего
+      // profile молча оставался null, а кнопка сохранения — неактивной.
+      const { data, error } = await supabase.rpc('get_guest_profile', {
+        p_device_id: deviceId,
+      });
+      if (cancelled) return;
+      if (error) {
+        console.error('Не удалось загрузить профиль гостя:', error);
+        return;
+      }
+      const row = data?.[0];
+      if (!row) return;
+      setProfile(row);
+      setName(row.name || '');
+      setPhoneDigits((row.phone || '').replace(/\D/g, '').slice(-10));
+      setBirthdayDay(row.birthday_day ? String(row.birthday_day) : '');
+      setBirthdayMonth(row.birthday_month ? String(row.birthday_month) : '');
+      setDislikes(row.dislikes || '');
       setError('');
       setSuccessMessage('');
       setSmsStep('idle');
     })();
     return () => { cancelled = true; };
-  }, [isOpen, guestId]);
+  }, [isOpen, deviceId]);
 
   const phone = phoneDigits.length === 10 ? `+7${phoneDigits}` : '';
   const phoneChanged = !!profile && phone !== (profile.phone || '');
