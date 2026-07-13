@@ -68,6 +68,29 @@ export default function PersonalCabinet({
       setError('');
       setSuccessMessage('');
       setSmsStep('idle');
+
+      // Пришли сюда из викторины, но гость уже зарегистрирован (телефон
+      // подтверждён раньше) — начисляем баллы сразу, без повторной формы
+      // регистрации и SMS: личность уже доказана в прошлый раз.
+      if (registrationContext && row.phone) {
+        const { data: creditData, error: creditError } = await supabase.rpc('credit_quiz_points', {
+          p_device_id: deviceId,
+          p_question_id: registrationContext.questionId,
+          p_selected_index: registrationContext.selectedIndex,
+        });
+        if (cancelled) return;
+        const creditResult = creditData?.[0];
+        if (creditError || !creditResult?.ok) {
+          console.error('Не удалось начислить баллы:', creditError);
+          return; // остаёмся на обычной форме — мало ли, пусть попробует сохранить вручную
+        }
+        setProfile((prev) => ({ ...prev, points: creditResult.points }));
+        setSuccessMessage('Готово! Баллы начислены');
+        setTimeout(() => {
+          onRegistrationComplete?.(creditResult.points);
+          handleClose();
+        }, 1800);
+      }
     })();
     return () => { cancelled = true; };
   }, [isOpen, deviceId]);

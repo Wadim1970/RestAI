@@ -6,12 +6,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    box-sizing: border-box;
 }
 
 .modal {
-    width: 100%;
+    width: calc(100% - 40px);
     max-width: 360px;
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: #fff;
     border-radius: 20px;
     padding: 24px;
