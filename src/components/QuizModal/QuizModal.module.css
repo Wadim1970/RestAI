@@ -37,6 +37,14 @@
     line-height: 1.5;
 }
 
+.badgeRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
 .pointsBadge {
     display: inline-block;
     background: var(--color-price-bg, #E5E0D4);
@@ -46,7 +54,23 @@
     font-size: 13px;
     padding: 5px 14px;
     border-radius: 14px;
-    margin-bottom: 14px;
+}
+
+.timerBadge {
+    display: inline-block;
+    background: #f0f0f0;
+    color: #666;
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 5px 14px;
+    border-radius: 14px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.timerBadgeUrgent {
+    background: #ffe0e0;
+    color: #d63333;
 }
 
 .question {
