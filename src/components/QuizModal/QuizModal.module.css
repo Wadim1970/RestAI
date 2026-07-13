@@ -3,18 +3,13 @@
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.6);
     z-index: 999998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
-/* Центрирование через position:fixed + left/top 50% + translate, а не
-   flexbox justify-content/align-items — тот же приём, что уже
-   используется в MenuHeader/MenuFooter (там это осознанный выбор
-   именно из-за того, что flex-центрирование на position:fixed
-   контейнере на некоторых устройствах съезжает вбок). */
 .modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     width: calc(100% - 40px);
     max-width: 360px;
     max-height: calc(100% - 40px);
