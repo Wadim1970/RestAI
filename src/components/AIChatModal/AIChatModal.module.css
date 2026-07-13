@@ -17,7 +17,7 @@
     display: flex;
     flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
     justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
-    position: relative; /* Чтобы крестик и видео позиционировались внутри */
+    position: relative; /* Чтобы крестик и голосовой экран позиционировались внутри */
     transform: translateZ(0);
     will-change: height;
     /* Плавный переход для изменения высоты */
@@ -54,7 +54,7 @@
     right: 5.45vw; /* Адаптивный отступ справа */
     width: 16px; height: 16px; /* Размер кнопки */
     background: none; border: none; padding: 0;
-    z-index: 200; /* ВЫШЕ ЧЕМ ВИДЕО (слой 200 против 10) */
+    z-index: 200; /* ВЫШЕ ГОЛОСОВОГО ЭКРАНА (слой 200 против 10) */
     display: flex; align-items: center; justify-content: center;
 }
 
@@ -91,26 +91,6 @@
 }
 
 
-/* ВИДЕО НА ВЕСЬ ЭКРАН (БЕЗ СКРУГЛЕНИЙ И ОБРУБКОВ) */
-.videoWrapper {
-    position: absolute; /* Вырываем из потока и кладем фоном */
-    top: 0; left: 0; 
-    width: 100%; height: 100%; /* Растягиваем на ВСЁ окно модалки */
-    background: #000; /* Черный фон пока видео грузится */
-    z-index: 10; /* Самый нижний слой (под всеми кнопками) */
-    border-radius: 0; /* НИКАКИХ СКРУГЛЕНИЙ (удалил твои 20px) */
-    overflow: hidden;
-}
-
-.videoPlaceholder {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-}
-
-.statusText {
-    color: #48BF48; font-size: 14px; opacity: 0.8;
-}
-
 /* Панель управления внизу (белое поле + зеленая кнопка) */
 .modal-footerControls {
     display: flex;
@@ -118,7 +98,7 @@
     padding: 0 12px;
     margin-bottom: 58px; /* Твой обязательный отступ от низа */
     position: relative;
-    z-index: 200; /* ВТОРАЯ КНОПКА ПОВЕРХ ВИДЕО (слой 200) */
+    z-index: 200; /* ВТОРАЯ КНОПКА ПОВЕРХ ГОЛОСОВОГО ЭКРАНА (слой 200) */
 }
 
 /* Белая оболочка поля ввода */

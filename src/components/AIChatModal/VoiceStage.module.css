@@ -1,0 +1,54 @@
+/* Синий "экран разговора" на весь модал — тот же слой, что раньше
+   занимала заглушка видео (z-index 10, под шапкой и футером). Сюда же
+   позже будут выезжать карточки блюд и корзина по командам от ИИ. */
+.stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: radial-gradient(ellipse at center, #1c3d8f 0%, #0a1440 70%, #060a24 100%);
+  overflow: hidden;
+}
+
+.orbWrap {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #9ec5ff 0%, #4f7fe0 45%, #2952b8 100%);
+  box-shadow: 0 0 60px 10px rgba(79, 127, 224, 0.55);
+  opacity: 0.6;
+  transform: scale(1);
+  transition: transform 0.08s linear, opacity 0.08s linear;
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+/* Едва заметное "дыхание" в тишине, чтобы экран не выглядел мёртвым —
+   громкость голоса накладывается поверх через transform/opacity в JS. */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 60px 10px rgba(79, 127, 224, 0.55); }
+  50% { box-shadow: 0 0 80px 18px rgba(79, 127, 224, 0.75); }
+}
+
+.status {
+  color: #cfe0ff;
+  font-size: 14px;
+  opacity: 0.85;
+  font-family: var(--font-body, sans-serif);
+  text-align: center;
+  padding: 0 24px;
+}
