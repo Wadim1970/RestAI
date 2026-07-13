@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и инструменты
 import styles from './AIChatModal.module.css'; // Подключаем стили
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
+import VoiceStage from './VoiceStage'; // Экран голосового ИИ
 
 // ИЗМЕНЕНИЕ: Теперь принимаем messages, setMessages и sessionId как пропсы из App.jsx
 const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages, guestId, restaurantId }) => {
   const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
-  const [viewMode, setViewMode] = useState('text'); // Режим: чат или видео
+  const [viewMode, setViewMode] = useState('text'); // Режим: чат или голос
   
   // УДАЛЕНО: локальный messages, так как теперь используем глобальный из пропсов
   
@@ -44,7 +45,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
   };
 
   // Движение пальца — тянем модалку визуально, только если история уже
-  // проскроллена до самого верха (или мы в видео-режиме, где скролла нет)
+  // проскроллена до самого верха (или мы в голосовом режиме, где скролла нет)
   const onTouchMove = (e) => {
     touchEnd.current = e.targetTouches[0].clientY;
     const distance = touchEnd.current - touchStart.current;
@@ -187,8 +188,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       // Показываем ответ эффектом печати, в историю попадёт по завершении
       typeOutMessage(aiResponse);
     } else {
-      // Если текста нет — переключаем видео/текст
-      setViewMode(prev => prev === 'text' ? 'video' : 'text');
+      // Если текста нет — переключаем голос/текст
+      setViewMode(prev => prev === 'text' ? 'voice' : 'text');
     }
   };
 
@@ -205,16 +206,8 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         {/* Индикатор свайпа вниз для закрытия */}
         <div className={styles.dragLine}></div>
 
-        {/* Видео-аватар */}
-        {viewMode === 'video' && (
-          <div className={styles['videoWrapper']}>
-              <div className={styles['videoPlaceholder']}>
-                <span className={styles['statusText']}>
-                  {isLoading ? '[ НЕЙРОСЕТЬ ГЕНЕРИРУЕТ ОТВЕТ... ]' : '[ ПОДКЛЮЧЕНИЕ ВИДЕО... ]'}
-                </span>
-              </div>
-          </div>
-        )}
+        {/* Голосовой ИИ */}
+        {viewMode === 'voice' && <VoiceStage />}
 
         {/* Кнопка закрытия модалки */}
         <button className={styles['modal-closeBtn']} onClick={handleClose}>
@@ -277,7 +270,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
           <button 
             key={viewMode}
             className={styles['modal-actionButton']} 
-            style={viewMode === 'video' ? { marginLeft: 'auto' } : {}} 
+            style={viewMode === 'voice' ? { marginLeft: 'auto' } : {}}
             onClick={handleActionClick}
             disabled={isLoading && viewMode === 'text'}
           >
