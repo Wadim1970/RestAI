@@ -1,0 +1,6 @@
+-- Откат вернул бы сломанную версию функции (ON CONFLICT (guest_id,
+-- question_id) с ambiguous column error) — бессмысленно. Если
+-- реально нужно вернуться к прежнему телу функции, применить
+-- CREATE OR REPLACE FUNCTION public.get_random_quiz_question(...)
+-- из supabase/migrations/20260713020000_quiz_topics_difficulty_timer.sql
+-- заново.
