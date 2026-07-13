@@ -64,7 +64,11 @@ ALTER TABLE public.quiz_attempts ALTER COLUMN issued_at SET DEFAULT now();
 
 -- ------------------------------------------------------------
 -- Выдача вопроса: прогрессия сложности + фиксация issued_at.
+-- Новая колонка time_limit_seconds меняет состав RETURNS TABLE —
+-- CREATE OR REPLACE отказывается менять его без явного DROP сначала.
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_random_quiz_question(bigint);
+
 CREATE OR REPLACE FUNCTION public.get_random_quiz_question(p_guest_id bigint)
 RETURNS TABLE(question_id uuid, question text, options jsonb, points integer, time_limit_seconds integer)
 LANGUAGE plpgsql
@@ -141,7 +145,12 @@ GRANT EXECUTE ON FUNCTION public.get_random_quiz_question(bigint) TO anon, authe
 -- Проверка ответа: логирует попытку СРАЗУ (не только когда верно),
 -- принудительно засчитывает как неверный ответ после истечения
 -- таймера (не доверяя клиентскому отсчёту).
+-- Старая двухпараметровая версия (p_question_id, p_selected_index)
+-- остаётся мёртвой перегрузкой, если её не убрать явно — новая
+-- сигнатура (с p_guest_id) не заменяет, а дополняет её.
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.check_quiz_answer(uuid, integer);
+
 CREATE OR REPLACE FUNCTION public.check_quiz_answer(
   p_guest_id bigint,
   p_question_id uuid,

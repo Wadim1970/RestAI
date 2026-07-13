@@ -66,7 +66,11 @@ ALTER TABLE public.quiz_attempts DROP COLUMN IF EXISTS answered_at;
 -- ------------------------------------------------------------
 -- Функции: вернуть версии без прогрессии сложности / таймера
 -- (состояние на момент 20260713010000_quiz_repeat_registered_guest.sql).
+-- Возвращаемый набор колонок тоже меняется (убираем time_limit_seconds) —
+-- CREATE OR REPLACE этого не позволяет без явного DROP сначала.
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_random_quiz_question(bigint);
+
 CREATE OR REPLACE FUNCTION public.get_random_quiz_question(p_guest_id bigint)
 RETURNS TABLE(question_id uuid, question text, options jsonb, points integer)
 LANGUAGE plpgsql
