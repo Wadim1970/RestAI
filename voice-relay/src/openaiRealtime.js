@@ -1,10 +1,10 @@
 import WebSocket from 'ws';
 import { config } from './config.js';
 
-// Протокол по документации OpenAI (developers.openai.com/api/docs/guides/
-// realtime-websocket и .../realtime-conversations). turn_detection и
-// точный формат session.audio.output стоит перепроверить по первому
-// реальному session.updated — это ещё не гонялось живьём, ключа пока нет.
+// Протокол по developers.openai.com/api/reference/resources/realtime/
+// client-events — voice и turn_detection живут не там, где в первой версии
+// (voice под audio.output, turn_detection под audio.input), поправлено по
+// факту реальной ошибки "Unknown parameter: 'session.voice'" при живом тесте.
 export function openRealtimeSession({ instructions, onAudioDelta, onEvent, onClose }) {
   const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(config.openaiModel)}`;
   const ws = new WebSocket(url, {
@@ -17,12 +17,16 @@ export function openRealtimeSession({ instructions, onAudioDelta, onEvent, onClo
       session: {
         type: 'realtime',
         instructions,
-        voice: config.openaiVoice,
         audio: {
-          input: { format: { type: 'audio/pcm', rate: 24000 } },
-          output: { format: { type: 'audio/pcm', rate: 24000 } },
+          input: {
+            format: { type: 'audio/pcm', rate: 24000 },
+            turn_detection: { type: 'server_vad' },
+          },
+          output: {
+            format: { type: 'audio/pcm', rate: 24000 },
+            voice: config.openaiVoice,
+          },
         },
-        turn_detection: { type: 'server_vad' },
       },
     }));
   });
