@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { config } from './config.js';
-import { voiceRoutes } from './voiceSession.js';
+import { voiceRoutes, getActiveSessionCount } from './voiceSession.js';
 
 const app = Fastify({ logger: true });
 
@@ -17,6 +17,11 @@ if (config.corsOrigin.length > 0) {
 await app.register(websocket);
 
 app.get('/health', async () => ({ ok: true }));
+
+app.get('/status', async () => ({
+  activeSessions: getActiveSessionCount(),
+  maxConcurrentSessions: config.maxConcurrentSessions,
+}));
 
 await app.register(voiceRoutes);
 
