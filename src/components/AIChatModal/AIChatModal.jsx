@@ -207,7 +207,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         <div className={styles.dragLine}></div>
 
         {/* Голосовой ИИ */}
-        {viewMode === 'voice' && <VoiceStage />}
+        {viewMode === 'voice' && <VoiceStage guestId={guestId} restaurantId={restaurantId} />}
 
         {/* Кнопка закрытия модалки */}
         <button className={styles['modal-closeBtn']} onClick={handleClose}>
