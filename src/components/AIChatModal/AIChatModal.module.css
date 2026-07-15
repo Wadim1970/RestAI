@@ -142,23 +142,6 @@
     transform: translateZ(0);
 }
 
-/* Кнопка "Открыть меню" на первом голосовом экране — вместо переключателя */
-.modal-menuButton {
-    margin-left: 6px;
-    height: 58px;
-    padding: 0 24px;
-    background-color: #48BF48;
-    color: #fff;
-    border: none;
-    border-radius: 29px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: var(--font-body, sans-serif);
-    white-space: nowrap;
-    box-shadow: inset 0 0 0 1px #E5E0D4;
-    flex-shrink: 0;
-}
-
 /* Иконки внутри кнопки */
 .modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
 .modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
