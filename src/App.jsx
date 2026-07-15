@@ -169,6 +169,11 @@ useEffect(() => {
 
   // --- СОСТОЯНИЕ МОДАЛКИ И КОНТЕКСТА ---
   const [isChatOpen, setIsChatOpen] = useState(false);
+  // Как открыли чат в последний раз: 'video' — по окончании стартового
+  // видео (первый разговор за сессию, кнопка "Открыть меню" вместо
+  // переключателя голос/текст), 'menu' — кнопкой "Чат" из меню (обычный
+  // переключатель). См. AIChatModal isFirstLaunch.
+  const [chatEntryPoint, setChatEntryPoint] = useState('menu');
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
   const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор: за себя / за весь стол
@@ -234,6 +239,7 @@ useEffect(() => {
       setCurrentSessionId(`sess_${Date.now()}`);
     }
     setChatContext('Общее меню ресторана');
+    setChatEntryPoint('video');
     setIsChatOpen(true);
   };
 
@@ -709,6 +715,7 @@ const handlePayFlowPaid = async () => {
                   } else {
                     setChatContext('Общее меню ресторана');
                   }
+                  setChatEntryPoint('menu');
                   setIsChatOpen(true);
                 }}
                 trackDishView={trackDishView} 
@@ -730,6 +737,7 @@ const handlePayFlowPaid = async () => {
           setMessages={setChatMessages}
           restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
+          isFirstLaunch={chatEntryPoint === 'video'}
         />
 
         <SplitBillModal

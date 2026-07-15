@@ -57,11 +57,24 @@ async function loadGuestContext(guestId, restaurantId) {
 }
 
 // Тот же публичный, закэшированный на Vercel Edge эндпоинт, которым уже
-// пользуется MenuPage.jsx — не бьём в Supabase отдельным запросом.
+// пользуется MenuPage.jsx. Меню ресторана — самая тяжёлая часть промта
+// (десятки блюд, килобайты текста) и почти не меняется в течение дня, а
+// сеть до Vercel — заметная доля задержки перед первой репликой ИИ.
+// Держим свой, ещё более короткоживущий кэш поверх edge-кэша: пока он не
+// протух, открытие голосовой сессии вообще не ходит в сеть за меню.
+const MENU_CACHE_TTL_MS = 60_000; // совпадает с s-maxage у /api/menu
+const menuCache = new Map(); // restaurantId -> { text, expiresAt }
+
 async function loadMenuSummary(restaurantId) {
   if (!restaurantId) return '';
+
+  const cached = menuCache.get(restaurantId);
+  if (cached && cached.expiresAt > Date.now()) return cached.text;
+
   const res = await fetch(`${config.menuApiBaseUrl}/api/menu?restaurantId=${encodeURIComponent(restaurantId)}`);
-  if (!res.ok) return '';
+  // Сеть/эндпоинт подвели — лучше отдать протухший, но живой кэш, чем
+  // оставить ИИ вовсе без меню на этот разговор.
+  if (!res.ok) return cached?.text ?? '';
   const { items } = await res.json();
 
   // Сжатая версия для системного промпта: полные описания и состав блюда
@@ -69,7 +82,7 @@ async function loadMenuSummary(restaurantId) {
   // синхронизации голоса с экраном. Калории/вес/время готовки — нужны
   // ИИ для реальных запросов гостя ("уложи меня в 600 ккал") и для уже
   // прописанной в Restaurant Policy логики по времени готовки.
-  return (items || [])
+  const text = (items || [])
     .map((i) => {
       const extras = [];
       if (i.weight_g) extras.push(`${i.weight_g}`);
@@ -79,6 +92,9 @@ async function loadMenuSummary(restaurantId) {
       return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}`;
     })
     .join('\n');
+
+  menuCache.set(restaurantId, { text, expiresAt: Date.now() + MENU_CACHE_TTL_MS });
+  return text;
 }
 
 // character_profile/restaurant_policy/philosophy — структурированный профиль

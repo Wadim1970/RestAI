@@ -68,14 +68,37 @@ export default function VoiceStage({ guestId, restaurantId }) {
     let stream = null;
     let audioContext = null;
     let scriptNode = null;
+    let outputAnalyser = null;
     let ws = null;
     let aiSpeaking = false;
     let nextPlaybackTime = 0;
+    let rafId = null;
 
     const setLevel = (level) => {
       if (!orbRef.current) return;
       orbRef.current.style.transform = `scale(${1 + level * 0.6})`;
       orbRef.current.style.opacity = String(0.6 + level * 0.4);
+    };
+
+    // Уровень звука ИИ брался раньше из каждого пришедшего по WS куска —
+    // но кусок уже отыгрывает секунду-другую из очереди (нашедшая
+    // очередь через nextPlaybackTime), пока следующий может задержаться
+    // из-за сети/генерации. Экран из-за этого "подвисал" на середине
+    // фразы: звук ещё играет, а обновлений уровня уже нет. Правильный
+    // источник — не момент прихода сообщения, а сам живой аудио-граф
+    // прямо сейчас, через AnalyserNode и непрерывный rAF-цикл.
+    const visualLoop = () => {
+      if (aiSpeaking && outputAnalyser) {
+        const data = new Uint8Array(outputAnalyser.frequencyBinCount);
+        outputAnalyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        setLevel(Math.min(1, Math.sqrt(sum / data.length) * 4));
+      }
+      rafId = requestAnimationFrame(visualLoop);
     };
 
     const playChunk = (base64Audio) => {
@@ -86,14 +109,13 @@ export default function VoiceStage({ guestId, restaurantId }) {
       buffer.copyToChannel(float32, 0);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(audioContext.destination);
+      source.connect(outputAnalyser);
 
       const startAt = Math.max(audioContext.currentTime, nextPlaybackTime);
       source.start(startAt);
       nextPlaybackTime = startAt + buffer.duration;
 
       aiSpeaking = true;
-      setLevel(rmsLevel(float32));
       source.onended = () => {
         // Это была последняя запланированная реплика ИИ — отдаём "ведение"
         // обратно микрофону гостя.
@@ -121,6 +143,14 @@ export default function VoiceStage({ guestId, restaurantId }) {
         source.connect(scriptNode);
         scriptNode.connect(silentGain);
         silentGain.connect(audioContext.destination);
+
+        // Через этот узел проходит воспроизводимый звук ИИ — им и кормим
+        // непрерывный визуальный цикл (см. visualLoop выше), а не разовыми
+        // снимками уровня в момент прихода каждого куска по сети.
+        outputAnalyser = audioContext.createAnalyser();
+        outputAnalyser.fftSize = 256;
+        outputAnalyser.connect(audioContext.destination);
+        rafId = requestAnimationFrame(visualLoop);
 
         const params = new URLSearchParams({
           guestId: guestId ?? '',
@@ -159,7 +189,7 @@ export default function VoiceStage({ guestId, restaurantId }) {
           ws.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
         };
       } catch (err) {
-        console.error('VoiceStage start() failed:', err); // TEMP DEBUG
+        console.error('VoiceStage: не удалось запустить голосовую сессию:', err);
         if (!stopped) {
           setStatus('error');
           setStatusMessage('Не удалось получить доступ к микрофону.');
@@ -171,6 +201,7 @@ export default function VoiceStage({ guestId, restaurantId }) {
 
     return () => {
       stopped = true;
+      if (rafId) cancelAnimationFrame(rafId);
       if (scriptNode) scriptNode.onaudioprocess = null;
       scriptNode?.disconnect();
       stream?.getTracks().forEach((t) => t.stop());

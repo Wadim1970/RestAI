@@ -1,10 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react'; // Подключаем React и инструменты
+import { useNavigate } from 'react-router-dom';
 import styles from './AIChatModal.module.css'; // Подключаем стили
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 import VoiceStage from './VoiceStage'; // Экран голосового ИИ
 
+// isFirstLaunch — открыт по окончании стартового видео (первый разговор
+// с ИИ за сессию), а не кнопкой "Чат" из меню. На этом экране вместо
+// переключателя голос/текст показываем прямую кнопку "Открыть меню" —
+// не хотим тут же предлагать уйти в текст тому, кто ещё не решил,
+// разговаривать ли вообще; переключатель как обычно доступен при входе
+// через меню.
 // ИЗМЕНЕНИЕ: Теперь принимаем messages, setMessages и sessionId как пропсы из App.jsx
-const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages, guestId, restaurantId }) => {
+const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages, guestId, restaurantId, isFirstLaunch = false }) => {
+  const navigate = useNavigate();
   const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
   const [viewMode, setViewMode] = useState('text'); // Режим: чат или голос
   
@@ -30,6 +38,11 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       onClose();
       setIsClosing(false);
     }, 300);
+  };
+
+  const handleGoToMenu = () => {
+    handleClose();
+    navigate('/menu');
   };
 
   // Модалка примонтирована один раз на всё приложение и никогда не
@@ -279,24 +292,34 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
             </div>
           )}
 
-          <button 
-            key={viewMode}
-            className={styles['modal-actionButton']} 
-            style={viewMode === 'voice' ? { marginLeft: 'auto' } : {}}
-            onClick={handleActionClick}
-            disabled={isLoading && viewMode === 'text'}
-          >
-            {/* Иконка меняется: если есть текст — самолетик, если нет — микрофон/чат */}
-            {inputValue.trim().length > 0 ? ( 
-              <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
-            ) : (
-              <img 
-                src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"} 
-                className={styles['modal-iconAudio']} 
-                alt="Switch" 
-              />
-            )}
-          </button>
+          {isFirstLaunch && viewMode === 'voice' ? (
+            <button
+              className={styles['modal-menuButton']}
+              style={{ marginLeft: 'auto' }}
+              onClick={handleGoToMenu}
+            >
+              Открыть меню
+            </button>
+          ) : (
+            <button
+              key={viewMode}
+              className={styles['modal-actionButton']}
+              style={viewMode === 'voice' ? { marginLeft: 'auto' } : {}}
+              onClick={handleActionClick}
+              disabled={isLoading && viewMode === 'text'}
+            >
+              {/* Иконка меняется: если есть текст — самолетик, если нет — микрофон/чат */}
+              {inputValue.trim().length > 0 ? (
+                <img src="/icons/free-icon-start.png" className={styles['modal-iconSend']} alt="Send" />
+              ) : (
+                <img
+                  src={viewMode === 'text' ? "/icons/free-icon-audio.png" : "/icons/free-icon-chat.png"}
+                  className={styles['modal-iconAudio']}
+                  alt="Switch"
+                />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
