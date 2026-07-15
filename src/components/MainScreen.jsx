@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react'; // Добавили useEffec
 import { useNavigate } from 'react-router-dom';
 import VideoBackground from './VideoBackground.jsx';
 import MenuButton from './MenuButton.jsx';
-import ToggleChatButton from './ToggleChatButton.jsx';
 
 // Добавляем пропс isChatOpen, который приходит из App.js через Routes
-const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
+const MainScreen = ({ onOpenVoiceChat, isChatOpen }) => {
   const navigate = useNavigate();
   const [isStarted, setIsStarted] = useState(false);
 
@@ -47,13 +46,7 @@ const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
   };
 
   const handleOpenMenu = () => {
-    navigate('/menu'); 
-  };
-
-  const handleModeToggle = (newMode) => {
-    if (onChatModeToggle) {
-      onChatModeToggle(newMode);
-    }
+    navigate('/menu');
   };
 
   return (
@@ -70,9 +63,10 @@ const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
         zIndex: 1 
       }}
     >
-      {/* Компонент с самим тегом <video>. По окончании — сразу в меню,
-          видео больше не крутится по кругу. */}
-      <VideoBackground onEnded={handleOpenMenu} />
+      {/* Компонент с самим тегом <video>. По окончании — сразу в голосовой
+          чат с ИИ (не в меню — гость, кто хочет меню сразу, жмёт кнопку
+          ниже, не дожидаясь конца ролика). Видео больше не крутится по кругу. */}
+      <VideoBackground onEnded={onOpenVoiceChat} />
 
       {/* ЭКРАН СТАРТА (Затемнение и кнопка Play) */}
       {!isStarted && (
@@ -127,12 +121,12 @@ const MainScreen = ({ onChatModeToggle, isChatOpen }) => {
         </div>
       )}
 
-      {/* НИЖНИЕ КНОПКИ (Меню и Чат) - появляются только после handleStart */}
+      {/* НИЖНЯЯ КНОПКА (Меню) - появляется только после handleStart. Кнопки
+          чата тут больше нет — голосовой ИИ теперь включается сам по
+          окончании видео, вернуться к нему можно кнопкой "Чат" в меню. */}
       {isStarted && (
-        <div className="buttons-footer-fixed"> 
+        <div className="buttons-footer-fixed">
           <MenuButton onClick={handleOpenMenu} />
-          {/* Кнопка открытия чата */}
-          <ToggleChatButton onToggle={handleModeToggle} />
         </div>
       )}
     </div>

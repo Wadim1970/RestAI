@@ -9,7 +9,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt.js'
 // известен — актуально для уже установленного приложения, запуск с иконки
 // не несёт ссылку со столом), промо установки (браузер, стол уже известен)
 // или сразу стартовый экран с видео (установлено, или промо уже отклонили).
-export default function HomeGate({ restaurantId, tableNumber, onScanned, onChatModeToggle, isChatOpen }) {
+export default function HomeGate({ restaurantId, tableNumber, onScanned, onOpenVoiceChat, isChatOpen }) {
   const isStandalone = useDisplayMode()
   const isIOS = isIOSDevice()
   const isAndroid = isAndroidDevice()
@@ -41,5 +41,5 @@ export default function HomeGate({ restaurantId, tableNumber, onScanned, onChatM
     )
   }
 
-  return <MainScreen onChatModeToggle={onChatModeToggle} isChatOpen={isChatOpen} />
+  return <MainScreen onOpenVoiceChat={onOpenVoiceChat} isChatOpen={isChatOpen} />
 }

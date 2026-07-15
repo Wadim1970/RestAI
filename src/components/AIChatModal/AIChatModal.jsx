@@ -32,9 +32,17 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
     }, 300);
   };
 
+  // Модалка примонтирована один раз на всё приложение и никогда не
+  // размонтируется (App.jsx держит её всегда, просто isOpen=false) — поэтому
+  // useState('text') выше отрабатывает как дефолт только один раз в жизни
+  // компонента. Голосовой вход теперь единственная точка входа (видео на
+  // главном экране, кнопка "Чат" в меню) — при каждом новом открытии стартуем
+  // именно в голосовом режиме, а не в том, в котором модалку закрыли в
+  // прошлый раз.
   useEffect(() => {
     if (isOpen) {
       setIsClosing(false);
+      setViewMode('voice');
     }
   }, [isOpen]);
 
@@ -131,12 +139,16 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
-  // --- ОБНОВЛЕННОЕ: АВТО-ПРИВЕТСТВИЕ / РЕАКЦИЯ ПРИ КАЖДОМ ОТКРЫТИИ ---
+  // --- АВТО-ПРИВЕТСТВИЕ ТЕКСТОВОГО ЧАТА ---
+  // Голосовой режим здоровается сам (голосом, через инструкции модели) —
+  // этот эффект нужен только когда гость реально в текстовом режиме
+  // (открыл его сам через переключатель внутри модалки), иначе при каждом
+  // голосовом открытии он бы зря дёргал n8n и копил в истории невидимое
+  // текстовое приветствие.
   useEffect(() => {
-    // Если модалка открыта и сейчас не идет другая загрузка
-    if (isOpen && !isLoading) {
+    if (isOpen && viewMode === 'text' && !isLoading) {
       const fetchGreeting = async () => {
-        // Отправляем маркер "ПРИВЕТСТВИЕ" при КАЖДОМ открытии чата
+        // Отправляем маркер "ПРИВЕТСТВИЕ" при каждом входе в текстовый режим
         // ИИ получит этот маркер + актуальный pageContext и выдаст нужную фразу
         const aiGreeting = await sendMessageToAI("ПРИВЕТСТВИЕ", pageContext, sessionId, restaurantId, guestId);
 
@@ -145,9 +157,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       };
       fetchGreeting();
     }
-    
+
     // УДАЛЕНО: if (!isOpen) { setMessages([]); } — теперь история сохраняется
-  }, [isOpen]); // Следим за каждым открытием модалки
+  }, [isOpen, viewMode]);
 
   // Специальная функция для Android, которая "тянет" чат вверх за клавиатурой
   const handleInputFocus = () => {

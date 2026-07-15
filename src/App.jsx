@@ -226,8 +226,15 @@ useEffect(() => {
     setViewHistory(prev => [...prev, dishName]);
   };
 
-  const handleToggleChatMode = (newMode) => {
-    // Логика переключения режима чата, если нужна
+  // Видео на главном экране доиграло — открываем голосовой чат с ИИ вместо
+  // автоперехода в меню (гость, кто хочет сразу в меню, жмёт кнопку поверх
+  // видео, не дожидаясь конца). AIChatModal сам стартует в голосовом режиме.
+  const handleOpenVoiceChat = () => {
+    if (!currentSessionId) {
+      setCurrentSessionId(`sess_${Date.now()}`);
+    }
+    setChatContext('Общее меню ресторана');
+    setIsChatOpen(true);
   };
 
   const updateCart = (delta, dishId) => {
@@ -668,7 +675,7 @@ const handlePayFlowPaid = async () => {
                   restaurantId={restaurantId}
                   tableNumber={tableNumber}
                   onScanned={handleTableScanned}
-                  onChatModeToggle={handleToggleChatMode}
+                  onOpenVoiceChat={handleOpenVoiceChat}
                   isChatOpen={isChatOpen}
                 />
               ) : (
