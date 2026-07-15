@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
+import { compileCharacterProfile, compileRestaurantPolicy } from './promptCompiler.js';
 
 // Ленивая инициализация — как и с OPENAI_API_KEY в openaiRealtime.js,
 // отсутствие/опечатка в переменных окружения не должна ронять весь
@@ -71,26 +72,62 @@ async function loadMenuSummary(restaurantId) {
     .join('\n');
 }
 
-const INSTRUCTIONS_TEMPLATE = `Ты — голосовой помощник ресторана RestAI. Говори по-русски, дружелюбно и
-живо, короткими фразами (это голос, а не текст на экране). Помогай гостю
-выбрать блюда, рассказывай о них с удовольствием, к месту — короткую
-забавную историю. Никогда не выдумывай блюда и цены, которых нет в меню.
+// character_profile/restaurant_policy/philosophy — структурированный профиль
+// ресторана (restaurant_ai_profiles), редактируется напрямую в Supabase.
+async function loadAiProfile(restaurantId) {
+  if (!restaurantId) return null;
+  const { data } = await getSupabase()
+    .from('restaurant_ai_profiles')
+    .select('character_profile, restaurant_policy, philosophy')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  return data;
+}
 
-Меню ресторана:
-{{menu}}
+// Платформенные правила — общие для ВСЕХ ресторанов, поэтому здесь, в
+// коде, а не в базе: единственный слой с правилами безопасности, не
+// должен редактироваться в обход код-ревью.
+const SYSTEM_PROMPT = `Ты — голосовой ассистент ресторана, говоришь по-русски. Ты разговариваешь
+с гостем вживую по телефону/приложению — отвечай короткими, живыми
+фразами, а не текстовыми абзацами.
 
-Профиль гостя (используй для персонализации мягко, не зачитывай как список):
-{{profile}}`;
+Правила данных:
+- Меню, которое дано ниже — единственный источник истины. Никогда не
+  выдумывай блюда, ингредиенты или цены, которых там нет.
+- У тебя есть статистика и предпочтения гостя (что заказывал раньше,
+  средний чек и т.д.) — используй это ТОЛЬКО для мягкой персонализации
+  (посоветовать похожее на то, что нравилось раньше). НИКОГДА не
+  озвучивай гостю сырые цифры, даты, историю визитов, суммы чеков и
+  сам факт, что у тебя есть эта статистика — гость не должен ощущать,
+  что за ним следят.
+
+Правила границ:
+- Обсуждай только ресторан, меню, заказ и застольную беседу. На
+  посторонние темы — вежливо возвращай разговор к ресторану.
+- Не давай медицинских советов и категоричных заявлений об аллергенах —
+  при вопросах про аллергию порекомендуй уточнить у официанта.
+- Не обсуждай политику ресторана, ценообразование, конкурентов.`;
 
 export async function buildSessionContext({ guestId, restaurantId }) {
-  const [{ preferences, restaurantHistory }, menu] = await Promise.all([
+  const [{ preferences, restaurantHistory }, menu, aiProfile] = await Promise.all([
     loadGuestContext(guestId, restaurantId),
     loadMenuSummary(restaurantId),
+    loadAiProfile(restaurantId),
   ]);
 
-  const instructions = INSTRUCTIONS_TEMPLATE
-    .replace('{{menu}}', menu || '(меню недоступно)')
-    .replace('{{profile}}', JSON.stringify({ preferences, restaurantHistory }));
+  const characterText = compileCharacterProfile(aiProfile?.character_profile);
+  const policyText = compileRestaurantPolicy(aiProfile?.restaurant_policy);
+  const philosophy = aiProfile?.philosophy || '';
 
-  return { instructions };
+  const dynamicContext = `Меню ресторана:\n${menu || '(меню недоступно)'}\n\n` +
+    `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
+    JSON.stringify({ preferences, restaurantHistory });
+
+  const instructions = [SYSTEM_PROMPT, characterText, policyText, philosophy, dynamicContext]
+    .filter(Boolean)
+    .join('\n\n---\n\n');
+
+  const voice = aiProfile?.character_profile?.voice?.openai_voice || null;
+
+  return { instructions, voice };
 }

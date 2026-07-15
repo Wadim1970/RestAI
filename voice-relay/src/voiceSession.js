@@ -45,10 +45,11 @@ export async function voiceRoutes(app) {
     let openaiSession = null;
 
     try {
-      const { instructions } = await buildSessionContext({ guestId, restaurantId });
+      const { instructions, voice } = await buildSessionContext({ guestId, restaurantId });
 
       openaiSession = openRealtimeSession({
         instructions,
+        voice,
         onAudioDelta: (base64Audio) => {
           if (guestSocket.readyState === guestSocket.OPEN) {
             guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));
