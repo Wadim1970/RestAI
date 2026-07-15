@@ -66,9 +66,18 @@ async function loadMenuSummary(restaurantId) {
 
   // Сжатая версия для системного промпта: полные описания и состав блюда
   // сюда не тащим (лишние токены) — появятся отдельным тулом на этапе
-  // синхронизации голоса с экраном.
+  // синхронизации голоса с экраном. Калории/вес/время готовки — нужны
+  // ИИ для реальных запросов гостя ("уложи меня в 600 ккал") и для уже
+  // прописанной в Restaurant Policy логики по времени готовки.
   return (items || [])
-    .map((i) => `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽`)
+    .map((i) => {
+      const extras = [];
+      if (i.weight_g) extras.push(`${i.weight_g}`);
+      if (i.nutritional_info?.calories != null) extras.push(`${i.nutritional_info.calories} ккал`);
+      if (i.cook_time_min != null) extras.push(`~${i.cook_time_min} мин готовка`);
+      const suffix = extras.length ? `, ${extras.join(', ')}` : '';
+      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}`;
+    })
     .join('\n');
 }
 
