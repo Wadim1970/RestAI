@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './AIChatModal.module.css'; // Подключаем стили
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 import VoiceStage from './VoiceStage'; // Экран голосового ИИ
+import MenuButton from '../MenuButton.jsx'; // Та же кнопка, что и на видео-заставке
 
 // isFirstLaunch — открыт по окончании стартового видео (первый разговор
 // с ИИ за сессию), а не кнопкой "Чат" из меню. На этом экране вместо
@@ -292,15 +293,10 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
             </div>
           )}
 
-          {isFirstLaunch && viewMode === 'voice' ? (
-            <button
-              className={styles['modal-menuButton']}
-              style={{ marginLeft: 'auto' }}
-              onClick={handleGoToMenu}
-            >
-              Открыть меню
-            </button>
-          ) : (
+          {/* На первом голосовом экране тут вместо переключателя ничего —
+              настоящая кнопка "Открыть меню" ниже, вне modal-glassContainer,
+              это буквально тот же MenuButton что и на видео-заставке. */}
+          {!(isFirstLaunch && viewMode === 'voice') && (
             <button
               key={viewMode}
               className={styles['modal-actionButton']}
@@ -322,6 +318,19 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
           )}
         </div>
       </div>
+
+      {/* Та же самая кнопка, тот же класс buttons-footer-fixed, что и на
+          MainScreen — не имитация, а буквально MenuButton, чтобы при
+          переходе видео -> голос гость видел ровно ту же кнопку на том
+          же месте, без единого пикселя смещения. Вне modal-glassContainer
+          (у него transform, ломающий position:fixed у потомков), но
+          внутри modal-overlay (без transform) — так фиксация идёт
+          от вьюпорта, как и на MainScreen. */}
+      {isFirstLaunch && viewMode === 'voice' && (
+        <div className="buttons-footer-fixed">
+          <MenuButton onClick={handleGoToMenu} />
+        </div>
+      )}
     </div>
   );
 };
