@@ -45,6 +45,15 @@ export function openRealtimeSession({ instructions, voice, onAudioDelta, onEvent
       ws.send(JSON.stringify({ type: 'response.create' }));
     } else if (event.type === 'response.output_audio.delta' && event.delta) {
       onAudioDelta(event.delta);
+    } else if (event.type === 'response.done') {
+      // Текстовая расшифровка того, что реально сказал ИИ — полезно для
+      // отладки формулировок (характер/приветствие) без переслушивания звука.
+      const transcript = (event.response?.output || [])
+        .flatMap((item) => item.content || [])
+        .map((c) => c.transcript)
+        .filter(Boolean)
+        .join(' ');
+      if (transcript) onEvent?.({ type: 'response.transcript', text: transcript });
     }
 
     onEvent?.(event);
