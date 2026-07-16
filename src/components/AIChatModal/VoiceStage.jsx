@@ -4,6 +4,12 @@ import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
 
+// Программное усиление голоса ИИ на выходе. Realtime-аудио приходит
+// нормализованным заметно ниже пика, поэтому на телефоне на макс.
+// системной громкости всё равно тиховато — поднимаем. Выше ~2.5 начинает
+// хрипеть на громких согласных, 2.0 — громко и ещё чисто.
+const PLAYBACK_GAIN = 2.0;
+
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
 // а Realtime API ждёт ровно 24000Гц.
@@ -74,6 +80,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
     let audioContext = null;
     let scriptNode = null;
     let outputAnalyser = null;
+    let playbackGain = null;
     let ws = null;
     let aiSpeaking = false;
     let nextPlaybackTime = 0;
@@ -114,7 +121,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
       buffer.copyToChannel(float32, 0);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(outputAnalyser);
+      source.connect(playbackGain);
 
       const startAt = Math.max(audioContext.currentTime, nextPlaybackTime);
       source.start(startAt);
@@ -152,8 +159,14 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
         // Через этот узел проходит воспроизводимый звук ИИ — им и кормим
         // непрерывный визуальный цикл (см. visualLoop выше), а не разовыми
         // снимками уровня в момент прихода каждого куска по сети.
+        // Цепочка воспроизведения ИИ: каждый кусок -> playbackGain (общий
+        // усилитель громкости) -> outputAnalyser (для визуализации шара) ->
+        // колонки. Усиление на одном общем узле, а не на каждом источнике.
+        playbackGain = audioContext.createGain();
+        playbackGain.gain.value = PLAYBACK_GAIN;
         outputAnalyser = audioContext.createAnalyser();
         outputAnalyser.fftSize = 256;
+        playbackGain.connect(outputAnalyser);
         outputAnalyser.connect(audioContext.destination);
         rafId = requestAnimationFrame(visualLoop);
 
