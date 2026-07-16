@@ -99,32 +99,42 @@ async function loadMenuSummary(restaurantId) {
   return text;
 }
 
-// Поиск по требованию — вызывается из инструмента get_dish_details
-// (см. voiceSession.js), а не при сборке контекста, поэтому не бьёт по
-// токенам разговоров, где состав блюда вообще не спрашивают. Ищем через
-// ilike, а не точное совпадение — модель передаёт название так, как его
-// произнёс гость («цезарь»), а не как оно записано в меню («Салат Цезарь
-// с курицей»).
-export async function lookupDishDetails(restaurantId, dishName) {
-  if (!restaurantId || !dishName) return { found: false };
+// Общий поиск по требованию — используется и текстовым инструментом
+// (get_dish_details), и показом карточки на экране (show_dish_card), а
+// не при сборке контекста, поэтому не бьёт по токенам разговоров, где
+// ни то ни другое вообще не просят. Ищем через ilike, а не точное
+// совпадение — модель передаёт название так, как его произнёс гость
+// («цезарь»), а не как оно записано в меню («Салат Цезарь с курицей»).
+async function findMatchingDishes(restaurantId, dishName, selectFields) {
+  if (!restaurantId || !dishName) return [];
 
   const { data, error } = await getSupabase()
     .from('menu_items')
-    .select('dish_name, description, ingredients, nutritional_info, weight_g, cost_rub, product_type, specific_details')
+    .select(selectFields)
     .eq('restaurant_id', restaurantId)
     .ilike('dish_name', `%${dishName}%`)
     .limit(5);
 
-  if (error || !data || data.length === 0) return { found: false };
+  return error || !data ? [] : data;
+}
+
+export async function lookupDishDetails(restaurantId, dishName) {
+  const rows = await findMatchingDishes(
+    restaurantId,
+    dishName,
+    'dish_name, description, ingredients, nutritional_info, weight_g, cost_rub, product_type, specific_details'
+  );
+
+  if (rows.length === 0) return { found: false };
 
   // Несколько совпадений («Цезарь с курицей» и «Цезарь с креветками») —
   // отдаём модели варианты, пусть переспросит гостя, а не гадает и не
   // озвучивает состав не того блюда (актуально в том числе для аллергий).
-  if (data.length > 1) {
-    return { found: false, candidates: data.map((d) => d.dish_name) };
+  if (rows.length > 1) {
+    return { found: false, candidates: rows.map((d) => d.dish_name) };
   }
 
-  const dish = data[0];
+  const dish = rows[0];
   const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : dish.ingredients;
 
   return {
@@ -140,6 +150,21 @@ export async function lookupDishDetails(restaurantId, dishName) {
     price_rub: dish.cost_rub,
     tasting_notes: dish.product_type === 'alcohol' ? (dish.specific_details || null) : undefined,
   };
+}
+
+// Для show_dish_card — та же логика поиска, но отдаёт сырую строку
+// menu_items с полями, которые понимает DishModal (тот же компонент,
+// что открывается тапом по блюду в меню), а не текстовое summary для речи.
+const DISH_DISPLAY_FIELDS =
+  'id, dish_name, cost_rub, image_url, image_url_thumbnail, description, ingredients, nutritional_info, weight_g, product_type, specific_details';
+
+export async function findDishForDisplay(restaurantId, dishName) {
+  const rows = await findMatchingDishes(restaurantId, dishName, DISH_DISPLAY_FIELDS);
+
+  if (rows.length === 0) return { found: false };
+  if (rows.length > 1) return { found: false, candidates: rows.map((d) => d.dish_name) };
+
+  return { found: true, dish: rows[0] };
 }
 
 // Голосовой вызов официанта — то же самое действие, что кнопка с
@@ -232,6 +257,14 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
   инструмент call_waiter. Если гость назвал причину (убрать посуду,
   принести приборы и т.п.) — передай её. После вызова скажи, что
   официант уже в пути, не называя точное время.
+
+Показ фото блюда на экране:
+- Когда уместно проиллюстрировать разговор — гость спрашивает, как
+  выглядит блюдо, или ты сам его рекомендуешь — вызови show_dish_card,
+  гость увидит фото, цену и вес. Не обязательно на каждое блюдо подряд,
+  только когда это реально помогает разговору.
+- Когда переходишь к другому блюду или тема уходит от еды — вызови
+  hide_dish_card. Гость тоже может закрыть карточку сам в любой момент.
 
 Первая реплика разговора (гость только что открыл приложение, ты
 говоришь первым):
