@@ -230,14 +230,18 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
     };
   }, [guestId, restaurantId, tableNumber]);
 
+  const hasDishes = voiceDishes.length > 0;
+
   return (
     <div className={styles.stage}>
-      <VoiceDishSlider
-        dishes={voiceDishes}
-        onDishTap={onExpandDish}
-        onClose={() => setVoiceDishes([])}
-      />
-      <div className={styles.orbWrap}>
+      {hasDishes && (
+        <VoiceDishSlider
+          dishes={voiceDishes}
+          onDishTap={onExpandDish}
+          onClose={() => setVoiceDishes([])}
+        />
+      )}
+      <div className={`${styles.orbWrap} ${hasDishes ? styles.orbWrapCompact : ''}`}>
         <div className={styles.orb} ref={orbRef} />
       </div>
       <p className={styles.status}>

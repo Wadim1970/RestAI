@@ -23,6 +23,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+/* Пока на экране куб с блюдами — ему главное место, шар уступает и
+   становится второстепенным индикатором "кто сейчас говорит". */
+.orbWrapCompact {
+  width: 84px;
+  height: 84px;
+}
+
+.orbWrapCompact .orb {
+  width: 72px;
+  height: 72px;
 }
 
 .orb {
@@ -33,7 +46,7 @@
   box-shadow: 0 0 60px 10px rgba(79, 127, 224, 0.55);
   opacity: 0.6;
   transform: scale(1);
-  transition: transform 0.08s linear, opacity 0.08s linear;
+  transition: transform 0.08s linear, opacity 0.08s linear, width 0.3s ease, height 0.3s ease;
   animation: breathe 2.6s ease-in-out infinite;
 }
 
