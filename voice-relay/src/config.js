@@ -24,6 +24,7 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
 
   menuApiBaseUrl: process.env.MENU_API_BASE_URL || 'https://guest.restai.pro',
+  waiterApiUrl: process.env.WAITER_API_URL || '',
 
   maxConcurrentSessions: Number(process.env.MAX_CONCURRENT_SESSIONS || 15),
 };

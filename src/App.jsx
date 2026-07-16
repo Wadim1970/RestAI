@@ -737,6 +737,7 @@ const handlePayFlowPaid = async () => {
           setMessages={setChatMessages}
           restaurantId={restaurantId} // <-- ДОБАВИЛИ ЭТО
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
+          tableNumber={tableNumber}
           isFirstLaunch={chatEntryPoint === 'video'}
         />
 

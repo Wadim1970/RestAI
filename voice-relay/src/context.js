@@ -142,6 +142,39 @@ export async function lookupDishDetails(restaurantId, dishName) {
   };
 }
 
+// Голосовой вызов официанта — то же самое действие, что кнопка с
+// колокольчиком в MenuFooter (call_waiter RPC), плюс необязательная
+// причина. В отличие от остальных функций этого файла — это не чтение
+// контекста, а действие; лежит здесь, потому что использует тот же
+// getSupabase() и тот же паттерн похода во внешний API, что и
+// loadMenuSummary.
+export async function callWaiter(restaurantId, tableNumber, reason) {
+  if (!restaurantId || !tableNumber) {
+    return { success: false, error: 'номер стола неизвестен' };
+  }
+
+  const { data: callId, error } = await getSupabase().rpc('call_waiter', {
+    p_restaurant_id: restaurantId,
+    p_table_number: String(tableNumber),
+    p_reason: reason || null,
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  // Push — тот же дополнительный канал, что и у ручной кнопки в
+  // MenuFooter (App.jsx), на случай свёрнутого приложения официанта.
+  // Best-effort: живой Realtime-канал у официанта отработает и без него.
+  if (config.waiterApiUrl) {
+    fetch(`${config.waiterApiUrl.replace(/\/$/, '')}/api/send-waiter-call-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callId }),
+    }).catch(() => {});
+  }
+
+  return { success: true };
+}
+
 async function loadRestaurantName(restaurantId) {
   if (!restaurantId) return '';
   // Внимание: PK этой таблицы называется "restaurantId" (camelCase) — в
@@ -193,6 +226,12 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
 - Не давай медицинских советов и категоричных заявлений об аллергенах —
   при вопросах про аллергию порекомендуй уточнить у официанта.
 - Не обсуждай политику ресторана, ценообразование, конкурентов.
+
+Вызов официанта:
+- Если гость прямо просит позвать/пригласить официанта — используй
+  инструмент call_waiter. Если гость назвал причину (убрать посуду,
+  принести приборы и т.п.) — передай её. После вызова скажи, что
+  официант уже в пути, не называя точное время.
 
 Первая реплика разговора (гость только что открыл приложение, ты
 говоришь первым):
