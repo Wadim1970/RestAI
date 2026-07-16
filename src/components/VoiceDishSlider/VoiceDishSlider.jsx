@@ -51,10 +51,11 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
         {dishes.map((dish) => (
           <SwiperSlide key={dish.id} onClick={() => onDishTap(dish)}>
             <img src={dish.image_url_thumbnail || dish.image_url} alt={dish.dish_name} />
-            <div className={styles.priceBadge}>{dish.cost_rub}₽</div>
             <div className={styles.infoBar}>
               <p>{dish.dish_name}</p>
-              {dishWeightLabel(dish) && <span>{dishWeightLabel(dish)}</span>}
+              <span>
+                {dish.cost_rub}₽{dishWeightLabel(dish) ? ` · ${dishWeightLabel(dish)}` : ''}
+              </span>
             </div>
           </SwiperSlide>
         ))}
