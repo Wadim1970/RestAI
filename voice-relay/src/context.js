@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
 import { compileCharacterProfile, compileRestaurantPolicy } from './promptCompiler.js';
 
-// Ленивая инициализация — как и с OPENAI_API_KEY в openaiRealtime.js,
+// Ленивая инициализация — как и с OPENAI_API_KEY в realtimeProvider.js,
 // отсутствие/опечатка в переменных окружения не должна ронять весь
 // процесс при старте (тогда бы не отвечал даже /health), а только
 // голосовую сессию конкретного гостя, когда до неё дойдёт дело.
@@ -97,6 +97,18 @@ async function loadMenuSummary(restaurantId) {
   return text;
 }
 
+async function loadRestaurantName(restaurantId) {
+  if (!restaurantId) return '';
+  // Внимание: PK этой таблицы называется "restaurantId" (camelCase) — в
+  // отличие от snake_case restaurant_id везде в остальной схеме.
+  const { data } = await getSupabase()
+    .from('restaurants')
+    .select('name')
+    .eq('restaurantId', restaurantId)
+    .maybeSingle();
+  return data?.name || '';
+}
+
 // character_profile/restaurant_policy/philosophy — структурированный профиль
 // ресторана (restaurant_ai_profiles), редактируется напрямую в Supabase.
 async function loadAiProfile(restaurantId) {
@@ -145,12 +157,14 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
   (см. ниже).`;
 
 export async function buildSessionContext({ guestId, restaurantId }) {
-  const [{ preferences, restaurantHistory }, menu, aiProfile] = await Promise.all([
+  const [{ preferences, restaurantHistory }, menu, aiProfile, restaurantName] = await Promise.all([
     loadGuestContext(guestId, restaurantId),
     loadMenuSummary(restaurantId),
     loadAiProfile(restaurantId),
+    loadRestaurantName(restaurantId),
   ]);
 
+  const restaurantLine = restaurantName ? `Ты работаешь в ресторане «${restaurantName}».` : '';
   const characterText = compileCharacterProfile(aiProfile?.character_profile);
   const policyText = compileRestaurantPolicy(aiProfile?.restaurant_policy);
   const philosophy = aiProfile?.philosophy || '';
@@ -159,11 +173,15 @@ export async function buildSessionContext({ guestId, restaurantId }) {
     `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
     JSON.stringify({ preferences, restaurantHistory });
 
-  const instructions = [SYSTEM_PROMPT, characterText, policyText, philosophy, dynamicContext]
+  const instructions = [SYSTEM_PROMPT, restaurantLine, characterText, policyText, philosophy, dynamicContext]
     .filter(Boolean)
     .join('\n\n---\n\n');
 
-  const voice = aiProfile?.character_profile?.voice?.openai_voice || null;
+  // Имена голосов не переносятся между провайдерами (alloy у OpenAI ничего
+  // не значит для Grok и наоборот) — профиль ресторана может задать голос
+  // под каждого провайдера отдельно, полем voice.<provider>_voice.
+  const voiceField = config.voiceProvider === 'grok' ? 'grok_voice' : 'openai_voice';
+  const voice = aiProfile?.character_profile?.voice?.[voiceField] || null;
 
   return { instructions, voice };
 }

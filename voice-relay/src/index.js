@@ -21,9 +21,12 @@ app.get('/health', async () => ({ ok: true }));
 app.get('/status', async () => ({
   activeSessions: getActiveSessionCount(),
   maxConcurrentSessions: config.maxConcurrentSessions,
+  voiceProvider: config.voiceProvider,
 }));
 
 await app.register(voiceRoutes);
+
+app.log.info({ voiceProvider: config.voiceProvider }, 'голосовой провайдер активен');
 
 try {
   await app.listen({ port: config.port, host: '0.0.0.0' });

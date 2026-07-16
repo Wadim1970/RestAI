@@ -1,5 +1,5 @@
 import { buildSessionContext } from './context.js';
-import { openRealtimeSession } from './openaiRealtime.js';
+import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
 // Пока нет очереди/горизонтального масштабирования — не даём числу
@@ -58,6 +58,8 @@ export async function voiceRoutes(app) {
         onEvent: (event) => {
           if (event.type === 'relay.error' || event.type === 'error') {
             app.log.error(event, 'realtime session error');
+          } else if (event.type === 'response.transcript') {
+            app.log.info({ guestId, restaurantId, text: event.text }, 'ИИ сказал');
           }
         },
         onClose: () => {
