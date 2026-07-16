@@ -78,15 +78,17 @@ async function loadMenuSummary(restaurantId) {
   const { items } = await res.json();
 
   // Сжатая версия для системного промпта: полные описания и состав блюда
-  // сюда не тащим (лишние токены) — появятся отдельным тулом на этапе
-  // синхронизации голоса с экраном. Калории/вес/время готовки — нужны
-  // ИИ для реальных запросов гостя ("уложи меня в 600 ккал") и для уже
-  // прописанной в Restaurant Policy логики по времени готовки.
+  // сюда не тащим (лишние токены на десятки блюд, которые за разговор
+  // почти никогда не спрашивают) — вместо этого ИИ достаёт их по запросу
+  // через инструмент get_dish_details (см. lookupDishDetails ниже).
+  // Калории/вес/время готовки остаются здесь — нужны сразу, для реальных
+  // запросов гостя ("уложи меня в 600 ккал") и логики Restaurant Policy
+  // по времени готовки.
   const text = (items || [])
     .map((i) => {
       const extras = [];
       if (i.weight_g) extras.push(`${i.weight_g}`);
-      if (i.nutritional_info?.calories != null) extras.push(`${i.nutritional_info.calories} ккал`);
+      if (i.nutritional_info?.calories_kcal != null) extras.push(`${i.nutritional_info.calories_kcal} ккал`);
       if (i.cook_time_min != null) extras.push(`~${i.cook_time_min} мин готовка`);
       const suffix = extras.length ? `, ${extras.join(', ')}` : '';
       return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}`;
@@ -95,6 +97,49 @@ async function loadMenuSummary(restaurantId) {
 
   menuCache.set(restaurantId, { text, expiresAt: Date.now() + MENU_CACHE_TTL_MS });
   return text;
+}
+
+// Поиск по требованию — вызывается из инструмента get_dish_details
+// (см. voiceSession.js), а не при сборке контекста, поэтому не бьёт по
+// токенам разговоров, где состав блюда вообще не спрашивают. Ищем через
+// ilike, а не точное совпадение — модель передаёт название так, как его
+// произнёс гость («цезарь»), а не как оно записано в меню («Салат Цезарь
+// с курицей»).
+export async function lookupDishDetails(restaurantId, dishName) {
+  if (!restaurantId || !dishName) return { found: false };
+
+  const { data, error } = await getSupabase()
+    .from('menu_items')
+    .select('dish_name, description, ingredients, nutritional_info, weight_g, cost_rub, product_type, specific_details')
+    .eq('restaurant_id', restaurantId)
+    .ilike('dish_name', `%${dishName}%`)
+    .limit(5);
+
+  if (error || !data || data.length === 0) return { found: false };
+
+  // Несколько совпадений («Цезарь с курицей» и «Цезарь с креветками») —
+  // отдаём модели варианты, пусть переспросит гостя, а не гадает и не
+  // озвучивает состав не того блюда (актуально в том числе для аллергий).
+  if (data.length > 1) {
+    return { found: false, candidates: data.map((d) => d.dish_name) };
+  }
+
+  const dish = data[0];
+  const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : dish.ingredients;
+
+  return {
+    found: true,
+    dish_name: dish.dish_name,
+    description: dish.description || null,
+    ingredients: ingredients || null,
+    weight: dish.nutritional_info?.weight_value || dish.weight_g || null,
+    calories_kcal: dish.nutritional_info?.calories_kcal ?? null,
+    protein_g: dish.nutritional_info?.protein_g ?? null,
+    fat_g: dish.nutritional_info?.fat_g ?? null,
+    carbs_g: dish.nutritional_info?.carbs_g ?? null,
+    price_rub: dish.cost_rub,
+    tasting_notes: dish.product_type === 'alcohol' ? (dish.specific_details || null) : undefined,
+  };
 }
 
 async function loadRestaurantName(restaurantId) {
@@ -131,6 +176,10 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
 Правила данных:
 - Меню, которое дано ниже — единственный источник истины. Никогда не
   выдумывай блюда, ингредиенты или цены, которых там нет.
+- В списке меню нет состава и описания блюд — если гость спрашивает,
+  из чего сделано блюдо, есть ли в нём что-то конкретное, или просит
+  подробное описание, вызови инструмент get_dish_details, а не
+  придумывай и не отвечай "не знаю" сразу.
 - У тебя есть статистика и предпочтения гостя (что заказывал раньше,
   средний чек и т.д.) — используй это ТОЛЬКО для мягкой персонализации
   (посоветовать похожее на то, что нравилось раньше). НИКОГДА не
