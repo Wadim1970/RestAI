@@ -175,11 +175,12 @@ useEffect(() => {
   // переключателя голос/текст), 'menu' — кнопкой "Чат" из меню (обычный
   // переключатель). См. AIChatModal isFirstLaunch.
   const [chatEntryPoint, setChatEntryPoint] = useState('menu');
-  // Карточка блюда, которую голосовой ИИ вывел на экран поверх AIChatModal
-  // (show_dish_card/hide_dish_card в voice-relay) — тот же DishModal, что
-  // и в меню, отдельный от него экземпляр состояния, потому что MenuPage
-  // не обязательно смонтирован, пока идёт голосовой разговор.
-  const [voiceDish, setVoiceDish] = useState(null);
+  // Блюдо, открытое из слайдера голосового ассистента (тап по карточке
+  // куба в VoiceDishSlider) — тот же DishModal, что и в меню, отдельный
+  // от него экземпляр состояния, потому что MenuPage не обязательно
+  // смонтирован, пока идёт голосовой разговор. Сам список показанных ИИ
+  // блюд живёт локально в VoiceStage, сюда долетает только тап на "открыть подробнее".
+  const [expandedDish, setExpandedDish] = useState(null);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
   const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор: за себя / за весь стол
@@ -239,7 +240,7 @@ useEffect(() => {
 
   // Открыть текстовый чат с контекстом конкретного блюда/раздела — общий
   // обработчик для кнопки чата в MenuPage и для той же кнопки внутри
-  // DishModal, когда карточку открыл голосовой ассистент (voiceDish).
+  // DishModal, когда карточку открыл голосовой ассистент (expandedDish).
   const handleOpenChatFromDish = (dish, currentSection) => {
     if (!currentSessionId) {
       setCurrentSessionId(`sess_${Date.now()}`);
@@ -739,7 +740,7 @@ const handlePayFlowPaid = async () => {
           onClose={() => {
             setIsChatOpen(false);
             setChatContext('');
-            setVoiceDish(null);
+            setExpandedDish(null);
           }}
           viewHistory={viewHistory}
           pageContext={chatContext}
@@ -750,19 +751,17 @@ const handlePayFlowPaid = async () => {
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
           tableNumber={tableNumber}
           isFirstLaunch={chatEntryPoint === 'video'}
-          onShowDish={setVoiceDish}
-          onHideDish={() => setVoiceDish(null)}
+          onExpandDish={setExpandedDish}
         />
 
-        {/* Карточка блюда от голосового ассистента — тот же DishModal, что и в
-            меню, но с более высоким z-index (поверх AIChatModal, а не под ним).
-            Закрыть может и гость (свайп/крестик/тап по фону — как обычно), и
-            сам ассистент (hide_dish_card) — оба пути ведут в один setVoiceDish. */}
+        {/* Полная карточка блюда по тапу в кубе-слайдере голосового ассистента —
+            тот же DishModal, что и в меню, но с более высоким z-index (поверх
+            AIChatModal целиком, включая сам слайдер, а не под ним). */}
         <DishModal
-          isOpen={!!voiceDish}
-          onClose={() => setVoiceDish(null)}
-          dish={voiceDish}
-          currentCount={voiceDish ? (cart[voiceDish.id] || 0) : 0}
+          isOpen={!!expandedDish}
+          onClose={() => setExpandedDish(null)}
+          dish={expandedDish}
+          currentCount={expandedDish ? (cart[expandedDish.id] || 0) : 0}
           updateCart={updateCart}
           onOpenChat={handleOpenChatFromDish}
           overlayZIndex={1000000}
