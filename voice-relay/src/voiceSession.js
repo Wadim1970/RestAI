@@ -1,12 +1,11 @@
-import { buildSessionContext, lookupDishDetails } from './context.js';
+import { buildSessionContext, lookupDishDetails, callWaiter } from './context.js';
 import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
-// Единственный инструмент на сейчас: подробности блюда по требованию
-// (см. lookupDishDetails в context.js — зачем он отдельно от общего
-// списка меню в промте). Показ блюд/корзины на экране во время
-// разговора — не реализовано, это отдельная, более крупная задача.
-function buildTools(restaurantId) {
+// Показ блюд/корзины на экране, добавление в корзину и отправка заказа —
+// не реализовано, это отдельная, более крупная задача (нужен канал
+// voice-relay -> экран гостя, сейчас WS несёт только аудио).
+function buildTools(restaurantId, tableNumber) {
   return [
     {
       name: 'get_dish_details',
@@ -27,6 +26,24 @@ function buildTools(restaurantId) {
         required: ['dish_name'],
       },
       execute: async ({ dish_name }) => lookupDishDetails(restaurantId, dish_name),
+    },
+    {
+      name: 'call_waiter',
+      description:
+        'Зовёт официанта к столу гостя — то же самое действие, что кнопка с колокольчиком в ' +
+        'приложении. Используй, когда гость прямо просит позвать/пригласить официанта. Причину ' +
+        'передавай, только если гость сам её назвал (например "убрать посуду", "принести ' +
+        'приборы") — не выдумывай и не уточняй специально.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reason: {
+            type: 'string',
+            description: 'Причина вызова со слов гостя, если она была. Необязательно.',
+          },
+        },
+      },
+      execute: async ({ reason } = {}) => callWaiter(restaurantId, tableNumber, reason),
     },
   ];
 }
@@ -58,7 +75,7 @@ export async function voiceRoutes(app) {
       return;
     }
 
-    const { guestId, restaurantId } = req.query;
+    const { guestId, restaurantId, tableNumber } = req.query;
 
     activeSessions += 1;
     app.log.info({ guestId, restaurantId, activeSessions }, 'голосовая сессия гостя открыта');
@@ -80,7 +97,7 @@ export async function voiceRoutes(app) {
       openaiSession = openRealtimeSession({
         instructions,
         voice,
-        tools: buildTools(restaurantId),
+        tools: buildTools(restaurantId, tableNumber),
         onAudioDelta: (base64Audio) => {
           if (guestSocket.readyState === guestSocket.OPEN) {
             guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));

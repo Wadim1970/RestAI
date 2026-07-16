@@ -12,7 +12,7 @@ import MenuButton from '../MenuButton.jsx'; // Та же кнопка, что и
 // разговаривать ли вообще; переключатель как обычно доступен при входе
 // через меню.
 // ИЗМЕНЕНИЕ: Теперь принимаем messages, setMessages и sessionId как пропсы из App.jsx
-const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages, guestId, restaurantId, isFirstLaunch = false }) => {
+const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMessages, guestId, restaurantId, tableNumber, isFirstLaunch = false }) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState(''); // Стейт для текста в поле ввода
   const [viewMode, setViewMode] = useState('text'); // Режим: чат или голос
@@ -233,7 +233,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         <div className={styles.dragLine}></div>
 
         {/* Голосовой ИИ */}
-        {viewMode === 'voice' && <VoiceStage guestId={guestId} restaurantId={restaurantId} />}
+        {viewMode === 'voice' && <VoiceStage guestId={guestId} restaurantId={restaurantId} tableNumber={tableNumber} />}
 
         {/* Кнопка закрытия модалки */}
         <button className={styles['modal-closeBtn']} onClick={handleClose}>
