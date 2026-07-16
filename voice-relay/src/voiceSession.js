@@ -1,4 +1,4 @@
-import { buildSessionContext, lookupDishDetails, callWaiter, findDishForDisplay } from './context.js';
+import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay } from './context.js';
 import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
@@ -51,29 +51,38 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
     {
       name: 'show_dish_card',
       description:
-        'Показывает гостю на экране фото блюда с ценой и весом. Используй, когда гость ' +
-        'спрашивает, как выглядит блюдо, или когда уместно проиллюстрировать то, что ты ' +
-        'предлагаешь. Если найдено несколько похожих блюд — уточни у гостя и вызови снова с ' +
-        'точным названием.',
+        'Показывает гостю на экране слайдер с фото названных блюд (цена и вес на карточке). ' +
+        'Вызывай каждый раз, когда называешь гостю конкретные блюда — с полным списком этих ' +
+        'блюд. Каждый вызов ПОЛНОСТЬЮ заменяет то, что было на экране до этого, поэтому при ' +
+        'смене темы просто вызови снова с новыми блюдами. Показать одно блюдо — тоже через ' +
+        'этот инструмент, просто список из одного названия.',
       parameters: {
         type: 'object',
         properties: {
-          dish_name: { type: 'string', description: 'Название блюда, как его назвал гость.' },
+          dish_names: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Названия блюд для показа, как ты их назвал гостю. Одно или несколько.',
+          },
         },
-        required: ['dish_name'],
+        required: ['dish_names'],
       },
-      execute: async ({ dish_name }) => {
-        const result = await findDishForDisplay(restaurantId, dish_name);
-        if (!result.found) return result;
+      execute: async ({ dish_names }) => {
+        const dishes = await findDishesForDisplay(restaurantId, dish_names);
         if (guestSocket.readyState === guestSocket.OPEN) {
-          guestSocket.send(JSON.stringify({ type: 'show_dish', dish: result.dish }));
+          // Всегда шлём — пустой массив тоже валиден (ничего не нашли —
+          // слайдер очистится, а не застрянет со старым набором).
+          guestSocket.send(JSON.stringify({ type: 'show_dish', dishes }));
         }
-        return { found: true, dish_name: result.dish.dish_name };
+        return { shown: dishes.map((d) => d.dish_name) };
       },
     },
     {
       name: 'hide_dish_card',
-      description: 'Убирает с экрана гостя карточку блюда, показанную через show_dish_card.',
+      description:
+        'Убирает с экрана гостя слайдер с карточками блюд. Нужен, только когда разговор уходит ' +
+        'от еды. При смене одних блюд на другие звать НЕ нужно — просто вызови show_dish_card ' +
+        'с новыми блюдами, он сам заменит старые.',
       parameters: { type: 'object', properties: {} },
       execute: async () => {
         if (guestSocket.readyState === guestSocket.OPEN) {

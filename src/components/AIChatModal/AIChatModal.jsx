@@ -229,8 +229,10 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
         onTouchEnd={onTouchEnd}
       > {/* Основное окно */}
 
-        {/* Индикатор свайпа вниз для закрытия */}
-        <div className={styles.dragLine}></div>
+        {/* Индикатор свайпа вниз для закрытия — только в текстовом режиме.
+            На голосовом экране он не к месту (там своя раскладка с шаром и
+            слайдером), поэтому в voice-режиме не рендерим. */}
+        {viewMode !== 'voice' && <div className={styles.dragLine}></div>}
 
         {/* Голосовой ИИ */}
         {viewMode === 'voice' && (
