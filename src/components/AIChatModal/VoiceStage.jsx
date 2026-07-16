@@ -4,11 +4,18 @@ import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
 
-// Программное усиление голоса ИИ на выходе. Realtime-аудио приходит
-// нормализованным заметно ниже пика, поэтому на телефоне на макс.
-// системной громкости всё равно тиховато — поднимаем. Выше ~2.5 начинает
-// хрипеть на громких согласных, 2.0 — громко и ещё чисто.
-const PLAYBACK_GAIN = 2.0;
+// Максимальная громкость голоса ИИ без хрипа. Простое усиление выше ~2.5
+// начинало резать пики (громкие согласные, восклицания) — поэтому перед
+// усилением стоит компрессор-лимитер: сжимает самые громкие места, и уже
+// после этого можно поднять общий уровень заметно выше без искажений.
+// PLAYBACK_GAIN — makeup-усиление ПОСЛЕ компрессора, тут 3.5 безопасно.
+const PLAYBACK_GAIN = 3.5;
+
+// Настройки компрессора подобраны как «лимитер для громкости»: сильное
+// сжатие (ratio 12) всего, что громче порога, быстрый attack — успевает
+// поймать резкие пики речи. Звук становится ровнее по динамике (для
+// ассистента в шумном зале это плюс — речь разборчивее) и заметно громче.
+const COMPRESSOR = { threshold: -28, knee: 24, ratio: 12, attack: 0.003, release: 0.25 };
 
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
@@ -81,6 +88,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
     let scriptNode = null;
     let outputAnalyser = null;
     let playbackGain = null;
+    let compressor = null;
     let ws = null;
     let aiSpeaking = false;
     let nextPlaybackTime = 0;
@@ -121,7 +129,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
       buffer.copyToChannel(float32, 0);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(playbackGain);
+      source.connect(compressor);
 
       const startAt = Math.max(audioContext.currentTime, nextPlaybackTime);
       source.start(startAt);
@@ -159,13 +167,22 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
         // Через этот узел проходит воспроизводимый звук ИИ — им и кормим
         // непрерывный визуальный цикл (см. visualLoop выше), а не разовыми
         // снимками уровня в момент прихода каждого куска по сети.
-        // Цепочка воспроизведения ИИ: каждый кусок -> playbackGain (общий
-        // усилитель громкости) -> outputAnalyser (для визуализации шара) ->
-        // колонки. Усиление на одном общем узле, а не на каждом источнике.
+        // Цепочка воспроизведения ИИ: каждый кусок -> compressor (сжимает
+        // пики) -> playbackGain (makeup-усиление громкости) -> outputAnalyser
+        // (визуализация шара) -> колонки. Всё на общих узлах, а не на каждом
+        // источнике. Порядок важен: компрессор ДО усиления, иначе усилим
+        // пики раньше, чем успеем их сжать.
+        compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = COMPRESSOR.threshold;
+        compressor.knee.value = COMPRESSOR.knee;
+        compressor.ratio.value = COMPRESSOR.ratio;
+        compressor.attack.value = COMPRESSOR.attack;
+        compressor.release.value = COMPRESSOR.release;
         playbackGain = audioContext.createGain();
         playbackGain.gain.value = PLAYBACK_GAIN;
         outputAnalyser = audioContext.createAnalyser();
         outputAnalyser.fftSize = 256;
+        compressor.connect(playbackGain);
         playbackGain.connect(outputAnalyser);
         outputAnalyser.connect(audioContext.destination);
         rafId = requestAnimationFrame(visualLoop);
