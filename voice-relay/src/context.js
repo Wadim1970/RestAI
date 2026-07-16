@@ -84,7 +84,18 @@ async function loadMenuSummary(restaurantId) {
   // Калории/вес/время готовки остаются здесь — нужны сразу, для реальных
   // запросов гостя ("уложи меня в 600 ккал") и логики Restaurant Policy
   // по времени готовки.
+  // Дедуп по названию+цене: одно блюдо часто заведено несколькими
+  // строками ради попадания в разные разделы меню (напр. «Борщ» и в
+  // «Популярное», и в «Супы») — в промте это дубль, из-за которого ИИ
+  // думает, что таких блюд несколько. Оставляем первое вхождение.
+  const seen = new Set();
   const text = (items || [])
+    .filter((i) => {
+      const key = `${i.dish_name}|${i.cost_rub}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .map((i) => {
       const extras = [];
       if (i.weight_g) extras.push(`${i.weight_g}`);
@@ -176,8 +187,13 @@ export async function findDishesForDisplay(restaurantId, dishNames) {
   for (const name of names) {
     const rows = await findMatchingDishes(restaurantId, name, DISH_DISPLAY_FIELDS);
     for (const row of rows) {
-      if (seen.has(row.id)) continue; // одно блюдо не дублируем, даже если попало под два названия
-      seen.add(row.id);
+      // Дедуп по названию+цене, а не по id: одно и то же блюдо часто
+      // заведено несколькими строками (разные id), чтобы попадать сразу
+      // в несколько разделов меню (напр. «Борщ» и в «Популярное», и в
+      // «Супы»). Для карточки это одно блюдо — не показываем дважды.
+      const key = `${row.dish_name}|${row.cost_rub}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       dishes.push(row);
       if (dishes.length >= MAX_DISPLAY_DISHES) return dishes;
     }
