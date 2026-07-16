@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './DishModal.module.css';
 
 // ДОБАВИЛИ: пропс onOpenChat
-const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat }) => {
+// overlayZIndex — необязательный: по умолчанию используется z-index из
+// DishModal.module.css (99999). Голосовой ассистент открывает эту же
+// модалку поверх AIChatModal (z-index 999999) — там передаётся более
+// высокое значение, дизайн карточки при этом не меняется.
+const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat, overlayZIndex }) => {
   const [isClosing, setIsClosing] = useState(false);
   
   const touchStart = useRef(null);
@@ -55,7 +59,11 @@ const DishModal = ({ isOpen, onClose, dish, currentCount, updateCart, onOpenChat
   const isAlcohol = dish.product_type === 'alcohol';
 
   return (
-    <div className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`} onClick={handleClose}>
+    <div
+      className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`}
+      style={overlayZIndex ? { zIndex: overlayZIndex } : undefined}
+      onClick={handleClose}
+    >
       <div 
         ref={modalRef}
         className={`${styles.modal} ${isClosing ? styles.slideDown : ''}`} 

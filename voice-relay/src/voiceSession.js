@@ -1,11 +1,14 @@
-import { buildSessionContext, lookupDishDetails, callWaiter } from './context.js';
+import { buildSessionContext, lookupDishDetails, callWaiter, findDishForDisplay } from './context.js';
 import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
-// Показ блюд/корзины на экране, добавление в корзину и отправка заказа —
-// не реализовано, это отдельная, более крупная задача (нужен канал
-// voice-relay -> экран гостя, сейчас WS несёт только аудио).
-function buildTools(restaurantId, tableNumber) {
+// show_dish_card/hide_dish_card — единственные инструменты, которые
+// шлют что-то ГОСТЮ напрямую (guestSocket), в обход ответа модели: тут
+// же, в closure, а не через realtimeProvider.js — тот знает только про
+// его собственный сокет к OpenAI/Grok, не про сокет гостя.
+// Добавление в корзину и отправка заказа на кухню — отдельная, более
+// крупная задача, этот канал для неё уже пригодится.
+function buildTools(restaurantId, tableNumber, guestSocket) {
   return [
     {
       name: 'get_dish_details',
@@ -44,6 +47,40 @@ function buildTools(restaurantId, tableNumber) {
         },
       },
       execute: async ({ reason } = {}) => callWaiter(restaurantId, tableNumber, reason),
+    },
+    {
+      name: 'show_dish_card',
+      description:
+        'Показывает гостю на экране фото блюда с ценой и весом. Используй, когда гость ' +
+        'спрашивает, как выглядит блюдо, или когда уместно проиллюстрировать то, что ты ' +
+        'предлагаешь. Если найдено несколько похожих блюд — уточни у гостя и вызови снова с ' +
+        'точным названием.',
+      parameters: {
+        type: 'object',
+        properties: {
+          dish_name: { type: 'string', description: 'Название блюда, как его назвал гость.' },
+        },
+        required: ['dish_name'],
+      },
+      execute: async ({ dish_name }) => {
+        const result = await findDishForDisplay(restaurantId, dish_name);
+        if (!result.found) return result;
+        if (guestSocket.readyState === guestSocket.OPEN) {
+          guestSocket.send(JSON.stringify({ type: 'show_dish', dish: result.dish }));
+        }
+        return { found: true, dish_name: result.dish.dish_name };
+      },
+    },
+    {
+      name: 'hide_dish_card',
+      description: 'Убирает с экрана гостя карточку блюда, показанную через show_dish_card.',
+      parameters: { type: 'object', properties: {} },
+      execute: async () => {
+        if (guestSocket.readyState === guestSocket.OPEN) {
+          guestSocket.send(JSON.stringify({ type: 'hide_dish' }));
+        }
+        return { success: true };
+      },
     },
   ];
 }
@@ -97,7 +134,7 @@ export async function voiceRoutes(app) {
       openaiSession = openRealtimeSession({
         instructions,
         voice,
-        tools: buildTools(restaurantId, tableNumber),
+        tools: buildTools(restaurantId, tableNumber, guestSocket),
         onAudioDelta: (base64Audio) => {
           if (guestSocket.readyState === guestSocket.OPEN) {
             guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));

@@ -4,6 +4,7 @@ import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
+import DishModal from './components/DishModal/DishModal';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
@@ -174,6 +175,11 @@ useEffect(() => {
   // переключателя голос/текст), 'menu' — кнопкой "Чат" из меню (обычный
   // переключатель). См. AIChatModal isFirstLaunch.
   const [chatEntryPoint, setChatEntryPoint] = useState('menu');
+  // Карточка блюда, которую голосовой ИИ вывел на экран поверх AIChatModal
+  // (show_dish_card/hide_dish_card в voice-relay) — тот же DishModal, что
+  // и в меню, отдельный от него экземпляр состояния, потому что MenuPage
+  // не обязательно смонтирован, пока идёт голосовой разговор.
+  const [voiceDish, setVoiceDish] = useState(null);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
   const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор: за себя / за весь стол
@@ -229,6 +235,26 @@ useEffect(() => {
   // Функция отслеживания просмотров
   const trackDishView = (dishName) => {
     setViewHistory(prev => [...prev, dishName]);
+  };
+
+  // Открыть текстовый чат с контекстом конкретного блюда/раздела — общий
+  // обработчик для кнопки чата в MenuPage и для той же кнопки внутри
+  // DishModal, когда карточку открыл голосовой ассистент (voiceDish).
+  const handleOpenChatFromDish = (dish, currentSection) => {
+    if (!currentSessionId) {
+      setCurrentSessionId(`sess_${Date.now()}`);
+    }
+
+    if (dish) {
+      const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+      setChatContext(info);
+    } else if (currentSection) {
+      setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
+    } else {
+      setChatContext('Общее меню ресторана');
+    }
+    setChatEntryPoint('menu');
+    setIsChatOpen(true);
   };
 
   // Видео на главном экране доиграло — открываем голосовой чат с ИИ вместо
@@ -701,35 +727,20 @@ const handlePayFlowPaid = async () => {
                 onRequestBill={handleRequestBill}
                 onCallWaiter={handleCallWaiter}
                 isCallPending={callStatus === 'pending'}
-                onOpenChat={(dish, currentSection) => {
-                  // Генерируем сессию ТОЛЬКО если ее еще нет
-                  if (!currentSessionId) {
-                      setCurrentSessionId(`sess_${Date.now()}`); 
-                  }
-                  
-                  if (dish) {
-                    const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
-                    setChatContext(info); 
-                  } else if (currentSection) {
-                    setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
-                  } else {
-                    setChatContext('Общее меню ресторана');
-                  }
-                  setChatEntryPoint('menu');
-                  setIsChatOpen(true);
-                }}
+                onOpenChat={handleOpenChatFromDish}
                 trackDishView={trackDishView} 
               />
             } 
           />
         </Routes>
 
-        <AIChatModal 
-          isOpen={isChatOpen} 
+        <AIChatModal
+          isOpen={isChatOpen}
           onClose={() => {
             setIsChatOpen(false);
             setChatContext('');
-          }} 
+            setVoiceDish(null);
+          }}
           viewHistory={viewHistory}
           pageContext={chatContext}
           sessionId={currentSessionId}
@@ -739,6 +750,22 @@ const handlePayFlowPaid = async () => {
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
           tableNumber={tableNumber}
           isFirstLaunch={chatEntryPoint === 'video'}
+          onShowDish={setVoiceDish}
+          onHideDish={() => setVoiceDish(null)}
+        />
+
+        {/* Карточка блюда от голосового ассистента — тот же DishModal, что и в
+            меню, но с более высоким z-index (поверх AIChatModal, а не под ним).
+            Закрыть может и гость (свайп/крестик/тап по фону — как обычно), и
+            сам ассистент (hide_dish_card) — оба пути ведут в один setVoiceDish. */}
+        <DishModal
+          isOpen={!!voiceDish}
+          onClose={() => setVoiceDish(null)}
+          dish={voiceDish}
+          currentCount={voiceDish ? (cart[voiceDish.id] || 0) : 0}
+          updateCart={updateCart}
+          onOpenChat={handleOpenChatFromDish}
+          overlayZIndex={1000000}
         />
 
         <SplitBillModal
