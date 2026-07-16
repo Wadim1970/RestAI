@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCube, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -13,23 +12,15 @@ function dishWeightLabel(dish) {
 }
 
 // Блюда, которые голосовой ассистент назвал во время разговора
-// (show_dish_card/hide_dish_card, состояние живёт в VoiceStage — см. его
-// комментарий про "здесь будут выезжать карточки блюд"). Вращение куба —
-// не только даёт понять, что карточки можно листать вручную, но и само
-// поворачивается к новому блюду ровно в момент, когда ИИ начинает о нём
-// говорить (см. эффект ниже, ключ — id последнего элемента массива).
+// (show_dish_card в voice-relay). Набор приходит с сервера уже целиком и
+// каждый раз заменяется полностью (при смене темы старые блюда не
+// остаются) — поэтому ключуем Swiper по составу набора: новый набор =
+// свежий Swiper с чистой инициализацией куба, без ручного slideTo и без
+// риска, что cube+loop криво переварит смену слайдов на лету.
 export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
-  const swiperRef = useRef(null);
-  const lastDishId = dishes[dishes.length - 1]?.id;
-
-  useEffect(() => {
-    if (!swiperRef.current || lastDishId == null) return;
-    const index = dishes.findIndex((d) => d.id === lastDishId);
-    if (index >= 0) swiperRef.current.slideTo(index);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastDishId]);
-
   if (dishes.length === 0) return null;
+
+  const setKey = dishes.map((d) => d.id).join(',');
 
   return (
     <div className={styles.wrapper}>
@@ -38,6 +29,7 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
       </button>
 
       <Swiper
+        key={setKey}
         modules={[EffectCube, Autoplay]}
         effect="cube"
         grabCursor
@@ -45,7 +37,6 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
         speed={800}
         cubeEffect={{ shadow: true, slideShadows: false, shadowOffset: 40, shadowScale: 1 }}
         autoplay={dishes.length > 1 ? { delay: 2600, disableOnInteraction: true } : false}
-        onSwiper={(instance) => { swiperRef.current = instance; }}
         className={styles.slider}
       >
         {dishes.map((dish) => (

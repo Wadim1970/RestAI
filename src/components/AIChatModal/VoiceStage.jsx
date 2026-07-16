@@ -3,16 +3,6 @@ import VoiceDishSlider from '../VoiceDishSlider/VoiceDishSlider';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
-const MAX_VOICE_DISHES = 4;
-
-// Новое/повторно названное блюдо всегда уходит в конец массива — так
-// "последний элемент" однозначно значит "то, о чём ИИ говорит сейчас",
-// не важно, впервые показано блюдо или ассистент вернулся к нему снова
-// (см. VoiceDishSlider — куб поворачивается именно к последнему).
-function addVoiceDish(prev, dish) {
-  const next = [...prev.filter((d) => d.id !== dish.id), dish];
-  return next.length > MAX_VOICE_DISHES ? next.slice(next.length - MAX_VOICE_DISHES) : next;
-}
 
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
@@ -194,8 +184,10 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
           } else if (msg.type === 'error' && msg.code === 'busy') {
             setStatus('busy');
             setStatusMessage(msg.message || '');
-          } else if (msg.type === 'show_dish' && msg.dish) {
-            setVoiceDishes((prev) => addVoiceDish(prev, msg.dish));
+          } else if (msg.type === 'show_dish') {
+            // Каждый показ заменяет набор целиком (см. voiceSession.js) —
+            // при смене темы старые блюда уходят сами, не накапливаются.
+            setVoiceDishes(Array.isArray(msg.dishes) ? msg.dishes : []);
           } else if (msg.type === 'hide_dish') {
             setVoiceDishes([]);
           }
