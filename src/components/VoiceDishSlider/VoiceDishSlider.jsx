@@ -50,7 +50,19 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
       >
         {dishes.map((dish) => (
           <SwiperSlide key={dish.id} onClick={() => onDishTap(dish)}>
-            <img src={dish.image_url_thumbnail || dish.image_url} alt={dish.dish_name} />
+            <img
+              src={dish.image_url_thumbnail || dish.image_url}
+              alt={dish.dish_name}
+              onError={(e) => {
+                // Тот же приём, что уже есть в DishModal — thumbnail лежит
+                // на облачном Supabase-проекте, который сейчас не отвечает,
+                // источник (image_url) — на отдельном хостинге ресторана и
+                // не затронут. Меняем src только один раз, не по кругу.
+                if (e.target.src.includes(dish.image_url_thumbnail) && dish.image_url) {
+                  e.target.src = dish.image_url;
+                }
+              }}
+            />
             <div className={styles.infoBar}>
               <p>{dish.dish_name}</p>
               <span>
