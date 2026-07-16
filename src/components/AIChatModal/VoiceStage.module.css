@@ -13,6 +13,11 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
+  /* Резерв снизу — buttons-footer-fixed (кнопка "Перейти в меню") лежит
+     поверх (z-index 999999) на фиксированном отступе от низа экрана;
+     без этого запаса центрированный текст статуса может оказаться на
+     той же высоте и будет частично перекрыт кнопкой. */
+  padding-bottom: 140px;
   background: radial-gradient(ellipse at center, #1c3d8f 0%, #0a1440 70%, #060a24 100%);
   overflow: hidden;
 }
