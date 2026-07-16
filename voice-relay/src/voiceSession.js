@@ -1,5 +1,5 @@
 import { buildSessionContext } from './context.js';
-import { openRealtimeSession } from './openaiRealtime.js';
+import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
 // Пока нет очереди/горизонтального масштабирования — не даём числу

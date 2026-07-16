@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
 import { compileCharacterProfile, compileRestaurantPolicy } from './promptCompiler.js';
 
-// Ленивая инициализация — как и с OPENAI_API_KEY в openaiRealtime.js,
+// Ленивая инициализация — как и с OPENAI_API_KEY в realtimeProvider.js,
 // отсутствие/опечатка в переменных окружения не должна ронять весь
 // процесс при старте (тогда бы не отвечал даже /health), а только
 // голосовую сессию конкретного гостя, когда до неё дойдёт дело.
@@ -177,7 +177,11 @@ export async function buildSessionContext({ guestId, restaurantId }) {
     .filter(Boolean)
     .join('\n\n---\n\n');
 
-  const voice = aiProfile?.character_profile?.voice?.openai_voice || null;
+  // Имена голосов не переносятся между провайдерами (alloy у OpenAI ничего
+  // не значит для Grok и наоборот) — профиль ресторана может задать голос
+  // под каждого провайдера отдельно, полем voice.<provider>_voice.
+  const voiceField = config.voiceProvider === 'grok' ? 'grok_voice' : 'openai_voice';
+  const voice = aiProfile?.character_profile?.voice?.[voiceField] || null;
 
   return { instructions, voice };
 }
