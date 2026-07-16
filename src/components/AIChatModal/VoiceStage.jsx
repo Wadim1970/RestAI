@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import VoiceDishSlider from '../VoiceDishSlider/VoiceDishSlider';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
+const MAX_VOICE_DISHES = 4;
+
+// Новое/повторно названное блюдо всегда уходит в конец массива — так
+// "последний элемент" однозначно значит "то, о чём ИИ говорит сейчас",
+// не важно, впервые показано блюдо или ассистент вернулся к нему снова
+// (см. VoiceDishSlider — куб поворачивается именно к последнему).
+function addVoiceDish(prev, dish) {
+  const next = [...prev.filter((d) => d.id !== dish.id), dish];
+  return next.length > MAX_VOICE_DISHES ? next.slice(next.length - MAX_VOICE_DISHES) : next;
+}
 
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
@@ -58,10 +69,14 @@ function rmsLevel(float32) {
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, onShowDish, onHideDish }) {
+export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpandDish }) {
   const orbRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
+  // Блюда, которые ИИ показал за этот разговор (show_dish_card/
+  // hide_dish_card) — локальное состояние, не в App.jsx: живёт и умирает
+  // вместе с самим голосовым разговором, отдельного сброса не требует.
+  const [voiceDishes, setVoiceDishes] = useState([]);
 
   useEffect(() => {
     let stopped = false;
@@ -180,9 +195,9 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onShowD
             setStatus('busy');
             setStatusMessage(msg.message || '');
           } else if (msg.type === 'show_dish' && msg.dish) {
-            onShowDish?.(msg.dish);
+            setVoiceDishes((prev) => addVoiceDish(prev, msg.dish));
           } else if (msg.type === 'hide_dish') {
-            onHideDish?.();
+            setVoiceDishes([]);
           }
         };
 
@@ -215,9 +230,18 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onShowD
     };
   }, [guestId, restaurantId, tableNumber]);
 
+  const hasDishes = voiceDishes.length > 0;
+
   return (
     <div className={styles.stage}>
-      <div className={styles.orbWrap}>
+      {hasDishes && (
+        <VoiceDishSlider
+          dishes={voiceDishes}
+          onDishTap={onExpandDish}
+          onClose={() => setVoiceDishes([])}
+        />
+      )}
+      <div className={`${styles.orbWrap} ${hasDishes ? styles.orbWrapCompact : ''}`}>
         <div className={styles.orb} ref={orbRef} />
       </div>
       <p className={styles.status}>
