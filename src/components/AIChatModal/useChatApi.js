@@ -9,6 +9,45 @@ function stripForAI(topDishes) {
     return (topDishes || []).map(({ name, times }) => ({ name, times }));
 }
 
+// Служебный маркер авто-приветствия (AIChatModal шлёт его вместо реальной
+// реплики гостя) — его самого в историю писать не нужно, а вот ответ-
+// приветствие ИИ пишем, чтобы голосовой режим знал, что уже здоровались.
+const GREETING_MARKER = 'ПРИВЕТСТВИЕ';
+
+// Единая история диалога (conversation_turns) — общая с голосовым
+// режимом. Читаем её ОДИН раз на сообщение (не громоздко: одна лёгкая
+// выборка по индексу session_id), форматируем для промпта DeepSeek.
+async function loadHistoryText(sessionId) {
+    if (!sessionId) return '';
+    const { data, error } = await supabase
+        .from('conversation_turns')
+        .select('role, content')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(40);
+    if (error || !data || data.length === 0) return '';
+    return data
+        .reverse()
+        .map((t) => `${t.role === 'user' ? 'Гость' : 'Ассистент'}: ${t.content}`)
+        .join('\n');
+}
+
+async function saveTurn(sessionId, restaurantId, guestId, role, content) {
+    if (!sessionId || !content) return;
+    try {
+        await supabase.from('conversation_turns').insert({
+            session_id: sessionId,
+            restaurant_id: restaurantId || null,
+            guest_id: guestId != null ? String(guestId) : null,
+            role,
+            content,
+            source: 'text',
+        });
+    } catch (err) {
+        console.warn('Не удалось записать реплику в историю:', err);
+    }
+}
+
 export const useChatApi = (webhookUrl) => {
     const [isLoading, setIsLoading] = useState(false);
 
@@ -62,6 +101,12 @@ export const useChatApi = (webhookUrl) => {
             }
         }
 
+        // История общего диалога (голос + текст) до текущей реплики —
+        // передаём её в n8n, чтобы DeepSeek помнил контекст беседы (в т.ч.
+        // то, что гость обсуждал голосом). Читаем ДО записи текущей реплики,
+        // чтобы она не задвоилась (message уходит отдельным полем).
+        const history = await loadHistoryText(sessionId);
+
         try {
             // Выполняем запрос к n8n
             const response = await fetch(webhookUrl, {
@@ -74,6 +119,7 @@ export const useChatApi = (webhookUrl) => {
                 body: JSON.stringify({
                     message: text,
                     context: context,
+                    history: history, // 🔥 Общая история диалога сессии (голос+текст)
                     sessionId: sessionId,
                     restaurantId: restaurantId,
                     guestId: guestId,
@@ -81,7 +127,7 @@ export const useChatApi = (webhookUrl) => {
                     restaurantHistory: restaurantHistory, // Что гость заказывал именно здесь
                 }),
             });
-            
+
             // Если сервер ответил с ошибкой (например, 500 или 404)
             if (!response.ok) {
                 throw new Error(`Ошибка сервера: ${response.status}`);
@@ -89,14 +135,24 @@ export const useChatApi = (webhookUrl) => {
 
             // Получаем «сырой» ответ от сервера
             const responseText = await response.text();
-            
+
+            let answer;
             try {
-                // Пытаемся распарсить ответ как JSON
                 const data = JSON.parse(responseText);
-                return data.output || data.text || data.message || responseText;
+                answer = data.output || data.text || data.message || responseText;
             } catch (jsonError) {
-                return responseText;
+                answer = responseText;
             }
+
+            // Пишем в общую историю: реплику гостя (кроме служебного маркера
+            // авто-приветствия) и ответ ассистента — чтобы голосовой режим
+            // видел текстовую часть разговора.
+            if (text !== GREETING_MARKER) {
+                await saveTurn(sessionId, restaurantId, guestId, 'user', text);
+            }
+            await saveTurn(sessionId, restaurantId, guestId, 'assistant', answer);
+
+            return answer;
 
         } catch (error) {
             console.error("n8n Error:", error);
