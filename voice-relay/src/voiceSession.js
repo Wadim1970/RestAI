@@ -91,6 +91,71 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
         return { success: true };
       },
     },
+    {
+      name: 'add_to_cart',
+      description:
+        'Добавляет выбранные гостем блюда в его корзину в приложении (реально кладёт их туда, ' +
+        'а не просто на словах). Вызывай, когда гость решил что-то заказать. Передавай название ' +
+        'и количество каждого блюда. Само по себе НЕ отправляет заказ на кухню — только наполняет ' +
+        'корзину; отправляет заказ сам гость кнопкой в корзине (см. show_cart).',
+      parameters: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                dish_name: { type: 'string', description: 'Название блюда.' },
+                quantity: { type: 'number', description: 'Сколько порций. По умолчанию 1.' },
+              },
+              required: ['dish_name'],
+            },
+            description: 'Блюда с количеством, которые гость хочет заказать.',
+          },
+        },
+        required: ['items'],
+      },
+      execute: async ({ items }) => {
+        const cartItems = [];
+        const notFound = [];
+        for (const it of items || []) {
+          const matches = await findDishesForDisplay(restaurantId, [it.dish_name]);
+          if (matches.length === 0) {
+            notFound.push(it.dish_name);
+            continue;
+          }
+          const dish = matches[0]; // берём первое совпадение — для заказа неоднозначность решает контекст беседы
+          cartItems.push({
+            id: dish.id,
+            dish_name: dish.dish_name,
+            cost_rub: dish.cost_rub,
+            image_url: dish.image_url,
+            image_url_thumbnail: dish.image_url_thumbnail,
+            quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
+          });
+        }
+        if (cartItems.length > 0 && guestSocket.readyState === guestSocket.OPEN) {
+          guestSocket.send(JSON.stringify({ type: 'cart_add', items: cartItems }));
+        }
+        return { added: cartItems.map((c) => `${c.dish_name} x${c.quantity}`), not_found: notFound };
+      },
+    },
+    {
+      name: 'show_cart',
+      description:
+        'Показывает гостю на экране его корзину со всеми добавленными блюдами и кнопкой ' +
+        '«Отправить заказ». Вызывай в конце выбора: сначала вслух подытожь заказ (перечисли ' +
+        'блюда и количество), затем открой корзину и скажи, что если всё верно — гость может ' +
+        'сам отправить заказ на кухню кнопкой «Отправить заказ».',
+      parameters: { type: 'object', properties: {} },
+      execute: async () => {
+        if (guestSocket.readyState === guestSocket.OPEN) {
+          guestSocket.send(JSON.stringify({ type: 'show_cart' }));
+        }
+        return { success: true };
+      },
+    },
   ];
 }
 

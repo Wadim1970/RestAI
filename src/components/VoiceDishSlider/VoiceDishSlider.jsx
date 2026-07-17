@@ -55,10 +55,11 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
               }}
             />
             <div className={styles.infoBar}>
-              <p>{dish.dish_name}</p>
-              <span>
-                {dish.cost_rub}₽{dishWeightLabel(dish) ? ` · ${dishWeightLabel(dish)}` : ''}
-              </span>
+              <div className={styles.infoLeft}>
+                <p className={styles.dishName}>{dish.dish_name}</p>
+                {dishWeightLabel(dish) && <span className={styles.dishWeight}>{dishWeightLabel(dish)}</span>}
+              </div>
+              <div className={styles.dishPrice}>{dish.cost_rub}₽</div>
             </div>
           </SwiperSlide>
         ))}

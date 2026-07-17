@@ -5,6 +5,7 @@ import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
+import CartModal from './components/CartModal/CartModal';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
@@ -181,6 +182,13 @@ useEffect(() => {
   // смонтирован, пока идёт голосовой разговор. Сам список показанных ИИ
   // блюд живёт локально в VoiceStage, сюда долетает только тап на "открыть подробнее".
   const [expandedDish, setExpandedDish] = useState(null);
+  // Корзина, которую голосовой ИИ показывает поверх чата (add_to_cart/
+  // show_cart в voice-relay). Количество блюд живёт в общем cart (чтобы
+  // совпадало с корзиной в меню), а данные добавленных ИИ блюд (фото,
+  // цена) — здесь: App не грузит полное меню, как MenuPage, поэтому сам
+  // не знает карточек блюд без этого словаря.
+  const [voiceDishesById, setVoiceDishesById] = useState({});
+  const [isVoiceCartOpen, setIsVoiceCartOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
   const [isPayChoiceOpen, setIsPayChoiceOpen] = useState(false);   // Выбор: за себя / за весь стол
@@ -257,6 +265,24 @@ useEffect(() => {
     setChatEntryPoint('menu');
     setIsChatOpen(true);
   };
+
+  // Голосовой ИИ положил блюда в корзину (add_to_cart). Обновляем и общий
+  // cart (количества — чтобы совпадало с корзиной в меню), и словарь
+  // данных блюд (для показа карточек в корзине поверх чата).
+  const handleVoiceCartAdd = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    setVoiceDishesById((prev) => {
+      const next = { ...prev };
+      for (const it of items) if (it?.id) next[it.id] = it;
+      return next;
+    });
+    for (const it of items) {
+      if (it?.id) updateCart(Math.max(1, Number(it.quantity) || 1), it.id);
+    }
+  };
+
+  // Голосовой ИИ показывает гостю корзину (show_cart).
+  const handleVoiceShowCart = () => setIsVoiceCartOpen(true);
 
   // Видео на главном экране доиграло — открываем голосовой чат с ИИ вместо
   // автоперехода в меню (гость, кто хочет сразу в меню, жмёт кнопку поверх
@@ -741,6 +767,7 @@ const handlePayFlowPaid = async () => {
             setIsChatOpen(false);
             setChatContext('');
             setExpandedDish(null);
+            setIsVoiceCartOpen(false);
           }}
           viewHistory={viewHistory}
           pageContext={chatContext}
@@ -752,6 +779,8 @@ const handlePayFlowPaid = async () => {
           tableNumber={tableNumber}
           isFirstLaunch={chatEntryPoint === 'video'}
           onExpandDish={setExpandedDish}
+          onCartAdd={handleVoiceCartAdd}
+          onShowCart={handleVoiceShowCart}
         />
 
         {/* Полная карточка блюда по тапу в кубе-слайдере голосового ассистента —
@@ -764,6 +793,23 @@ const handlePayFlowPaid = async () => {
           currentCount={expandedDish ? (cart[expandedDish.id] || 0) : 0}
           updateCart={updateCart}
           onOpenChat={handleOpenChatFromDish}
+          overlayZIndex={1000000}
+        />
+
+        {/* Корзина, вызванная голосовым ИИ (show_cart) — тот же CartModal,
+            что и в меню, с кнопкой «Отправить заказ» (onConfirmOrder=
+            handleConfirmOrder). Позиции берём из общего cart + данных блюд,
+            которые ИИ добавил (voiceDishesById), поверх чата. */}
+        <CartModal
+          isOpen={isVoiceCartOpen}
+          onClose={() => setIsVoiceCartOpen(false)}
+          cartItems={Object.keys(cart)
+            .filter((id) => voiceDishesById[id])
+            .map((id) => ({ ...voiceDishesById[id], count: cart[id] }))}
+          confirmedOrders={confirmedOrders || []}
+          updateCart={updateCart}
+          onConfirmOrder={handleConfirmOrder}
+          onRequestBill={handleRequestBill}
           overlayZIndex={1000000}
         />
 

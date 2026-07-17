@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 
-const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill }) => {
+const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex }) => {
   const [comment, setComment] = useState(''); // Состояние для текста комментария
   const [isClosing, setIsClosing] = useState(false); // Состояние для запуска анимации закрытия
      
@@ -106,7 +106,11 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const totalSum = [...cartItems, ...confirmedOrders].reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
 
   return (
-    <div className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`} onClick={handleClose}>
+    <div
+      className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`}
+      style={overlayZIndex ? { zIndex: overlayZIndex } : undefined}
+      onClick={handleClose}
+    >
       <div 
         ref={modalRef}
         className={`${styles.modal} ${isClosing ? styles.slideDown : ''}`} 
