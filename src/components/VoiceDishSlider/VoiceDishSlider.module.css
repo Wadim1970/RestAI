@@ -31,20 +31,30 @@
   display: block;
 }
 
-/* Одна панель — название, цена и вес вместе, ничего больше. */
+/* Одна панель: слева название+вес, справа крупная цена. */
 .infoBar {
   position: absolute;
   left: 0;
   bottom: 0;
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.infoBar p {
+.infoLeft {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* даёт длинному названию сжаться, а не толкать цену за край */
+}
+
+.dishName {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
@@ -52,9 +62,18 @@
   font-family: var(--font-body, sans-serif);
 }
 
-.infoBar span {
+.dishWeight {
   font-size: 11px;
   opacity: 0.8;
+  margin-top: 2px;
+}
+
+.dishPrice {
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-body, sans-serif);
+  white-space: nowrap;
 }
 
 .closeBtn {

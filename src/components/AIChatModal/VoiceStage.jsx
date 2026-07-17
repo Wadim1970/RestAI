@@ -4,18 +4,21 @@ import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
 
-// Максимальная громкость голоса ИИ без хрипа. Простое усиление выше ~2.5
-// начинало резать пики (громкие согласные, восклицания) — поэтому перед
-// усилением стоит компрессор-лимитер: сжимает самые громкие места, и уже
-// после этого можно поднять общий уровень заметно выше без искажений.
-// PLAYBACK_GAIN — makeup-усиление ПОСЛЕ компрессора, тут 3.5 безопасно.
-const PLAYBACK_GAIN = 3.5;
+// Максимальная громкость голоса ИИ без хрипа. Простое усиление резало
+// пики (громкие согласные, восклицания) — поэтому перед усилением стоит
+// компрессор-лимитер: сильно прижимает самые громкие места, и уже после
+// этого можно поднять общий уровень намного выше без искажений.
+// PLAYBACK_GAIN — makeup-усиление ПОСЛЕ компрессора. Здесь выкручено
+// высоко (громко почти на максимум); если где-то начнёт хрипеть —
+// снижать в первую очередь его, потом трогать порог компрессора.
+const PLAYBACK_GAIN = 6.0;
 
-// Настройки компрессора подобраны как «лимитер для громкости»: сильное
-// сжатие (ratio 12) всего, что громче порога, быстрый attack — успевает
-// поймать резкие пики речи. Звук становится ровнее по динамике (для
-// ассистента в шумном зале это плюс — речь разборчивее) и заметно громче.
-const COMPRESSOR = { threshold: -28, knee: 24, ratio: 12, attack: 0.003, release: 0.25 };
+// «Лимитер для громкости»: очень сильное сжатие (ratio 20) всего, что
+// громче низкого порога, мгновенный attack — ловит резкие пики речи до
+// того, как их усилит makeup. Динамика становится ровной, зато можно
+// безопасно поднять общий уровень. Ровный звук для ассистента в шумном
+// зале — плюс, речь разборчивее.
+const COMPRESSOR = { threshold: -30, knee: 20, ratio: 20, attack: 0.002, release: 0.25 };
 
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
@@ -72,7 +75,7 @@ function rmsLevel(float32) {
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpandDish }) {
+export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpandDish, onCartAdd, onShowCart }) {
   const orbRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
@@ -80,6 +83,14 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
   // hide_dish_card) — локальное состояние, не в App.jsx: живёт и умирает
   // вместе с самим голосовым разговором, отдельного сброса не требует.
   const [voiceDishes, setVoiceDishes] = useState([]);
+
+  // Латест-реф на колбэки корзины из App: они могут пересоздаваться на
+  // каждый рендер родителя, а WS-эффект зависит только от id сессии —
+  // без рефа новая функция заставляла бы переподключать сокет.
+  const onCartAddRef = useRef(onCartAdd);
+  const onShowCartRef = useRef(onShowCart);
+  onCartAddRef.current = onCartAdd;
+  onShowCartRef.current = onShowCart;
 
   useEffect(() => {
     let stopped = false;
@@ -220,6 +231,10 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
             setVoiceDishes(Array.isArray(msg.dishes) ? msg.dishes : []);
           } else if (msg.type === 'hide_dish') {
             setVoiceDishes([]);
+          } else if (msg.type === 'cart_add' && Array.isArray(msg.items)) {
+            onCartAddRef.current?.(msg.items);
+          } else if (msg.type === 'show_cart') {
+            onShowCartRef.current?.();
           }
         };
 
