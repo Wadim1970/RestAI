@@ -90,7 +90,7 @@ async function handleFunctionCalls(ws, tools, output, onEvent) {
   return true;
 }
 
-export function openRealtimeSession({ instructions, voice, tools = [], onAudioDelta, onEvent, onClose }) {
+export function openRealtimeSession({ instructions, voice, tools = [], hasHistory = false, onAudioDelta, onEvent, onClose }) {
   const provider = PROVIDERS[config.voiceProvider] || PROVIDERS.openai;
   const ws = new WebSocket(provider.url(), { headers: provider.headers() });
 
@@ -110,9 +110,13 @@ export function openRealtimeSession({ instructions, voice, tools = [], onAudioDe
     }
 
     if (event.type === 'session.updated') {
-      // Сессия сконфигурирована — просим ИИ поздороваться первым, та же
-      // логика, что маркер "ПРИВЕТСТВИЕ" в текстовом чате (AIChatModal.jsx).
-      ws.send(JSON.stringify({ type: 'response.create' }));
+      // Сессия сконфигурирована. Приветствуем первым ТОЛЬКО если разговор
+      // ещё не начинался (пустая история). Если гость уже общался в этот
+      // визит (в тексте или голосе) — не здороваемся заново, а ждём его
+      // реплику: промпт уже содержит историю и указание продолжать.
+      if (!hasHistory) {
+        ws.send(JSON.stringify({ type: 'response.create' }));
+      }
     } else if (event.type === 'response.output_audio.delta' && event.delta) {
       onAudioDelta(event.delta);
     } else if (event.type === 'response.done') {

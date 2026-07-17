@@ -235,6 +235,50 @@ export async function callWaiter(restaurantId, tableNumber, reason) {
   return { success: true };
 }
 
+// Общая история диалога (conversation_turns) — единая для голоса и
+// текста, ключ session_id. Читаем ОДИН РАЗ при старте голосовой сессии
+// (дальше Grok держит контекст сам), а не на каждую реплику. limit —
+// защита от разрастания промпта на очень длинном визите; берём последние.
+export async function loadConversationHistory(sessionId, limit = 40) {
+  if (!sessionId) return [];
+  const { data, error } = await getSupabase()
+    .from('conversation_turns')
+    .select('role, content, source, created_at')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data.reverse(); // вернули по убыванию ради limit-«последние», отдаём в хронологическом порядке
+}
+
+// Запись одной реплики в общую историю. Best-effort: сбой записи не
+// должен ронять разговор, поэтому ошибка только логируется вызывающим.
+export async function saveConversationTurn({ sessionId, restaurantId, guestId, role, content, source }) {
+  if (!sessionId || !content) return;
+  await getSupabase().from('conversation_turns').insert({
+    session_id: sessionId,
+    restaurant_id: restaurantId || null,
+    guest_id: guestId || null,
+    role,
+    content,
+    source,
+  });
+}
+
+function formatHistoryForPrompt(turns) {
+  if (!turns || turns.length === 0) return '';
+  const lines = turns
+    .map((t) => `${t.role === 'user' ? 'Гость' : 'Ты'}: ${t.content}`)
+    .join('\n');
+  return (
+    'Предыдущие реплики этого же разговора (гость мог общаться и текстом, ' +
+    'и голосом — это один непрерывный диалог):\n' +
+    lines +
+    '\n\nЭто ПРОДОЛЖЕНИЕ уже начатого разговора: НЕ здоровайся заново и не ' +
+    'представляйся снова, просто продолжай с учётом сказанного выше.'
+  );
+}
+
 async function loadRestaurantName(restaurantId) {
   if (!restaurantId) return '';
   // Внимание: PK этой таблицы называется "restaurantId" (camelCase) — в
@@ -335,26 +379,33 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
 - Это не сценарий слово в слово — говори в своём характере и манере речи
   (см. ниже).`;
 
-export async function buildSessionContext({ guestId, restaurantId }) {
-  const [{ preferences, restaurantHistory }, menu, aiProfile, restaurantName] = await Promise.all([
+export async function buildSessionContext({ guestId, restaurantId, sessionId }) {
+  const [{ preferences, restaurantHistory }, menu, aiProfile, restaurantName, history] = await Promise.all([
     loadGuestContext(guestId, restaurantId),
     loadMenuSummary(restaurantId),
     loadAiProfile(restaurantId),
     loadRestaurantName(restaurantId),
+    loadConversationHistory(sessionId),
   ]);
 
   const restaurantLine = restaurantName ? `Ты работаешь в ресторане «${restaurantName}».` : '';
   const characterText = compileCharacterProfile(aiProfile?.character_profile);
   const policyText = compileRestaurantPolicy(aiProfile?.restaurant_policy);
   const philosophy = aiProfile?.philosophy || '';
+  const historyText = formatHistoryForPrompt(history);
 
   const dynamicContext = `Меню ресторана:\n${menu || '(меню недоступно)'}\n\n` +
     `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
     JSON.stringify({ preferences, restaurantHistory });
 
-  const instructions = [SYSTEM_PROMPT, restaurantLine, characterText, policyText, philosophy, dynamicContext]
+  const instructions = [SYSTEM_PROMPT, restaurantLine, characterText, policyText, philosophy, dynamicContext, historyText]
     .filter(Boolean)
     .join('\n\n---\n\n');
+
+  // Есть ли уже история — voiceSession по этому флагу решает, здороваться
+  // первым (пустой визит) или молча ждать первую реплику гостя (разговор
+  // уже шёл в другом режиме).
+  const hasHistory = history.length > 0;
 
   // Имена голосов не переносятся между провайдерами (alloy у OpenAI ничего
   // не значит для Grok и наоборот) — профиль ресторана может задать голос
@@ -362,5 +413,5 @@ export async function buildSessionContext({ guestId, restaurantId }) {
   const voiceField = config.voiceProvider === 'grok' ? 'grok_voice' : 'openai_voice';
   const voice = aiProfile?.character_profile?.voice?.[voiceField] || null;
 
-  return { instructions, voice };
+  return { instructions, voice, hasHistory };
 }

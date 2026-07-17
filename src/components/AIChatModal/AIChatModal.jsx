@@ -240,6 +240,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
             guestId={guestId}
             restaurantId={restaurantId}
             tableNumber={tableNumber}
+            sessionId={sessionId}
             onExpandDish={onExpandDish}
             onCartAdd={onCartAdd}
             onShowCart={onShowCart}

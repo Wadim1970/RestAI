@@ -75,7 +75,7 @@ function rmsLevel(float32) {
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpandDish, onCartAdd, onShowCart }) {
+export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, onExpandDish, onCartAdd, onShowCart }) {
   const orbRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
@@ -202,6 +202,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
           guestId: guestId ?? '',
           restaurantId: restaurantId ?? '',
           tableNumber: tableNumber ?? '',
+          sessionId: sessionId ?? '',
         });
         ws = new WebSocket(`${RELAY_WS_URL}?${params}`);
 
@@ -265,7 +266,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, onExpan
       audioContext?.close();
       ws?.close();
     };
-  }, [guestId, restaurantId, tableNumber]);
+  }, [guestId, restaurantId, tableNumber, sessionId]);
 
   const hasDishes = voiceDishes.length > 0;
 

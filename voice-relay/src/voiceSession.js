@@ -1,4 +1,4 @@
-import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay } from './context.js';
+import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn } from './context.js';
 import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
@@ -186,10 +186,10 @@ export async function voiceRoutes(app) {
       return;
     }
 
-    const { guestId, restaurantId, tableNumber } = req.query;
+    const { guestId, restaurantId, tableNumber, sessionId } = req.query;
 
     activeSessions += 1;
-    app.log.info({ guestId, restaurantId, activeSessions }, 'голосовая сессия гостя открыта');
+    app.log.info({ guestId, restaurantId, sessionId, activeSessions }, 'голосовая сессия гостя открыта');
 
     // На случай, если гость и OpenAI-нога закроются почти одновременно —
     // слот освобождается ровно один раз, кто бы ни закрылся первым.
@@ -203,11 +203,12 @@ export async function voiceRoutes(app) {
     let openaiSession = null;
 
     try {
-      const { instructions, voice } = await buildSessionContext({ guestId, restaurantId });
+      const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
 
       openaiSession = openRealtimeSession({
         instructions,
         voice,
+        hasHistory,
         tools: buildTools(restaurantId, tableNumber, guestSocket),
         onAudioDelta: (base64Audio) => {
           if (guestSocket.readyState === guestSocket.OPEN) {
@@ -219,6 +220,13 @@ export async function voiceRoutes(app) {
             app.log.error(event, 'realtime session error');
           } else if (event.type === 'response.transcript') {
             app.log.info({ guestId, restaurantId, text: event.text }, 'ИИ сказал');
+            // Пишем реплику ИИ в общую историю — чтобы текстовый режим
+            // (и следующая голосовая сессия) видели, что уже было сказано.
+            // Best-effort: сбой записи не должен ронять разговор.
+            saveConversationTurn({
+              sessionId, restaurantId, guestId,
+              role: 'assistant', content: event.text, source: 'voice',
+            }).catch((e) => app.log.error(e, 'не удалось записать реплику ИИ в историю'));
           } else if (event.type === 'tool.called') {
             app.log.info({ guestId, restaurantId, name: event.name, args: event.args, result: event.result }, 'ИИ вызвал инструмент');
           }
