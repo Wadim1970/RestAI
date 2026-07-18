@@ -99,22 +99,39 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
             cursor: 'pointer',
           }}
         >
-          {/* Стеклянный треугольник-«play»: полупрозрачный, с матовым
-              размытием фона (эффект стекла) и скруглёнными углами. clip-path
-              рисует треугольник со скруглениями (квадратичные кривые в
-              вершинах), а backdrop-filter внутри него даёт матовое стекло.
-              Размер 70×70. Больше ни кнопки-круга, ни надписи — только он. */}
-          <div
-            style={{
-              width: '70px',
-              height: '70px',
-              background: 'rgba(255, 255, 255, 0.2)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              clipPath:
-                "path('M 30.07 19.73 L 51.93 31.27 Q 59 35 51.93 38.73 L 30.07 50.27 Q 23 54 23 46 L 23 24 Q 23 16 30.07 19.73 Z')",
-            }}
-          />
+          {/* Стеклянный треугольник-«play» ~118px. Раньше был div с clip-path
+              и backdrop-filter, но на iOS Safari эта пара багует: размытие не
+              обрезается по треугольнику, и выглядело как полупрозрачный
+              квадрат. Поэтому рисуем SVG: градиентная заливка (стеклянный
+              отблеск, светлее сверху) + яркая градиентная обводка-кромка
+              (блики по краям) + мягкая тень. Скруглённые углы — через
+              квадратичные кривые в вершинах пути. */}
+          <svg
+            width="118"
+            height="118"
+            viewBox="0 0 70 70"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35))' }}
+          >
+            <defs>
+              <linearGradient id="introTriFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.12" />
+              </linearGradient>
+              <linearGradient id="introTriRim" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="45%" stopColor="#ffffff" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M 25.89 16.32 L 52.11 30.68 Q 60 35 52.11 39.32 L 25.89 53.68 Q 18 58 18 49 L 18 21 Q 18 12 25.89 16.32 Z"
+              fill="url(#introTriFill)"
+              stroke="url(#introTriRim)"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
       )}
 
