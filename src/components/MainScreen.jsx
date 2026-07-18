@@ -33,6 +33,12 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
     setIsStarted(true);
     const video = document.querySelector('video');
     if (video) {
+      // Со звуком и с начала. На iOS до этого крутился фоновый muted-цикл
+      // логотипа — снимаем loop, перематываем в начало и играем со звуком
+      // (жест по кнопке разблокирует аудио для приветствия ИИ). При блокировке
+      // автоплея со звуком падаем на muted, чтобы анимация точно проиграла.
+      video.loop = false;
+      video.currentTime = 0;
       video.muted = false;
       video.play().catch(() => {
         video.muted = true;
@@ -42,10 +48,23 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
     onIntroStart?.();
   };
 
-  // Автостарт — только НЕ на iOS. На iOS ждём тап по кнопке пуска.
+  // Старт заставки: Android и пр. — сразу; iOS — по тапу (нужен жест для
+  // звука). На iOS до тапа крутим анимированный логотип ФОНОМ (muted-автоплей
+  // на iOS разрешён без жеста): тогда стеклянный треугольник лежит на «живом»
+  // логотипе и читается как стекло, а не как серая фигура на чёрном экране.
+  // loop обязателен, иначе событие ended сработает раньше тапа и голос
+  // активируется до старта.
   useEffect(() => {
-    if (isIOS) return;
-    startIntro();
+    if (!isIOS) {
+      startIntro();
+      return;
+    }
+    const video = document.querySelector('video');
+    if (video) {
+      video.muted = true;
+      video.loop = true;
+      video.play().catch(() => {});
+    }
     // Один раз при монтировании; startIntro/onIntroStart стабильны на время экрана.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
