@@ -199,6 +199,12 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
 
   if (!isOpen) return null; // Если модалка закрыта — не рендерим ничего
 
+  // Первый голосовой экран (сразу после заставки): единственный выход —
+  // кнопка "Открыть меню". Крестик и свайп-вниз здесь убираем, чтобы гость
+  // не закрыл экран случайно в никуда (обычный вход через "Чат" из меню
+  // крестик и свайп сохраняет).
+  const isFirstVoice = isFirstLaunch && viewMode === 'voice';
+
   // Логика кнопки отправки
   const handleActionClick = async () => { 
     if (inputValue.trim().length > 0) { // Если есть текст
@@ -224,9 +230,9 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
       <div
         ref={modalRef}
         className={`${styles['modal-glassContainer']} ${isClosing ? styles.slideDown : ''}`}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={isFirstVoice ? undefined : onTouchStart}
+        onTouchMove={isFirstVoice ? undefined : onTouchMove}
+        onTouchEnd={isFirstVoice ? undefined : onTouchEnd}
       > {/* Основное окно */}
 
         {/* Индикатор свайпа вниз для закрытия — только в текстовом режиме.
@@ -248,10 +254,13 @@ const AIChatModal = ({ isOpen, onClose, pageContext, sessionId, messages, setMes
           />
         )}
 
-        {/* Кнопка закрытия модалки */}
-        <button className={styles['modal-closeBtn']} onClick={handleClose}>
-          <img src="/icons/icon-on.png" alt="Закрыть" />
-        </button>
+        {/* Кнопка закрытия (крестик) — скрыта на первом голосовом экране:
+            оттуда единственный выход — кнопка "Открыть меню". */}
+        {!isFirstVoice && (
+          <button className={styles['modal-closeBtn']} onClick={handleClose}>
+            <img src="/icons/icon-on.png" alt="Закрыть" />
+          </button>
+        )}
 
         {/* Область переписки */}
         {viewMode === 'text' && (

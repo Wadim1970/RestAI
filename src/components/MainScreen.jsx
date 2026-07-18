@@ -92,44 +92,29 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.3)',
             display: 'flex',
-            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             zIndex: 100,
             cursor: 'pointer',
           }}
         >
-          {/* Круг со стрелкой */}
-          <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '50%',
-            background: 'rgba(48, 77, 34, 0.9)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            border: '2px solid white',
-            marginBottom: '20px',
-          }}>
-            <div style={{
-              width: 0,
-              height: 0,
-              borderTop: '15px solid transparent',
-              borderBottom: '15px solid transparent',
-              borderLeft: '25px solid white',
-              marginLeft: '5px',
-            }} />
-          </div>
-          <span style={{
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '18px',
-            letterSpacing: '2px',
-          }}>
-            НАЖМИТЕ, ЧТОБЫ ВОЙТИ
-          </span>
+          {/* Стеклянный треугольник-«play»: полупрозрачный, с матовым
+              размытием фона (эффект стекла) и скруглёнными углами. clip-path
+              рисует треугольник со скруглениями (квадратичные кривые в
+              вершинах), а backdrop-filter внутри него даёт матовое стекло.
+              Размер 70×70. Больше ни кнопки-круга, ни надписи — только он. */}
+          <div
+            style={{
+              width: '70px',
+              height: '70px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              clipPath:
+                "path('M 30.07 19.73 L 51.93 31.27 Q 59 35 51.93 38.73 L 30.07 50.27 Q 23 54 23 46 L 23 24 Q 23 16 30.07 19.73 Z')",
+            }}
+          />
         </div>
       )}
 
