@@ -29,6 +29,7 @@ const PROVIDERS = {
         input: {
           format: { type: 'audio/pcm', rate: 24000 },
           turn_detection: { type: 'server_vad' },
+          transcription: { model: 'whisper-1' }, // распознавание речи гостя, см. grok-ветку
         },
         output: {
           format: { type: 'audio/pcm', rate: 24000 },
@@ -47,7 +48,13 @@ const PROVIDERS = {
       tool_choice: 'auto',
       turn_detection: { type: 'server_vad' },
       audio: {
-        input: { format: { type: 'audio/pcm', rate: 24000 } },
+        // transcription.model включает распознавание речи ГОСТЯ — без него
+        // Grok не шлёт conversation.item.input_audio_transcription.* и в
+        // общую историю попадают только реплики ИИ, но не гостя.
+        input: {
+          format: { type: 'audio/pcm', rate: 24000 },
+          transcription: { model: 'grok-transcribe' },
+        },
         output: { format: { type: 'audio/pcm', rate: 24000 } },
       },
     }),
@@ -94,6 +101,19 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
   const provider = PROVIDERS[config.voiceProvider] || PROVIDERS.openai;
   const ws = new WebSocket(provider.url(), { headers: provider.headers() });
 
+  // Распознавание речи гостя приходит кумулятивно (событие ...updated
+  // повторяется, каждый раз с более полным текстом, у Grok финального
+  // .completed может не быть). Копим последний текст, а фиксируем реплику
+  // гостя в историю в момент, когда ИИ начинает отвечать (response.done) —
+  // значит гость договорил и транскрипт уже финальный.
+  let pendingUserTranscript = '';
+
+  const flushUserTranscript = () => {
+    const text = pendingUserTranscript.trim();
+    pendingUserTranscript = '';
+    if (text) onEvent?.({ type: 'user.transcript', text });
+  };
+
   ws.on('open', () => {
     ws.send(JSON.stringify({
       type: 'session.update',
@@ -117,9 +137,20 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
       if (!hasHistory) {
         ws.send(JSON.stringify({ type: 'response.create' }));
       }
+    } else if (event.type === 'conversation.item.input_audio_transcription.updated') {
+      // Кумулятивный транскрипт речи гостя — запоминаем последний.
+      if (event.transcript) pendingUserTranscript = event.transcript;
+    } else if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      // Если провайдер прислал финальное событие — фиксируем сразу.
+      if (event.transcript) pendingUserTranscript = event.transcript;
+      flushUserTranscript();
     } else if (event.type === 'response.output_audio.delta' && event.delta) {
       onAudioDelta(event.delta);
     } else if (event.type === 'response.done') {
+      // Гость договорил, ИИ отвечает — фиксируем реплику гостя ДО реплики
+      // ИИ, чтобы в истории они легли в правильном хронологическом порядке.
+      flushUserTranscript();
+
       try {
         const calledTool = await handleFunctionCalls(ws, tools, event.response?.output, onEvent);
         if (calledTool) return; // речь пойдёт вторым response.done, после ответа функции
