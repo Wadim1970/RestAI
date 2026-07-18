@@ -137,13 +137,15 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
       if (!hasHistory) {
         ws.send(JSON.stringify({ type: 'response.create' }));
       }
-    } else if (event.type === 'conversation.item.input_audio_transcription.updated') {
-      // Кумулятивный транскрипт речи гостя — запоминаем последний.
+    } else if (
+      event.type === 'conversation.item.input_audio_transcription.updated' ||
+      event.type === 'conversation.item.input_audio_transcription.completed'
+    ) {
+      // Grok шлёт транскрипт кумулятивно и повторяет .completed на каждом
+      // шаге (не как единичный финал) — поэтому НЕ фиксируем здесь, только
+      // запоминаем последнюю версию. Реплику в историю кладём один раз,
+      // когда ИИ начинает отвечать (response.done ниже) — гость договорил.
       if (event.transcript) pendingUserTranscript = event.transcript;
-    } else if (event.type === 'conversation.item.input_audio_transcription.completed') {
-      // Если провайдер прислал финальное событие — фиксируем сразу.
-      if (event.transcript) pendingUserTranscript = event.transcript;
-      flushUserTranscript();
     } else if (event.type === 'response.output_audio.delta' && event.delta) {
       onAudioDelta(event.delta);
     } else if (event.type === 'response.done') {
@@ -171,7 +173,12 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
     onEvent?.(event);
   });
 
-  ws.on('close', () => onClose?.());
+  ws.on('close', () => {
+    // Последняя реплика гостя перед закрытием (например, «всё, спасибо»)
+    // могла не успеть попасть на response.done — фиксируем её здесь.
+    flushUserTranscript();
+    onClose?.();
+  });
   ws.on('error', (err) => onEvent?.({ type: 'relay.error', error: String(err) }));
 
   return {
