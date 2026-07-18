@@ -121,6 +121,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     let outputAnalyser = null;
     let compressor = null;
     let playbackGain = null;
+    let removeUnlock = null;
 
     // Уровень звука ИИ — из живого аудио-графа через AnalyserNode и rAF,
     // а не из момента прихода куска по сети (тот уже отыгрывает из очереди).
@@ -160,8 +161,10 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       };
     };
 
-    // AudioContext создаём в обработчике клика «войти» (user gesture есть) —
-    // иначе автоплей аудио был бы заблокирован политикой браузера.
+    // Раньше AudioContext разблокировал клик по кнопке «войти». Кнопки
+    // больше нет — заставка стартует сама после скана QR, поэтому контекст
+    // создаём здесь, а разблокировку звука вешаем на первое касание экрана
+    // (см. unlockAudio ниже).
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     audioContextRef.current = audioContext;
 
@@ -182,6 +185,28 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     playbackGain.connect(outputAnalyser);
     outputAnalyser.connect(audioContext.destination);
     rafId = requestAnimationFrame(visualLoop);
+
+    // Разблокировка звука без кнопки: браузеры (особенно iOS) держат
+    // AudioContext в suspended до жеста пользователя, и приветствие ИИ
+    // молчит. Ловим ПЕРВОЕ касание экрана где угодно (по заставке в том
+    // числе), будим контекст и проигрываем беззвучный буфер — этого iOS
+    // достаточно, чтобы дальше зазвучал и голос ассистента. Невидимо, без
+    // отдельной кнопки.
+    const unlockAudio = () => {
+      const ctx = audioContextRef.current;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') ctx.resume();
+      try {
+        const b = ctx.createBuffer(1, 1, 22050);
+        const s = ctx.createBufferSource();
+        s.buffer = b;
+        s.connect(ctx.destination);
+        s.start(0);
+      } catch { /* контекст уже закрыт — не важно */ }
+    };
+    const unlockEvents = ['pointerdown', 'touchend', 'click'];
+    unlockEvents.forEach((e) => document.addEventListener(e, unlockAudio, { once: true, passive: true }));
+    removeUnlock = () => unlockEvents.forEach((e) => document.removeEventListener(e, unlockAudio));
 
     const params = new URLSearchParams({
       guestId: guestId ?? '',
@@ -228,6 +253,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
 
     return () => {
       stopped = true;
+      if (removeUnlock) removeUnlock();
       if (rafId) cancelAnimationFrame(rafId);
       audioContext.close();
       ws.close();

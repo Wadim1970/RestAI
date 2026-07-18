@@ -32,6 +32,24 @@ html, body {
     background: #000; /* Черная подложка, чтобы не было белых вспышек */
 }
 
+/* Пока играет стартовая заставка — поднимаем обёртку ПОВЕРХ голосового чата
+   (AIChatModal, z-index 999999), который в это время молча прогревается под
+   ней. z-index у .main-screen-wrapper объявлен через !important, поэтому
+   inline-стиль его не переопределял (из-за этого на iPhone видео пряталось
+   под зелёным экраном голосового чата) — правим тоже через класс с !important. */
+.main-screen-wrapper.intro-active {
+    z-index: 1000005 !important;
+}
+
+/* Заставка доиграла — обёртка плавно гаснет и перестаёт ловить тапы, открывая
+   уже прогретый голосовой чат под собой (z-index при этом падает обратно на
+   базовый 1, т.к. класс intro-active снят). */
+.main-screen-wrapper.intro-gone {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
 .avatar-video {
     position: fixed !important; /* Видео зафиксировано относительно экрана */
     top: 0 !important; /* Прижато к верху */
