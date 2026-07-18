@@ -4,21 +4,35 @@ import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
 
-// Максимальная громкость голоса ИИ без хрипа. Простое усиление резало
-// пики (громкие согласные, восклицания) — поэтому перед усилением стоит
-// компрессор-лимитер: сильно прижимает самые громкие места, и уже после
-// этого можно поднять общий уровень намного выше без искажений.
-// PLAYBACK_GAIN — makeup-усиление ПОСЛЕ компрессора. Здесь выкручено
-// высоко (громко почти на максимум); если где-то начнёт хрипеть —
-// снижать в первую очередь его, потом трогать порог компрессора.
-const PLAYBACK_GAIN = 6.0;
+// Громкость голоса ИИ: усиливаем, но без хрипа/треска. Порядок узлов
+// критичен — сначала makeup-усиление, ПОТОМ лимитер, ПОТОМ мягкий клиппер.
+// Раньше лимитер стоял ДО усиления: его attack пропускал начало каждого
+// согласного, а makeup ×6 загонял этот пик в жёсткий клиппинг на динамике —
+// отсюда треск на речи. Теперь лимитер видит уже усиленный сигнал и держит
+// потолок, а tanh-клиппер мягко скругляет редкие выбросы (без щелчков).
+const PLAYBACK_GAIN = 3.0;
 
-// «Лимитер для громкости»: очень сильное сжатие (ratio 20) всего, что
-// громче низкого порога, мгновенный attack — ловит резкие пики речи до
-// того, как их усилит makeup. Динамика становится ровной, зато можно
-// безопасно поднять общий уровень. Ровный звук для ассистента в шумном
-// зале — плюс, речь разборчивее.
-const COMPRESSOR = { threshold: -30, knee: 20, ratio: 20, attack: 0.002, release: 0.25 };
+// Лимитер-потолок ПОСЛЕ усиления: держит выход около -3 дБ, ratio 20 —
+// «кирпичная стена», быстрый attack ловит усиленные пики речи.
+const LIMITER = { threshold: -3.0, knee: 0, ratio: 20, attack: 0.002, release: 0.1 };
+
+// Небольшой запас (сек) перед стартом новой реплики — подушка против
+// сетевого джиттера: куски аудио приходят неравномерно, и без запаса
+// очередь то и дело опустошается, давая щелчки на стыках. 120мс на слух
+// незаметно, зато стыки гладкие.
+const PLAYBACK_LEAD = 0.12;
+
+// Мягкий клиппер (tanh) — страховка от жёсткого клиппинга на самом выходе.
+// Кривая почти линейна в рабочем диапазоне и плавно насыщается у краёв,
+// поэтому любой выброс превращается в мягкое насыщение, а не в треск.
+function makeSoftClipCurve(samples = 1024) {
+  const curve = new Float32Array(samples);
+  for (let i = 0; i < samples; i++) {
+    const x = (i / (samples - 1)) * 2 - 1;
+    curve[i] = Math.tanh(1.1 * x);
+  }
+  return curve;
+}
 
 // Линейная интерполяция — этого достаточно для голоса, аудиофильская
 // точность тут не нужна. Микрофон браузера обычно отдаёт 48000Гц,
@@ -92,10 +106,11 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   onCartAddRef.current = onCartAdd;
   onShowCartRef.current = onShowCart;
 
+  // setLevel задаёт лишь ЦЕЛЬ уровня; сам шар плавно подтягивается к ней в
+  // visualLoop каждый кадр (интерполяция) — поэтому движение гладкое, без
+  // рывков между кусками аудио.
   const setLevel = (level) => {
-    if (!orbRef.current) return;
-    orbRef.current.style.transform = `scale(${1 + level * 0.6})`;
-    orbRef.current.style.opacity = String(0.6 + level * 0.4);
+    targetLevelRef.current = Math.max(0, Math.min(1, level));
   };
 
   // Общее между фазами прогрева и активации — держим в ref, чтобы второй
@@ -107,6 +122,10 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   const aiSpeakingRef = useRef(false);
   const nextPlaybackTimeRef = useRef(0);
   const activatedRef = useRef(false);
+  // Плавность шара: target — куда стремимся (из анализатора ИИ или с
+  // микрофона), display — текущее значение, каждый кадр подтягиваемое к цели.
+  const targetLevelRef = useRef(0);
+  const displayLevelRef = useRef(0);
 
   // ФАЗА 1 — соединение и ВОСПРОИЗВЕДЕНИЕ (без микрофона). Запускается при
   // монтировании: под видео-заставкой (prewarm) это и есть «прогрев» —
@@ -119,12 +138,13 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     let stopped = false;
     let rafId = null;
     let outputAnalyser = null;
-    let compressor = null;
-    let playbackGain = null;
+    let makeupGain = null;
     let removeUnlock = null;
 
-    // Уровень звука ИИ — из живого аудио-графа через AnalyserNode и rAF,
-    // а не из момента прихода куска по сети (тот уже отыгрывает из очереди).
+    // Уровень звука ИИ — из живого аудио-графа через AnalyserNode. Цикл
+    // крутится ВСЕГДА (не только пока играет ИИ) и каждый кадр подтягивает
+    // отображаемый уровень к целевому — поэтому шар движется плавно, а не
+    // рывками между кусками аудио.
     const visualLoop = () => {
       if (aiSpeakingRef.current && outputAnalyser) {
         const data = new Uint8Array(outputAnalyser.frequencyBinCount);
@@ -134,7 +154,19 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           const v = (data[i] - 128) / 128;
           sum += v * v;
         }
-        setLevel(Math.min(1, Math.sqrt(sum / data.length) * 4));
+        targetLevelRef.current = Math.min(1, Math.sqrt(sum / data.length) * 3.5);
+      } else {
+        // Ни ИИ, ни свежих данных с микрофона — плавно гасим (микрофон, если
+        // активен, тут же перепишет цель своим значением в onaudioprocess).
+        targetLevelRef.current *= 0.9;
+      }
+      // Интерполяция к цели — сглаживает и пики ИИ, и стыки кусков аудио.
+      displayLevelRef.current += (targetLevelRef.current - displayLevelRef.current) * 0.22;
+      const el = orbRef.current;
+      if (el) {
+        const d = displayLevelRef.current;
+        el.style.transform = `scale(${1 + d * 0.6})`;
+        el.style.opacity = String(0.6 + d * 0.4);
       }
       rafId = requestAnimationFrame(visualLoop);
     };
@@ -149,9 +181,14 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       buffer.copyToChannel(float32, 0);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(compressor);
+      source.connect(makeupGain);
 
-      const startAt = Math.max(audioContext.currentTime, nextPlaybackTimeRef.current);
+      // Если очередь опустела (ИИ молчал) — стартуем не впритык к «сейчас», а
+      // с запасом PLAYBACK_LEAD, чтобы сетевой джиттер не рвал звук щелчками.
+      const base = aiSpeakingRef.current
+        ? nextPlaybackTimeRef.current
+        : audioContext.currentTime + PLAYBACK_LEAD;
+      const startAt = Math.max(audioContext.currentTime, base);
       source.start(startAt);
       nextPlaybackTimeRef.current = startAt + buffer.duration;
 
@@ -168,21 +205,26 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     audioContextRef.current = audioContext;
 
-    // Цепочка воспроизведения: кусок -> compressor -> playbackGain (громкость)
-    // -> outputAnalyser (визуализация шара) -> колонки. Компрессор ДО
-    // усиления, чтобы не резать пики.
-    compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = COMPRESSOR.threshold;
-    compressor.knee.value = COMPRESSOR.knee;
-    compressor.ratio.value = COMPRESSOR.ratio;
-    compressor.attack.value = COMPRESSOR.attack;
-    compressor.release.value = COMPRESSOR.release;
-    playbackGain = audioContext.createGain();
-    playbackGain.gain.value = PLAYBACK_GAIN;
+    // Цепочка воспроизведения: кусок -> makeupGain (усиление) -> limiter
+    // (потолок против клиппинга) -> softClip (мягкая страховка) ->
+    // outputAnalyser (визуализация шара) -> колонки. Усиление ДО лимитера,
+    // иначе усиленные пики режутся уже на выходе (был треск на речи).
+    makeupGain = audioContext.createGain();
+    makeupGain.gain.value = PLAYBACK_GAIN;
+    const limiter = audioContext.createDynamicsCompressor();
+    limiter.threshold.value = LIMITER.threshold;
+    limiter.knee.value = LIMITER.knee;
+    limiter.ratio.value = LIMITER.ratio;
+    limiter.attack.value = LIMITER.attack;
+    limiter.release.value = LIMITER.release;
+    const softClip = audioContext.createWaveShaper();
+    softClip.curve = makeSoftClipCurve();
+    softClip.oversample = '2x';
     outputAnalyser = audioContext.createAnalyser();
     outputAnalyser.fftSize = 256;
-    compressor.connect(playbackGain);
-    playbackGain.connect(outputAnalyser);
+    makeupGain.connect(limiter);
+    limiter.connect(softClip);
+    softClip.connect(outputAnalyser);
     outputAnalyser.connect(audioContext.destination);
     rafId = requestAnimationFrame(visualLoop);
 
@@ -280,11 +322,25 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       else ws.addEventListener('open', send, { once: true });
     };
 
+    const resumeContext = async () => {
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch { /* не критично */ }
+      }
+    };
+
+    // На iOS звук воспроизведения оживает только когда активна аудио-сессия,
+    // а её включает именно захват микрофона (getUserMedia). Поэтому порядок
+    // важен: сначала берём микрофон и будим контекст, и ТОЛЬКО ПОТОМ просим
+    // приветствие — иначе первые слова ИИ уходят в ещё «спящий» контекст и на
+    // айфоне не слышны. echoCancellation/noiseSuppression — чтобы микрофон не
+    // ловил голос ассистента из динамика (меньше фонового шума и эха).
     const activate = async () => {
-      // Приветствие можно просить сразу — оно не ждёт микрофона.
-      sendStartGreeting();
+      let micOk = false;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
         if (stopped) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -292,7 +348,6 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         streamRef.current = stream;
         const audioContext = audioContextRef.current;
         if (!audioContext) return;
-        if (audioContext.state === 'suspended') audioContext.resume();
 
         const source = audioContext.createMediaStreamSource(stream);
         // ScriptProcessorNode подключаем к destination через нулевой гейн —
@@ -314,11 +369,22 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           const resampled = resampleTo24k(input, audioContext.sampleRate);
           ws.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
         };
-
-        if (!stopped) setStatus('listening');
+        micOk = true;
       } catch (err) {
         console.error('VoiceStage: не удалось получить микрофон:', err);
-        if (!stopped) {
+      }
+
+      // Будим контекст и просим приветствие ПОСЛЕ попытки микрофона (успешной
+      // или нет) — так на iOS воспроизведение выходит из тишины. Даже без
+      // микрофона ИИ поздоровается (гость просто не сможет ответить голосом).
+      if (stopped) return;
+      await resumeContext();
+      sendStartGreeting();
+
+      if (!stopped) {
+        if (micOk) {
+          setStatus('listening');
+        } else {
           setStatus('error');
           setStatusMessage('Не удалось получить доступ к микрофону.');
         }
