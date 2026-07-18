@@ -1,72 +1,62 @@
 // src/components/MainScreen.jsx
-// src/components/MainScreen.jsx
-import React, { useState, useEffect } from 'react'; // Добавили useEffect для слежения за состоянием чата
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoBackground from './VideoBackground.jsx';
 import MenuButton from './MenuButton.jsx';
 
-// Добавляем пропс isChatOpen, который приходит из App.js через Routes
-const MainScreen = ({ onOpenVoiceChat, isChatOpen }) => {
+// onIntroStart — гость нажал «войти», заставка пошла: начинаем прогрев
+// голоса под ней. onIntroEnd — заставка доиграла: активируем голос.
+const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
   const navigate = useNavigate();
   const [isStarted, setIsStarted] = useState(false);
-
-  /**
-   * ЭФФЕКТ УПРАВЛЕНИЯ ПАУЗОЙ
-   * Этот хук срабатывает каждый раз, когда меняется статус isChatOpen (открыт/закрыт чат)
-   */
-  useEffect(() => {
-    // Находим элемент видео в DOM
-    const video = document.querySelector('video');
-    
-    // Если видео найдено и пользователь уже нажал кнопку "Войти" (isStarted)
-    if (video && isStarted) {
-      if (isChatOpen) {
-        // Если чат открылся — ставим видео на паузу
-        video.pause();
-      } else {
-        // Если чат закрылся — продолжаем воспроизведение
-        video.play().catch(error => {
-          // Игнорируем возможные ошибки автоплея при возврате из чата
-          console.error("Ошибка при возобновлении видео:", error);
-        });
-      }
-    }
-  }, [isChatOpen, isStarted]); // Следим за этими двумя переменными
+  const [videoEnded, setVideoEnded] = useState(false);
 
   const handleStart = () => {
     setIsStarted(true);
-    // Находим видео при первом клике ("Нажмите, чтобы войти")
     const video = document.querySelector('video');
     if (video) {
-      video.muted = false; // Включаем звук, так как был клик пользователя
-      video.play().catch(error => {
-        console.error("Ошибка автоплея:", error);
-      });
+      video.muted = false; // клик пользователя — можно со звуком
+      video.play().catch((error) => console.error('Ошибка автоплея:', error));
     }
+    // Одновременно с заставкой начинаем прогрев голоса под ней.
+    onIntroStart?.();
+  };
+
+  const handleVideoEnded = () => {
+    setVideoEnded(true);
+    onIntroEnd?.(); // активируем голос: микрофон + приветствие
   };
 
   const handleOpenMenu = () => {
     navigate('/menu');
   };
 
+  // Пока заставка играет — весь экран поверх голосового чата (тот молча
+  // прогревается под ним). Как только видео кончилось — экран гаснет и
+  // уходит вниз по слою, открывая уже прогретый голосовой чат.
+  const overlayActive = isStarted && !videoEnded;
+
   return (
-    <div 
-      className="main-screen-wrapper" 
-      style={{ 
-        position: 'fixed', 
+    <div
+      className="main-screen-wrapper"
+      style={{
+        position: 'fixed',
         top: 0,
         left: 0,
-        width: '100vw', 
+        width: '100vw',
         height: '100svh', // Статичная высота (Small Viewport Height)
-        background: '#000', 
+        background: '#000',
         overflow: 'hidden',
-        zIndex: 1 
+        // Поверх AIChatModal (z-index 999999), пока идёт заставка; после — под ним.
+        zIndex: overlayActive ? 1000005 : 1,
+        opacity: videoEnded ? 0 : 1,
+        transition: 'opacity 0.4s ease',
+        pointerEvents: videoEnded ? 'none' : 'auto',
       }}
     >
-      {/* Компонент с самим тегом <video>. По окончании — сразу в голосовой
-          чат с ИИ (не в меню — гость, кто хочет меню сразу, жмёт кнопку
-          ниже, не дожидаясь конца ролика). Видео больше не крутится по кругу. */}
-      <VideoBackground onEnded={onOpenVoiceChat} />
+      {/* Заставка (анимация логотипа). По окончании — активируем уже
+          прогретый голосовой чат (см. handleVideoEnded). */}
+      <VideoBackground onEnded={handleVideoEnded} />
 
       {/* ЭКРАН СТАРТА (Затемнение и кнопка Play) */}
       {!isStarted && (

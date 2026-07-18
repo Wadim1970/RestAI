@@ -29,6 +29,7 @@ const PROVIDERS = {
         input: {
           format: { type: 'audio/pcm', rate: 24000 },
           turn_detection: { type: 'server_vad' },
+          transcription: { model: 'whisper-1' }, // распознавание речи гостя, см. grok-ветку
         },
         output: {
           format: { type: 'audio/pcm', rate: 24000 },
@@ -47,7 +48,13 @@ const PROVIDERS = {
       tool_choice: 'auto',
       turn_detection: { type: 'server_vad' },
       audio: {
-        input: { format: { type: 'audio/pcm', rate: 24000 } },
+        // transcription.model включает распознавание речи ГОСТЯ — без него
+        // Grok не шлёт conversation.item.input_audio_transcription.* и в
+        // общую историю попадают только реплики ИИ, но не гостя.
+        input: {
+          format: { type: 'audio/pcm', rate: 24000 },
+          transcription: { model: 'grok-transcribe' },
+        },
         output: { format: { type: 'audio/pcm', rate: 24000 } },
       },
     }),
@@ -90,9 +97,37 @@ async function handleFunctionCalls(ws, tools, output, onEvent) {
   return true;
 }
 
-export function openRealtimeSession({ instructions, voice, tools = [], hasHistory = false, onAudioDelta, onEvent, onClose }) {
+export function openRealtimeSession({ instructions, voice, tools = [], hasHistory = false, deferGreeting = false, onAudioDelta, onEvent, onClose }) {
   const provider = PROVIDERS[config.voiceProvider] || PROVIDERS.openai;
   const ws = new WebSocket(provider.url(), { headers: provider.headers() });
+
+  // Приветствие первым говорит только на пустой историей (иначе продолжаем
+  // разговор). deferGreeting откладывает его до сигнала start_greeting от
+  // клиента (прогрев голоса под видео-заставкой): сессия готова, а само
+  // приветствие генерируется только когда заставка закончилась.
+  let sessionReady = false;
+  let greetingSent = false;
+  let greetingRequested = false;
+  const sendGreeting = () => {
+    if (greetingSent || hasHistory) return;
+    greetingSent = true;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'response.create' }));
+    }
+  };
+
+  // Распознавание речи гостя приходит кумулятивно (событие ...updated
+  // повторяется, каждый раз с более полным текстом, у Grok финального
+  // .completed может не быть). Копим последний текст, а фиксируем реплику
+  // гостя в историю в момент, когда ИИ начинает отвечать (response.done) —
+  // значит гость договорил и транскрипт уже финальный.
+  let pendingUserTranscript = '';
+
+  const flushUserTranscript = () => {
+    const text = pendingUserTranscript.trim();
+    pendingUserTranscript = '';
+    if (text) onEvent?.({ type: 'user.transcript', text });
+  };
 
   ws.on('open', () => {
     ws.send(JSON.stringify({
@@ -110,16 +145,30 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
     }
 
     if (event.type === 'session.updated') {
-      // Сессия сконфигурирована. Приветствуем первым ТОЛЬКО если разговор
-      // ещё не начинался (пустая история). Если гость уже общался в этот
-      // визит (в тексте или голосе) — не здороваемся заново, а ждём его
-      // реплику: промпт уже содержит историю и указание продолжать.
-      if (!hasHistory) {
-        ws.send(JSON.stringify({ type: 'response.create' }));
-      }
+      // Сессия сконфигурирована. Приветствие — по правилам sendGreeting:
+      // не на пустой истории, и с учётом отложенного прогрева (deferGreeting
+      // ждёт сигнала start_greeting от клиента, когда заставка закончилась).
+      sessionReady = true;
+      // Приветствуем, если прогрев не откладывал его ИЛИ клиент уже
+      // прислал сигнал start_greeting (заставка кончилась раньше, чем
+      // успела сконфигурироваться сессия).
+      if (!deferGreeting || greetingRequested) sendGreeting();
+    } else if (
+      event.type === 'conversation.item.input_audio_transcription.updated' ||
+      event.type === 'conversation.item.input_audio_transcription.completed'
+    ) {
+      // Grok шлёт транскрипт кумулятивно и повторяет .completed на каждом
+      // шаге (не как единичный финал) — поэтому НЕ фиксируем здесь, только
+      // запоминаем последнюю версию. Реплику в историю кладём один раз,
+      // когда ИИ начинает отвечать (response.done ниже) — гость договорил.
+      if (event.transcript) pendingUserTranscript = event.transcript;
     } else if (event.type === 'response.output_audio.delta' && event.delta) {
       onAudioDelta(event.delta);
     } else if (event.type === 'response.done') {
+      // Гость договорил, ИИ отвечает — фиксируем реплику гостя ДО реплики
+      // ИИ, чтобы в истории они легли в правильном хронологическом порядке.
+      flushUserTranscript();
+
       try {
         const calledTool = await handleFunctionCalls(ws, tools, event.response?.output, onEvent);
         if (calledTool) return; // речь пойдёт вторым response.done, после ответа функции
@@ -140,10 +189,22 @@ export function openRealtimeSession({ instructions, voice, tools = [], hasHistor
     onEvent?.(event);
   });
 
-  ws.on('close', () => onClose?.());
+  ws.on('close', () => {
+    // Последняя реплика гостя перед закрытием (например, «всё, спасибо»)
+    // могла не успеть попасть на response.done — фиксируем её здесь.
+    flushUserTranscript();
+    onClose?.();
+  });
   ws.on('error', (err) => onEvent?.({ type: 'relay.error', error: String(err) }));
 
   return {
+    // Клиент зовёт, когда заставка закончилась: если сессия уже готова —
+    // приветствуем немедленно, иначе запоминаем и приветствуем, как только
+    // придёт session.updated.
+    startGreeting() {
+      greetingRequested = true;
+      if (sessionReady) sendGreeting();
+    },
     sendAudio(base64Audio) {
       if (ws.readyState !== WebSocket.OPEN) return;
       ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64Audio }));

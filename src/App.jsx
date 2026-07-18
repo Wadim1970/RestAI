@@ -182,6 +182,10 @@ useEffect(() => {
   // смонтирован, пока идёт голосовой разговор. Сам список показанных ИИ
   // блюд живёт локально в VoiceStage, сюда долетает только тап на "открыть подробнее".
   const [expandedDish, setExpandedDish] = useState(null);
+  // Идёт видео-заставка первого запуска — голос в это время прогревается
+  // под ней (prewarm), приветствие отложено до её окончания. См.
+  // handleIntroStart/handleIntroEnd и prewarm у AIChatModal.
+  const [introPlaying, setIntroPlaying] = useState(false);
   // Корзина, которую голосовой ИИ показывает поверх чата (add_to_cart/
   // show_cart в voice-relay). Количество блюд живёт в общем cart (чтобы
   // совпадало с корзиной в меню), а данные добавленных ИИ блюд (фото,
@@ -284,16 +288,25 @@ useEffect(() => {
   // Голосовой ИИ показывает гостю корзину (show_cart).
   const handleVoiceShowCart = () => setIsVoiceCartOpen(true);
 
-  // Видео на главном экране доиграло — открываем голосовой чат с ИИ вместо
-  // автоперехода в меню (гость, кто хочет сразу в меню, жмёт кнопку поверх
-  // видео, не дожидаясь конца). AIChatModal сам стартует в голосовом режиме.
-  const handleOpenVoiceChat = () => {
+  // Заставка началась (гость нажал «войти», видео заиграло) — СРАЗУ
+  // открываем голосовой чат в режиме прогрева (prewarm): под видео молча
+  // готовятся соединение, сессия Grok и контекст, но приветствие ждёт.
+  // Так к концу 7-сек анимации остаётся только сгенерировать приветствие
+  // (~2-3с) вместо всей цепочки (~10с).
+  const handleIntroStart = () => {
     if (!currentSessionId) {
       setCurrentSessionId(`sess_${Date.now()}`);
     }
     setChatContext('Общее меню ресторана');
     setChatEntryPoint('video');
+    setIntroPlaying(true);
     setIsChatOpen(true);
+  };
+
+  // Заставка доиграла — снимаем prewarm: VoiceStage включает микрофон и
+  // просит приветствие, видео уходит, гость видит голосовой экран.
+  const handleIntroEnd = () => {
+    setIntroPlaying(false);
   };
 
   const updateCart = (delta, dishId) => {
@@ -734,7 +747,8 @@ const handlePayFlowPaid = async () => {
                   restaurantId={restaurantId}
                   tableNumber={tableNumber}
                   onScanned={handleTableScanned}
-                  onOpenVoiceChat={handleOpenVoiceChat}
+                  onIntroStart={handleIntroStart}
+                  onIntroEnd={handleIntroEnd}
                   isChatOpen={isChatOpen}
                 />
               ) : (
@@ -768,6 +782,7 @@ const handlePayFlowPaid = async () => {
             setChatContext('');
             setExpandedDish(null);
             setIsVoiceCartOpen(false);
+            setIntroPlaying(false);
           }}
           viewHistory={viewHistory}
           pageContext={chatContext}
@@ -778,6 +793,7 @@ const handlePayFlowPaid = async () => {
           guestId={guestId}           // <-- ДОБАВИЛИ ЭТО
           tableNumber={tableNumber}
           isFirstLaunch={chatEntryPoint === 'video'}
+          prewarm={introPlaying}
           onExpandDish={setExpandedDish}
           onCartAdd={handleVoiceCartAdd}
           onShowCart={handleVoiceShowCart}
