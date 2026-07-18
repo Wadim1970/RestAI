@@ -187,6 +187,9 @@ export async function voiceRoutes(app) {
     }
 
     const { guestId, restaurantId, tableNumber, sessionId } = req.query;
+    // Прогрев голоса под видео-заставкой: сессия конфигурируется сразу, а
+    // приветствие ждёт сигнала start_greeting (когда заставка закончилась).
+    const deferGreeting = req.query.deferGreeting === '1';
 
     activeSessions += 1;
     app.log.info({ guestId, restaurantId, sessionId, activeSessions }, 'голосовая сессия гостя открыта');
@@ -209,6 +212,7 @@ export async function voiceRoutes(app) {
         instructions,
         voice,
         hasHistory,
+        deferGreeting,
         tools: buildTools(restaurantId, tableNumber, guestSocket),
         onAudioDelta: (base64Audio) => {
           if (guestSocket.readyState === guestSocket.OPEN) {
@@ -260,6 +264,9 @@ export async function voiceRoutes(app) {
       }
       if (msg.type === 'audio' && msg.data) {
         openaiSession.sendAudio(msg.data);
+      } else if (msg.type === 'start_greeting') {
+        // Заставка закончилась — можно здороваться (см. deferGreeting).
+        openaiSession.startGreeting();
       }
     });
 

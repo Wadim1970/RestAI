@@ -75,7 +75,7 @@ function rmsLevel(float32) {
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, onExpandDish, onCartAdd, onShowCart }) {
+export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, onExpandDish, onCartAdd, onShowCart }) {
   const orbRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
@@ -92,34 +92,40 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   onCartAddRef.current = onCartAdd;
   onShowCartRef.current = onShowCart;
 
+  const setLevel = (level) => {
+    if (!orbRef.current) return;
+    orbRef.current.style.transform = `scale(${1 + level * 0.6})`;
+    orbRef.current.style.opacity = String(0.6 + level * 0.4);
+  };
+
+  // Общее между фазами прогрева и активации — держим в ref, чтобы второй
+  // эффект (микрофон) мог дотянуться до уже созданных в первом графа и WS.
+  const audioContextRef = useRef(null);
+  const wsRef = useRef(null);
+  const streamRef = useRef(null);
+  const scriptNodeRef = useRef(null);
+  const aiSpeakingRef = useRef(false);
+  const nextPlaybackTimeRef = useRef(0);
+  const activatedRef = useRef(false);
+
+  // ФАЗА 1 — соединение и ВОСПРОИЗВЕДЕНИЕ (без микрофона). Запускается при
+  // монтировании: под видео-заставкой (prewarm) это и есть «прогрев» —
+  // WebSocket, сессия Grok и загрузка контекста готовятся заранее, а само
+  // приветствие откладывается (deferGreeting) до сигнала из фазы 2.
+  // prewarm читается один раз при монтировании — смена флага НЕ пересоздаёт
+  // соединение (иначе прогрев был бы бессмысленным).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let stopped = false;
-    let stream = null;
-    let audioContext = null;
-    let scriptNode = null;
-    let outputAnalyser = null;
-    let playbackGain = null;
-    let compressor = null;
-    let ws = null;
-    let aiSpeaking = false;
-    let nextPlaybackTime = 0;
     let rafId = null;
+    let outputAnalyser = null;
+    let compressor = null;
+    let playbackGain = null;
 
-    const setLevel = (level) => {
-      if (!orbRef.current) return;
-      orbRef.current.style.transform = `scale(${1 + level * 0.6})`;
-      orbRef.current.style.opacity = String(0.6 + level * 0.4);
-    };
-
-    // Уровень звука ИИ брался раньше из каждого пришедшего по WS куска —
-    // но кусок уже отыгрывает секунду-другую из очереди (нашедшая
-    // очередь через nextPlaybackTime), пока следующий может задержаться
-    // из-за сети/генерации. Экран из-за этого "подвисал" на середине
-    // фразы: звук ещё играет, а обновлений уровня уже нет. Правильный
-    // источник — не момент прихода сообщения, а сам живой аудио-граф
-    // прямо сейчас, через AnalyserNode и непрерывный rAF-цикл.
+    // Уровень звука ИИ — из живого аудио-графа через AnalyserNode и rAF,
+    // а не из момента прихода куска по сети (тот уже отыгрывает из очереди).
     const visualLoop = () => {
-      if (aiSpeaking && outputAnalyser) {
+      if (aiSpeakingRef.current && outputAnalyser) {
         const data = new Uint8Array(outputAnalyser.frequencyBinCount);
         outputAnalyser.getByteTimeDomainData(data);
         let sum = 0;
@@ -133,6 +139,8 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     };
 
     const playChunk = (base64Audio) => {
+      const audioContext = audioContextRef.current;
+      if (!audioContext) return;
       const float32 = pcm16Base64ToFloat32(base64Audio);
       if (float32.length === 0) return;
 
@@ -142,112 +150,148 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       source.buffer = buffer;
       source.connect(compressor);
 
-      const startAt = Math.max(audioContext.currentTime, nextPlaybackTime);
+      const startAt = Math.max(audioContext.currentTime, nextPlaybackTimeRef.current);
       source.start(startAt);
-      nextPlaybackTime = startAt + buffer.duration;
+      nextPlaybackTimeRef.current = startAt + buffer.duration;
 
-      aiSpeaking = true;
+      aiSpeakingRef.current = true;
       source.onended = () => {
-        // Это была последняя запланированная реплика ИИ — отдаём "ведение"
-        // обратно микрофону гостя.
-        if (audioContext.currentTime >= nextPlaybackTime - 0.02) aiSpeaking = false;
+        if (audioContext.currentTime >= nextPlaybackTimeRef.current - 0.02) aiSpeakingRef.current = false;
       };
     };
 
-    const start = async () => {
+    // AudioContext создаём в обработчике клика «войти» (user gesture есть) —
+    // иначе автоплей аудио был бы заблокирован политикой браузера.
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = audioContext;
+
+    // Цепочка воспроизведения: кусок -> compressor -> playbackGain (громкость)
+    // -> outputAnalyser (визуализация шара) -> колонки. Компрессор ДО
+    // усиления, чтобы не резать пики.
+    compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = COMPRESSOR.threshold;
+    compressor.knee.value = COMPRESSOR.knee;
+    compressor.ratio.value = COMPRESSOR.ratio;
+    compressor.attack.value = COMPRESSOR.attack;
+    compressor.release.value = COMPRESSOR.release;
+    playbackGain = audioContext.createGain();
+    playbackGain.gain.value = PLAYBACK_GAIN;
+    outputAnalyser = audioContext.createAnalyser();
+    outputAnalyser.fftSize = 256;
+    compressor.connect(playbackGain);
+    playbackGain.connect(outputAnalyser);
+    outputAnalyser.connect(audioContext.destination);
+    rafId = requestAnimationFrame(visualLoop);
+
+    const params = new URLSearchParams({
+      guestId: guestId ?? '',
+      restaurantId: restaurantId ?? '',
+      tableNumber: tableNumber ?? '',
+      sessionId: sessionId ?? '',
+      deferGreeting: prewarm ? '1' : '0',
+    });
+    const ws = new WebSocket(`${RELAY_WS_URL}?${params}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      // При прогреве под видео шар пока не показывается, статус не важен;
+      // «Слушаю…» ставит фаза активации, когда включит микрофон.
+      if (!stopped && !prewarm) setStatus('listening');
+    };
+    ws.onclose = () => {
+      if (stopped) return;
+      setStatus((s) => (s === 'busy' ? s : 'error'));
+    };
+    ws.onmessage = (event) => {
+      if (stopped) return;
+      let msg;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (msg.type === 'audio' && msg.data) {
+        playChunk(msg.data);
+      } else if (msg.type === 'error' && msg.code === 'busy') {
+        setStatus('busy');
+        setStatusMessage(msg.message || '');
+      } else if (msg.type === 'show_dish') {
+        setVoiceDishes(Array.isArray(msg.dishes) ? msg.dishes : []);
+      } else if (msg.type === 'hide_dish') {
+        setVoiceDishes([]);
+      } else if (msg.type === 'cart_add' && Array.isArray(msg.items)) {
+        onCartAddRef.current?.(msg.items);
+      } else if (msg.type === 'show_cart') {
+        onShowCartRef.current?.();
+      }
+    };
+
+    return () => {
+      stopped = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      audioContext.close();
+      ws.close();
+    };
+  }, [guestId, restaurantId, tableNumber, sessionId]);
+
+  // ФАЗА 2 — АКТИВАЦИЯ: микрофон + сигнал приветствия. Запускается, когда
+  // заставка закончилась (prewarm стал false). Микрофон запрашивается
+  // ТОЛЬКО здесь, поэтому попап разрешения появляется после анимации, а не
+  // во время неё — и он не в критическом пути приветствия (ИИ говорит
+  // первым, микрофон ему не нужен).
+  useEffect(() => {
+    if (prewarm || activatedRef.current) return;
+    activatedRef.current = true;
+    let stopped = false;
+
+    const sendStartGreeting = () => {
+      const ws = wsRef.current;
+      if (!ws) return;
+      const send = () => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'start_greeting' }));
+      };
+      if (ws.readyState === WebSocket.OPEN) send();
+      else ws.addEventListener('open', send, { once: true });
+    };
+
+    const activate = async () => {
+      // Приветствие можно просить сразу — оно не ждёт микрофона.
+      sendStartGreeting();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (stopped) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+        streamRef.current = stream;
+        const audioContext = audioContextRef.current;
+        if (!audioContext) return;
+        if (audioContext.state === 'suspended') audioContext.resume();
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const source = audioContext.createMediaStreamSource(stream);
-
-        // ScriptProcessorNode должен быть подключен до destination, иначе
-        // onaudioprocess не гарантированно срабатывает — гасим гейном в 0,
-        // чтобы гость не слышал эхо собственного микрофона.
-        scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+        // ScriptProcessorNode подключаем к destination через нулевой гейн —
+        // иначе onaudioprocess не гарантированно срабатывает, но эхо своего
+        // микрофона гость слышать не должен.
+        const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+        scriptNodeRef.current = scriptNode;
         const silentGain = audioContext.createGain();
         silentGain.gain.value = 0;
         source.connect(scriptNode);
         scriptNode.connect(silentGain);
         silentGain.connect(audioContext.destination);
 
-        // Через этот узел проходит воспроизводимый звук ИИ — им и кормим
-        // непрерывный визуальный цикл (см. visualLoop выше), а не разовыми
-        // снимками уровня в момент прихода каждого куска по сети.
-        // Цепочка воспроизведения ИИ: каждый кусок -> compressor (сжимает
-        // пики) -> playbackGain (makeup-усиление громкости) -> outputAnalyser
-        // (визуализация шара) -> колонки. Всё на общих узлах, а не на каждом
-        // источнике. Порядок важен: компрессор ДО усиления, иначе усилим
-        // пики раньше, чем успеем их сжать.
-        compressor = audioContext.createDynamicsCompressor();
-        compressor.threshold.value = COMPRESSOR.threshold;
-        compressor.knee.value = COMPRESSOR.knee;
-        compressor.ratio.value = COMPRESSOR.ratio;
-        compressor.attack.value = COMPRESSOR.attack;
-        compressor.release.value = COMPRESSOR.release;
-        playbackGain = audioContext.createGain();
-        playbackGain.gain.value = PLAYBACK_GAIN;
-        outputAnalyser = audioContext.createAnalyser();
-        outputAnalyser.fftSize = 256;
-        compressor.connect(playbackGain);
-        playbackGain.connect(outputAnalyser);
-        outputAnalyser.connect(audioContext.destination);
-        rafId = requestAnimationFrame(visualLoop);
-
-        const params = new URLSearchParams({
-          guestId: guestId ?? '',
-          restaurantId: restaurantId ?? '',
-          tableNumber: tableNumber ?? '',
-          sessionId: sessionId ?? '',
-        });
-        ws = new WebSocket(`${RELAY_WS_URL}?${params}`);
-
-        ws.onopen = () => {
-          if (!stopped) setStatus('listening');
-        };
-        ws.onclose = () => {
-          if (stopped) return;
-          setStatus((s) => (s === 'busy' ? s : 'error'));
-        };
-        ws.onmessage = (event) => {
-          if (stopped) return;
-          let msg;
-          try {
-            msg = JSON.parse(event.data);
-          } catch {
-            return;
-          }
-          if (msg.type === 'audio' && msg.data) {
-            playChunk(msg.data);
-          } else if (msg.type === 'error' && msg.code === 'busy') {
-            setStatus('busy');
-            setStatusMessage(msg.message || '');
-          } else if (msg.type === 'show_dish') {
-            // Каждый показ заменяет набор целиком (см. voiceSession.js) —
-            // при смене темы старые блюда уходят сами, не накапливаются.
-            setVoiceDishes(Array.isArray(msg.dishes) ? msg.dishes : []);
-          } else if (msg.type === 'hide_dish') {
-            setVoiceDishes([]);
-          } else if (msg.type === 'cart_add' && Array.isArray(msg.items)) {
-            onCartAddRef.current?.(msg.items);
-          } else if (msg.type === 'show_cart') {
-            onShowCartRef.current?.();
-          }
-        };
-
         scriptNode.onaudioprocess = (event) => {
+          const ws = wsRef.current;
           if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
           const input = event.inputBuffer.getChannelData(0);
-          if (!aiSpeaking) setLevel(rmsLevel(input));
+          if (!aiSpeakingRef.current) setLevel(rmsLevel(input));
           const resampled = resampleTo24k(input, audioContext.sampleRate);
           ws.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
         };
+
+        if (!stopped) setStatus('listening');
       } catch (err) {
-        console.error('VoiceStage: не удалось запустить голосовую сессию:', err);
+        console.error('VoiceStage: не удалось получить микрофон:', err);
         if (!stopped) {
           setStatus('error');
           setStatusMessage('Не удалось получить доступ к микрофону.');
@@ -255,18 +299,19 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       }
     };
 
-    start();
+    activate();
 
     return () => {
       stopped = true;
-      if (rafId) cancelAnimationFrame(rafId);
-      if (scriptNode) scriptNode.onaudioprocess = null;
-      scriptNode?.disconnect();
-      stream?.getTracks().forEach((t) => t.stop());
-      audioContext?.close();
-      ws?.close();
+      if (scriptNodeRef.current) {
+        scriptNodeRef.current.onaudioprocess = null;
+        scriptNodeRef.current.disconnect();
+        scriptNodeRef.current = null;
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     };
-  }, [guestId, restaurantId, tableNumber, sessionId]);
+  }, [prewarm]);
 
   const hasDishes = voiceDishes.length > 0;
 

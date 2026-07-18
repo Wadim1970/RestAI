@@ -1,7 +1,7 @@
 // src/components/VideoBackground.jsx
 import React from 'react';
 
-const VIDEO_SOURCE = "/VIDEO-2025-12-07-21-42-11.mp4";
+const VIDEO_SOURCE = "/intro-logo.mp4";
 
 // Раньше было loop — крутилось по кругу. Теперь проигрывается один раз за
 // сеанс, а по окончании onEnded уводит гостя дальше (в меню) — не нужно
