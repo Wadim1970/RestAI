@@ -114,10 +114,10 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
           {/* Стеклянный треугольник-«play» ~83px. Рисуем SVG (а не div с
               clip-path + backdrop-filter — та пара багует на iOS Safari:
               размытие не обрезалось по фигуре и выглядело как полупрозрачный
-              квадрат). Эффект матового стекла даём ПЛОТНОЙ молочной заливкой
-              (0.82→0.55, а не прозрачной плёнкой): градиент — отблеск сверху,
-              яркая обводка-кромка — блики, снизу мягкая тень. Саму фигуру НЕ
-              размываем (иначе весь треугольник расплывается). */}
+              квадрат). Заливка полупрозрачная (0.45→0.12) — лёгкое стекло,
+              не матовое: градиент даёт отблеск сверху, яркая обводка-кромка —
+              блики, снизу мягкая тень. Саму фигуру НЕ размываем (иначе весь
+              треугольник расплывается). */}
           <svg
             width="83"
             height="83"
@@ -127,8 +127,8 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
           >
             <defs>
               <linearGradient id="introTriFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.82" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.55" />
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.12" />
               </linearGradient>
               <linearGradient id="introTriRim" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
