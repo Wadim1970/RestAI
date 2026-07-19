@@ -111,40 +111,41 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
             cursor: 'pointer',
           }}
         >
-          {/* Стеклянный треугольник-«play» ~83px. Рисуем SVG (а не div с
-              clip-path + backdrop-filter — та пара багует на iOS Safari:
-              размытие не обрезалось по фигуре и выглядело как полупрозрачный
-              квадрат). Заливка полупрозрачная (0.45→0.12): градиент — отблеск
-              сверху, яркая обводка-кромка — блики, снизу мягкая тень. Плюс
-              лёгкое размытие всей фигуры (blur 1px) для мягкого «матового»
-              стекла — маленькое, иначе (больше ~1.5px) сам треугольник
-              расплывается. */}
-          <svg
-            width="83"
-            height="83"
-            viewBox="0 0 70 70"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: 'blur(1px) drop-shadow(0 3px 7px rgba(0, 0, 0, 0.35))' }}
+          {/* Кнопка пуска в стиле Telegram (play/pause поверх видео): КРУГ с
+              эффектом матового стекла. Ключевое — backdrop-filter размывает
+              ФОН ПОЗАДИ кнопки (настоящий «эффект стекла»), а сама иконка
+              остаётся чёткой. Круг + backdrop-filter на iOS работают надёжно
+              (в отличие от треугольника через clip-path, где размытие не
+              обрезалось по фигуре). Фрост ярче виден на пёстром фоне; на
+              градиенте — мягкое полупрозрачное стекло. */}
+          <div
+            style={{
+              width: '78px',
+              height: '78px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              border: '1px solid rgba(255, 255, 255, 0.30)',
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <defs>
-              <linearGradient id="introTriFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.12" />
-              </linearGradient>
-              <linearGradient id="introTriRim" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="45%" stopColor="#ffffff" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.9" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M 25.89 16.32 L 52.11 30.68 Q 60 35 52.11 39.32 L 25.89 53.68 Q 18 58 18 49 L 18 21 Q 18 12 25.89 16.32 Z"
-              fill="url(#introTriFill)"
-              stroke="url(#introTriRim)"
-              strokeWidth="1.4"
-              strokeLinejoin="round"
+            {/* Чёткая иконка play (её НЕ размываем) */}
+            <div
+              style={{
+                width: 0,
+                height: 0,
+                borderTop: '13px solid transparent',
+                borderBottom: '13px solid transparent',
+                borderLeft: '22px solid #fff',
+                marginLeft: '5px',
+                filter: 'drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25))',
+              }}
             />
-          </svg>
+          </div>
         </div>
       )}
 
