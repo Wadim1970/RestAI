@@ -21,6 +21,7 @@ export default function PersonalCabinet({
   onOpen,
   onClose,
   deviceId,
+  showTab = false, // показывать ли флажок «Профиль» на краю (только на /menu)
   registrationContext, // { questionId, selectedIndex } | null — задаёт вызывающая сторона
   onRegistrationComplete, // (points) => void
 }) {
@@ -36,8 +37,24 @@ export default function PersonalCabinet({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  // Зарегистрирован = телефон подтверждён по SMS + указано имя. Только таким
+  // гостям показываем флажок «Профиль» (см. showTab). Узнаём отдельным лёгким
+  // запросом при монтировании, не дожидаясь открытия кабинета.
+  const [isRegistered, setIsRegistered] = useState(false);
 
   const swipeHandlers = useSwipeLeftOpen(onOpen);
+
+  useEffect(() => {
+    if (!deviceId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc('get_guest_profile', { p_device_id: deviceId });
+      if (cancelled) return;
+      const row = data?.[0];
+      setIsRegistered(!!(row?.phone && row?.name));
+    })();
+    return () => { cancelled = true; };
+  }, [deviceId]);
 
   useEffect(() => {
     if (!isOpen || !deviceId) return;
@@ -200,6 +217,7 @@ export default function PersonalCabinet({
         birthday_month: birthdayMonth ? Number(birthdayMonth) : null,
         dislikes: dislikes.trim() || null,
       }));
+      setIsRegistered(true); // телефон подтверждён — теперь показываем флажок на /menu
       setSmsStep('idle');
       setSmsCode('');
 
@@ -222,7 +240,11 @@ export default function PersonalCabinet({
 
   return (
     <>
-      {!isOpen && (
+      {/* Флажок «Профиль» (с ним и свайп-открытие) — только на экране меню
+          (showTab) и только у зарегистрированных гостей. На заставке и на
+          голосовом экране флажка нет. Сам кабинет при этом можно открыть
+          программно (викторина → регистрация) независимо от флажка. */}
+      {!isOpen && showTab && isRegistered && (
         <div className={styles.edgeTab} onClick={onOpen} {...swipeHandlers}>
           <span className={styles.edgeTabText}>ПРОФИЛЬ</span>
         </div>

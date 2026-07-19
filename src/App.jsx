@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom'; 
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
@@ -38,6 +38,11 @@ function getOrCreateDeviceId() {
   // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
   // известен (tableNumber стартует с null, эффект выставляет его чуть позже).
   const [entryResolved, setEntryResolved] = useState(false);
+
+  // Флажок «Профиль» показываем только на экране меню — на заставке и
+  // голосовом экране его быть не должно. Роут берём из useLocation (HashRouter).
+  const location = useLocation();
+  const isOnMenu = location.pathname === '/menu';
 
   // Получаем ID ресторана и номер столика из URL параметров или localStorage
   useEffect(() => {
@@ -862,6 +867,7 @@ const handlePayFlowPaid = async () => {
             onOpen={() => setIsCabinetOpen(true)}
             onClose={handleCabinetClose}
             deviceId={getOrCreateDeviceId()}
+            showTab={isOnMenu}
             registrationContext={cabinetRegistrationContext}
           />
         )}
