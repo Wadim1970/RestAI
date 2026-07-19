@@ -111,28 +111,29 @@ const MainScreen = ({ onIntroStart, onIntroEnd, isChatOpen }) => {
             cursor: 'pointer',
           }}
         >
-          {/* Стеклянный треугольник-«play» ~83px, слегка размыт (frosted).
-              Рисуем SVG (а не div с clip-path + backdrop-filter — та пара
-              багует на iOS Safari: размытие не обрезалось по фигуре и
-              выглядело как полупрозрачный квадрат): градиентная заливка
-              (отблеск, светлее сверху) + яркая градиентная обводка-кромка
-              (блики) + лёгкое размытие + мягкая тень. */}
+          {/* Стеклянный треугольник-«play» ~83px. Рисуем SVG (а не div с
+              clip-path + backdrop-filter — та пара багует на iOS Safari:
+              размытие не обрезалось по фигуре и выглядело как полупрозрачный
+              квадрат). Эффект матового стекла даём ПЛОТНОЙ молочной заливкой
+              (0.82→0.55, а не прозрачной плёнкой): градиент — отблеск сверху,
+              яркая обводка-кромка — блики, снизу мягкая тень. Саму фигуру НЕ
+              размываем (иначе весь треугольник расплывается). */}
           <svg
             width="83"
             height="83"
             viewBox="0 0 70 70"
             xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: 'blur(2.5px) drop-shadow(0 3px 7px rgba(0, 0, 0, 0.35))' }}
+            style={{ filter: 'drop-shadow(0 3px 7px rgba(0, 0, 0, 0.35))' }}
           >
             <defs>
               <linearGradient id="introTriFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.12" />
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.82" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.55" />
               </linearGradient>
               <linearGradient id="introTriRim" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="45%" stopColor="#ffffff" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
+                <stop offset="45%" stopColor="#ffffff" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.9" />
               </linearGradient>
             </defs>
             <path
