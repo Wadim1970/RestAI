@@ -279,16 +279,20 @@ function formatHistoryForPrompt(turns) {
   );
 }
 
-async function loadRestaurantName(restaurantId) {
-  if (!restaurantId) return '';
+// Читаем ресторан целиком (select *): нужны и name, и локация
+// (latitude/longitude/city/address) для погоды. select('*') не падает, если
+// какой-то из этих колонок нет — вернёт то, что есть (в отличие от явного
+// перечисления колонок, где отсутствующая колонка = ошибка запроса).
+async function loadRestaurant(restaurantId) {
+  if (!restaurantId) return {};
   // Внимание: PK этой таблицы называется "restaurantId" (camelCase) — в
   // отличие от snake_case restaurant_id везде в остальной схеме.
   const { data } = await getSupabase()
     .from('restaurants')
-    .select('name')
+    .select('*')
     .eq('restaurantId', restaurantId)
     .maybeSingle();
-  return data?.name || '';
+  return data || {};
 }
 
 // character_profile/restaurant_policy/philosophy — структурированный профиль
@@ -301,6 +305,110 @@ async function loadAiProfile(restaurantId) {
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
   return data;
+}
+
+// ── Погода: температура в городе ресторана (Open-Meteo, бесплатно, без ключа).
+// Локацию берём из строки ресторана: сперва точные координаты
+// (latitude/longitude), иначе геокодим город, иначе — куски адреса. Кэшируем:
+// город не переезжает, а температура достаточно свежая раз в 30 минут.
+const WEATHER_CACHE_TTL_MS = 30 * 60_000;
+const weatherCache = new Map(); // ключ ресторана -> { temp, expiresAt }
+const geoCache = new Map();     // строка запроса -> { lat, lon }
+
+async function fetchJson(url, timeoutMs = 2500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null; // сеть/таймаут — просто без погоды, приветствие не должно падать
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function coordsFromRow(r) {
+  const lat = Number(r.latitude);
+  const lon = Number(r.longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0)) return { lat, lon };
+  return null;
+}
+
+// Кандидаты в «город» для геокодинга: сам город, затем куски адреса, из
+// которых убраны «г.», номера домов, «ул./просп./д.» и т.п.
+function cityCandidates(r) {
+  const out = [];
+  if (r.city) out.push(String(r.city).trim());
+  if (r.address) {
+    for (let seg of String(r.address).split(',')) {
+      seg = seg.replace(/^\s*(г\.?|город|пгт|с\.?|село|пос\.?)\s*/i, '').trim();
+      if (seg && !/\d/.test(seg) && !/(ул|улица|просп|проспект|пер|переул|д\.|дом|кв|корп|стр|бул|наб|ш\.|шоссе)/i.test(seg)) {
+        out.push(seg);
+      }
+    }
+  }
+  return [...new Set(out.filter(Boolean))];
+}
+
+async function geocode(name) {
+  if (!name) return null;
+  if (geoCache.has(name)) return geoCache.get(name);
+  const data = await fetchJson(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=ru&format=json`
+  );
+  const hit = data?.results?.[0];
+  const coords = hit ? { lat: hit.latitude, lon: hit.longitude } : null;
+  if (coords) geoCache.set(name, coords);
+  return coords;
+}
+
+async function fetchTemperature(restaurant) {
+  if (!restaurant) return null;
+  const key = restaurant.restaurantId ||
+    `${restaurant.city}|${restaurant.address}|${restaurant.latitude}|${restaurant.longitude}`;
+  const cached = weatherCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.temp;
+
+  let coords = coordsFromRow(restaurant);
+  if (!coords) {
+    for (const cand of cityCandidates(restaurant)) {
+      coords = await geocode(cand);
+      if (coords) break;
+    }
+  }
+  if (!coords) return null;
+
+  const data = await fetchJson(
+    `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m`
+  );
+  const temp = data?.current?.temperature_2m;
+  if (typeof temp !== 'number') return null;
+  weatherCache.set(key, { temp, expiresAt: Date.now() + WEATHER_CACHE_TTL_MS });
+  return temp;
+}
+
+// Пороговые фразы по температуре — БУКВАЛЬНО как задал ресторан: ниже 10° —
+// мягко, 10–15° — эмоционально; по жаре: выше 30° — эмоционально, 28–30° —
+// мягко. В комфортные 15–28° — без погодной фразы.
+function weatherSuggestion(temp) {
+  if (typeof temp !== 'number') return '';
+  if (temp < 10) return 'сегодня довольно холодно, может сразу предложить вам что-то горячее, чтобы согреться?';
+  if (temp < 15) return 'ну и холодина сегодня, давайте я вам сейчас закажу горячий чай или кофе, чтобы вы могли согреться, пока будем выбирать блюда.';
+  if (temp > 30) return 'на улице пекло. Давайте я сразу предложу вам что-то из холодных напитков — а то, так можно и испечься.';
+  if (temp > 28) return 'сегодня жарко на улице, может сразу заказать вам прохладительные напитки, чтобы вы могли чувствовать себя комфортно?';
+  return '';
+}
+
+// Блок в промпт: сам факт температуры (чтобы советовать по погоде в течение
+// разговора) + инструкция сказать подсказку сразу после приветствия. Подсказку
+// даём только в новом разговоре (при возобновлении приветствия нет).
+function buildWeatherBlock(temp, hasHistory) {
+  if (typeof temp !== 'number') return '';
+  const base = `Погода за окном сейчас: около ${Math.round(temp)}°C. Учитывай это, советуя блюда и напитки (в холод — тёплое, в жару — прохладительное).`;
+  const suggestion = hasHistory ? '' : weatherSuggestion(temp);
+  if (!suggestion) return base;
+  return `${base}\nСРАЗУ ПОСЛЕ приветствия, первой же репликой, добавь по погоде (можно слегка своими словами, сохрани смысл и тёплую интонацию): «${suggestion}»`;
 }
 
 // Платформенные правила — общие для ВСЕХ ресторанов, поэтому здесь, в
@@ -370,42 +478,51 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
 
 Первая реплика разговора (гость только что открыл приложение, ты
 говоришь первым):
-- Поздоровайся, представься своим именем.
-- Коротко скажи, чем можешь помочь: выбрать блюда, посчитать калории,
-  подобрать вино или напиток.
-- Упомяни, что вместо разговора с тобой гость может открыть меню
-  кнопкой «Открыть меню» и посмотреть блюда самостоятельно.
-- Скажи, что вернуться к разговору с тобой можно в любой момент кнопкой «Чат».
+- Поздоровайся коротко и по-человечески, представься своим именем и скажи,
+  что ты персональный ассистент ресторана, готов принять заказ или
+  рассказать о меню. Пример тона и длины (не копируй дословно):
+  «Привет! Я <имя>, ваш персональный ассистент ресторана <название>,
+  готов принять заказ или рассказать о меню».
+- Держи приветствие коротким — одна-две живые фразы, без длинного
+  перечисления возможностей.
+- Если ниже есть погодная подсказка — добавь её этой же первой репликой,
+  сразу после приветствия.
 - Это не сценарий слово в слово — говори в своём характере и манере речи
   (см. ниже).`;
 
 export async function buildSessionContext({ guestId, restaurantId, sessionId }) {
-  const [{ preferences, restaurantHistory }, menu, aiProfile, restaurantName, history] = await Promise.all([
+  // Ресторан грузим первым — из него нужна локация для погоды, чтобы запрос
+  // температуры пошёл параллельно с остальными загрузками.
+  const restaurant = await loadRestaurant(restaurantId);
+
+  const [{ preferences, restaurantHistory }, menu, aiProfile, history, temperature] = await Promise.all([
     loadGuestContext(guestId, restaurantId),
     loadMenuSummary(restaurantId),
     loadAiProfile(restaurantId),
-    loadRestaurantName(restaurantId),
     loadConversationHistory(sessionId),
+    fetchTemperature(restaurant),
   ]);
 
+  const restaurantName = restaurant.name || '';
   const restaurantLine = restaurantName ? `Ты работаешь в ресторане «${restaurantName}».` : '';
   const characterText = compileCharacterProfile(aiProfile?.character_profile);
   const policyText = compileRestaurantPolicy(aiProfile?.restaurant_policy);
   const philosophy = aiProfile?.philosophy || '';
   const historyText = formatHistoryForPrompt(history);
+  const hasHistory = history.length > 0;
+  const weatherText = buildWeatherBlock(temperature, hasHistory);
 
   const dynamicContext = `Меню ресторана:\n${menu || '(меню недоступно)'}\n\n` +
     `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
     JSON.stringify({ preferences, restaurantHistory });
 
-  const instructions = [SYSTEM_PROMPT, restaurantLine, characterText, policyText, philosophy, dynamicContext, historyText]
+  const instructions = [SYSTEM_PROMPT, restaurantLine, characterText, policyText, philosophy, weatherText, dynamicContext, historyText]
     .filter(Boolean)
     .join('\n\n---\n\n');
 
-  // Есть ли уже история — voiceSession по этому флагу решает, здороваться
-  // первым (пустой визит) или молча ждать первую реплику гостя (разговор
-  // уже шёл в другом режиме).
-  const hasHistory = history.length > 0;
+  // hasHistory (вычислен выше) voiceSession использует, чтобы решить:
+  // здороваться первым (пустой визит) или молча ждать реплику гостя
+  // (разговор уже шёл в другом режиме).
 
   // Имена голосов не переносятся между провайдерами (alloy у OpenAI ничего
   // не значит для Grok и наоборот) — профиль ресторана может задать голос
