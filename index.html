@@ -6,6 +6,14 @@
    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>restai-pwa</title>
     <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#11131B" />
+    <!-- Тёмный фон страницы с самого первого кадра — чтобы между splash-экраном
+         Android (см. background_color в manifest) и первой отрисовкой React не
+         мелькал белый фон body по умолчанию. Цвет совпадает с тёмным краем
+         градиента стартового экрана, поэтому переход бесшовный. -->
+    <style>
+      html, body { margin: 0; background-color: #11131B; }
+    </style>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
