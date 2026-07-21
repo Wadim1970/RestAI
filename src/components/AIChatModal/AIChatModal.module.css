@@ -11,11 +11,11 @@
 .modal-glassContainer {
     width: 100%;
     height: 100dvh; /* Высота под мобилки с учетом строк поиска в браузере */
-    background-color: rgba(255, 255, 255, 0.2); /* Прозрачность фона */
-    /* Общий фон почти не размываем — еле заметно. Сильное размытие теперь
+    background-color: rgba(255, 255, 255, 0); /* Фон полностью прозрачный (без белой дымки) */
+    /* Общий фон практически не размываем — 1px, еле-еле. Сильное размытие
        живёт на самих пузырях диалога (см. .modal-botMessage / .userMessage). */
-    -webkit-backdrop-filter: blur(2px) saturate(150%) contrast(100%); /* Размытие (Safari) */
-    backdrop-filter: blur(2px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
+    -webkit-backdrop-filter: blur(1px) saturate(150%) contrast(100%); /* Размытие (Safari) */
+    backdrop-filter: blur(1px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
     display: flex;
     flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
     justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
