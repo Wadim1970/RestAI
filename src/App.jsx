@@ -33,6 +33,8 @@ function getOrCreateDeviceId() {
   const [callStatus, setCallStatus] = useState('idle'); // 'idle' | 'pending' | 'acknowledged' — вызов официанта
   const activeCallIdRef = useRef(null); // id текущего вызова — нужен для отмены
   const activeCallChannelRef = useRef(null); // realtime-канал текущего вызова
+  const callBusyRef = useRef(false); // замок: запрос вызова/отмены в полёте — игнорируем повторные тапы
+  const callTimeoutRef = useRef(null); // таймер авто-сброса залипшего pending
   // Пока эффект ниже не отработал — ещё не знаем, известен ли стол из
   // URL/localStorage. Без этого флага HomeGate на первом рендере успевал
   // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
@@ -424,29 +426,46 @@ const handleRequestBill = async () => {
 // подписываемся на него, чтобы узнать момент отклика. Повторное нажатие,
 // пока вызов ещё не принят — отмена (гость не может отменить ПРИНЯТЫЙ
 // вызов, только висящий в ожидании).
+// Снять активный вызов у гостя: убрать realtime-канал, обнулить id и таймер
+// авто-сброса. Общий хелпер для отмены, отклика и авто-сброса.
+const clearActiveCall = () => {
+  if (activeCallChannelRef.current) {
+    supabase.removeChannel(activeCallChannelRef.current);
+    activeCallChannelRef.current = null;
+  }
+  activeCallIdRef.current = null;
+  if (callTimeoutRef.current) {
+    clearTimeout(callTimeoutRef.current);
+    callTimeoutRef.current = null;
+  }
+};
+
 const handleCallWaiter = async () => {
   if (!restaurantId || !tableNumber) return;
+  // Замок от повторных нажатий: пока запрос вызова/отмены в полёте — игнор.
+  // Без него быстрые тапы (особенно под нагрузкой, когда ответ RPC медленный)
+  // плодили дубли-вызовы и утекшие realtime-каналы — это и раскачивало Realtime.
+  if (callBusyRef.current) return;
+  if (callStatus === 'acknowledged') return; // ждём, пока тост сам погаснет
 
+  // Повторное нажатие, пока вызов ещё не принят — отмена.
   if (callStatus === 'pending') {
+    callBusyRef.current = true;
     const callId = activeCallIdRef.current;
-    if (activeCallChannelRef.current) {
-      supabase.removeChannel(activeCallChannelRef.current);
-      activeCallChannelRef.current = null;
-    }
-    activeCallIdRef.current = null;
+    clearActiveCall();
     setCallStatus('idle');
-    if (callId) {
-      try {
-        await supabase.rpc('cancel_waiter_call', { p_call_id: callId });
-      } catch (err) {
-        console.error('Ошибка отмены вызова:', err);
-      }
+    try {
+      if (callId) await supabase.rpc('cancel_waiter_call', { p_call_id: callId });
+    } catch (err) {
+      console.error('Ошибка отмены вызова:', err);
+    } finally {
+      callBusyRef.current = false;
     }
     return;
   }
 
-  if (callStatus === 'acknowledged') return; // ждём, пока тост сам погаснет
-
+  // Новый вызов.
+  callBusyRef.current = true;
   try {
     const { data: callId, error } = await supabase.rpc('call_waiter', {
       p_restaurant_id: restaurantId,
@@ -458,6 +477,9 @@ const handleCallWaiter = async () => {
       return;
     }
 
+    // call_waiter теперь возвращает id ОДНОГО вызова на стол (свой новый либо
+    // уже висящий — второй гость за столом подхватит тот же). Подписываемся.
+    clearActiveCall();
     activeCallIdRef.current = callId;
     setCallStatus('pending');
 
@@ -467,16 +489,25 @@ const handleCallWaiter = async () => {
         event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `id=eq.${callId}`,
       }, (payload) => {
         if (payload.new.status === 'acknowledged') {
+          clearActiveCall();
           setCallStatus('acknowledged');
-          supabase.removeChannel(channel);
-          activeCallChannelRef.current = null;
-          activeCallIdRef.current = null;
           setTimeout(() => setCallStatus('idle'), 4000);
         }
       })
       .subscribe();
 
     activeCallChannelRef.current = channel;
+
+    // Авто-сброс залипшего pending: если официант не ответил за 2 минуты —
+    // возвращаем кнопку в idle, чтобы не залипала навсегда. Вызов в БД
+    // остаётся (официант ещё может принять); повторный тап через дедуп
+    // подхватит тот же вызов.
+    callTimeoutRef.current = setTimeout(() => {
+      if (activeCallIdRef.current === callId) {
+        clearActiveCall();
+        setCallStatus('idle');
+      }
+    }, 120000);
 
     // Push — дополнительный канал поверх Realtime, специально для случая,
     // когда приложение официанта полностью свёрнуто (тогда ни звук, ни
@@ -493,6 +524,8 @@ const handleCallWaiter = async () => {
     }
   } catch (err) {
     console.error('Системная ошибка при вызове официанта:', err);
+  } finally {
+    callBusyRef.current = false;
   }
 };
 
@@ -515,12 +548,8 @@ useEffect(() => {
         .single();
 
       if (!error && data?.status === 'acknowledged') {
+        clearActiveCall();
         setCallStatus('acknowledged');
-        if (activeCallChannelRef.current) {
-          supabase.removeChannel(activeCallChannelRef.current);
-          activeCallChannelRef.current = null;
-        }
-        activeCallIdRef.current = null;
         setTimeout(() => setCallStatus('idle'), 4000);
       }
     } catch (err) {
