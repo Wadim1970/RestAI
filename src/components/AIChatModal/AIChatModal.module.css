@@ -12,8 +12,10 @@
     width: 100%;
     height: 100dvh; /* Высота под мобилки с учетом строк поиска в браузере */
     background-color: rgba(255, 255, 255, 0.2); /* Прозрачность фона */
-    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие (Safari) */
-    backdrop-filter: blur(20px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
+    /* Общий фон почти не размываем — еле заметно. Сильное размытие теперь
+       живёт на самих пузырях диалога (см. .modal-botMessage / .userMessage). */
+    -webkit-backdrop-filter: blur(2px) saturate(150%) contrast(100%); /* Размытие (Safari) */
+    backdrop-filter: blur(2px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
     display: flex;
     flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
     justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
@@ -146,10 +148,13 @@
 .modal-iconSend { width: 24px; height: 28px; filter: brightness(0) invert(1); }
 .modal-iconAudio { width: 40px; height: 35px; filter: brightness(0) invert(1); }
 
-/* Сообщение бота (текстовое) */
+/* Сообщение бота (текстовое) — матовое стекло с теми же показателями,
+   что раньше были у общего фона (blur 20px / saturate 150% / contrast 100%). */
 .modal-botMessage {
     align-self: flex-start; /* Бот прижат к леву */
-    background: white;
+    background: rgba(255, 255, 255, 0.2);
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
     padding: 12px 16px;
     border-radius: 12px 12px 12px 0;
     max-width: 85%;
@@ -160,7 +165,11 @@
 
 .userMessage {
     align-self: flex-end; /* Юзер прижат к праву */
-    background: #48BF48;
+    /* Тоже матовое стекло с теми же показателями, но сохраняем зелёный
+       оттенок, чтобы реплики гостя визуально отличались от реплик ИИ. */
+    background: rgba(72, 191, 72, 0.35);
+    -webkit-backdrop-filter: blur(20px) saturate(150%) contrast(100%);
+    backdrop-filter: blur(20px) saturate(150%) contrast(100%);
     color: white;
     padding: 12px 16px;
     border-radius: 12px 12px 0 12px;
