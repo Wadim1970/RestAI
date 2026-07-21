@@ -20,9 +20,9 @@
     box-sizing: border-box; 
     z-index: 1; 
     
-    /* БЫЛО: padding-top: 116px; */
-    /* СТАЛО: 116px + отступ для safe area */
-    padding-top: 116px;
+    /* Отступ под фиксированный хедер. +10px после того, как хедер стал выше
+       (MenuHeader height 5.5rem -> 6.125rem), чтобы контент не заезжал под него. */
+    padding-top: 126px;
     
     padding-bottom: 175px; 
     padding-left: 22px; 
@@ -165,7 +165,7 @@
 
 /* --- Позиция скролла для якорей --- */
 .menuSection {
-    scroll-margin-top: 160px; 
+    scroll-margin-top: 170px; /* +10px под возросшую высоту хедера */
 }
 
 /* --- Меню контент --- */

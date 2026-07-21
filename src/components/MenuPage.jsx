@@ -152,7 +152,7 @@ useEffect(() => {
         
         const element = sectionRefs.current[sectionName];
         if (element) {
-            const yOffset = -150;
+            const yOffset = -160; // +10px под возросшую высоту хедера
             const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
             window.scrollTo({ top: y, behavior: 'smooth' });
             setTimeout(() => { isScrollingRef.current = false; }, 1000);
