@@ -52,7 +52,12 @@ useEffect(() => {
             // грузить его заново при каждом заходе каждого гостя.
             const res = await fetch(`/api/menu?restaurantId=${encodeURIComponent(restaurantId)}`);
             const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Ошибка загрузки меню');
+            if (!res.ok) {
+                // Подтягиваем настоящую причину из /api/menu (code/detail/hint),
+                // чтобы в консоли было видно, что именно вернул PostgREST.
+                const extra = [json.code, json.detail, json.hint].filter(Boolean).join(' | ');
+                throw new Error((json.error || 'Ошибка загрузки меню') + (extra ? ` — ${extra}` : ''));
+            }
             const menuItems = json.items;
 
             const items = Array.isArray(menuItems) ? menuItems : [];
