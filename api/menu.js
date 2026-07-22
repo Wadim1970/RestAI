@@ -23,7 +23,17 @@ export default async function handler(req, res) {
     .order('dish_name', { ascending: true })
 
   if (error) {
-    res.status(502).json({ error: 'Не удалось загрузить меню' })
+    // Раньше отдавали только общий текст и глотали настоящую причину —
+    // из-за этого сбой PostgREST (например, PGRST205 «таблицы нет в кэше
+    // схемы» после reload) выглядел в консоли гостя одинаково загадочно.
+    // Теперь пробрасываем code/message/hint, чтобы диагностировать сразу.
+    console.error('menu_items query failed:', error)
+    res.status(502).json({
+      error: 'Не удалось загрузить меню',
+      code: error.code || null,
+      detail: error.message || null,
+      hint: error.hint || null,
+    })
     return
   }
 
