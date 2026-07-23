@@ -160,6 +160,22 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
         return { success: true };
       },
     },
+    {
+      name: 'hide_cart',
+      description:
+        'Убирает (закрывает) корзину с экрана гостя. Вызывай СРАЗУ, как только гость просит ' +
+        'убрать / закрыть / свернуть / спрятать корзину — в любой формулировке, включая ' +
+        'искажённые распознаванием («убери корзину», «закрой корзину», «убери карзину», ' +
+        '«спрячь заказ», «корзину убери»). Не путай с hide_dish_card — та убирает карточки ' +
+        'блюд, а эта именно корзину.',
+      parameters: { type: 'object', properties: {} },
+      execute: async () => {
+        if (guestSocket.readyState === guestSocket.OPEN) {
+          guestSocket.send(JSON.stringify({ type: 'hide_cart' }));
+        }
+        return { success: true };
+      },
+    },
   ];
 }
 
