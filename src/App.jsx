@@ -120,6 +120,10 @@ useEffect(() => {
   // ========================================================
   const [guestId, setGuestId] = useState(null); // Здесь будет храниться порядковый номер гостя (id из БД)
   const [seatNumber, setSeatNumber] = useState(null); // Место этого устройства в общем заказе стола (из place_guest_order)
+  // id активной сессии стола (mark_table_occupied). По нему приложение
+  // отслеживает, не закрыл ли официант стол (тогда сбрасываем сессию гостя),
+  // и по нему же освобождает стол при авто-закрытии по бездействию.
+  const [tableSessionId, setTableSessionId] = useState(null);
 
   useEffect(() => {
     const initializeGuest = async () => {
@@ -713,6 +717,100 @@ const handlePayFlowPaid = async () => {
       const rid = localStorage.getItem('restaurant_id') || restaurantId || '';
       window.location.replace(rid ? `/?restaurant_id=${encodeURIComponent(rid)}` : '/');
     };
+
+    // Как только стол известен (скан QR или вход по ссылке с &table) —
+    // открываем сессию стола со статусом «Занят», ещё ДО первого заказа:
+    // официант сразу видит, что за столом кто-то есть. Идемпотентно — если
+    // сессия уже идёт (в т.ч. «готовится»), RPC не трогает её статус, а
+    // только возвращает id, который нам нужен для отслеживания закрытия.
+    useEffect(() => {
+      if (!restaurantId || !tableNumber) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const { data, error } = await supabase.rpc('mark_table_occupied', {
+            p_restaurant_id: restaurantId,
+            p_table_number: String(tableNumber),
+          });
+          if (!error && !cancelled) {
+            const row = Array.isArray(data) ? data[0] : data;
+            if (row?.session_id) setTableSessionId(row.session_id);
+          }
+        } catch (err) {
+          console.warn('Не удалось отметить стол занятым:', err);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [restaurantId, tableNumber]);
+
+    // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
+    // счёта/оплаты — там свой сброс, дёргать reload нельзя):
+    //   (1) официант закрыл стол / оплата -> сессия стала неактивной ->
+    //       уводим гостя на скан QR (endGuestSession);
+    //   (2) гость ничего не заказал и не трогает меню 10 минут -> закрываем
+    //       «занятый» стол и тоже уводим на скан QR.
+    useEffect(() => {
+      if (!tableSessionId) return;
+
+      // В потоке закрытия счёта у гостя свои экраны (оплата, викторина,
+      // отзыв, «спасибо») — хард-reload их бы оборвал. Там не вмешиваемся.
+      const inCheckoutFlow =
+        isBillRequested || payFlowSeats !== null || quizTrigger !== null || isReviewSubmitted;
+      if (inCheckoutFlow) return;
+
+      let stopped = false;
+
+      // (1) Стол закрыли — sessionId больше не активен.
+      const checkSessionAlive = async () => {
+        if (stopped) return;
+        try {
+          const { data, error } = await supabase.rpc('is_table_session_active', {
+            p_session_id: tableSessionId,
+          });
+          if (!error && data === false && !stopped) {
+            endGuestSession();
+          }
+        } catch (err) {
+          console.warn('Не удалось проверить статус сессии стола:', err);
+        }
+      };
+      const pollId = setInterval(checkSessionAlive, 30000);
+      const onVisible = () => { if (document.visibilityState === 'visible') checkSessionAlive(); };
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('focus', checkSessionAlive);
+
+      // (2) Таймер бездействия — только когда заказывать гость ещё не начал
+      // (корзина пуста и подтверждённых заказов нет). Любое касание/скролл
+      // сбрасывает отсчёт.
+      const IDLE_MS = 10 * 60 * 1000; // 10 минут
+      const idleEligible = Object.keys(cart).length === 0 && confirmedOrders.length === 0;
+      let idleTimer = null;
+      const onIdleFire = async () => {
+        if (stopped) return;
+        // Состояние могло измениться за время отсчёта — сверяемся ещё раз.
+        if (Object.keys(cart).length !== 0 || confirmedOrders.length !== 0) return;
+        try {
+          await supabase.rpc('release_table_if_occupied', { p_session_id: tableSessionId });
+        } catch { /* всё равно уводим гостя на скан QR */ }
+        endGuestSession();
+      };
+      const resetIdle = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(onIdleFire, IDLE_MS);
+      };
+      const interactionEvents = idleEligible ? ['pointerdown', 'keydown', 'scroll', 'touchstart'] : [];
+      interactionEvents.forEach((e) => window.addEventListener(e, resetIdle, { passive: true }));
+      if (idleEligible) resetIdle();
+
+      return () => {
+        stopped = true;
+        clearInterval(pollId);
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('focus', checkSessionAlive);
+        if (idleTimer) clearTimeout(idleTimer);
+        interactionEvents.forEach((e) => window.removeEventListener(e, resetIdle));
+      };
+    }, [tableSessionId, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted, cart, confirmedOrders]);
 
     const handleSubmitReview = async () => {
     // Если ничего не заполнили — просто завершаем сеанс (без стола, требуем QR)
