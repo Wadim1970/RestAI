@@ -40,7 +40,11 @@ const PROVIDERS = {
             prefix_padding_ms: 300,
             silence_duration_ms: 600,
           },
-          transcription: { model: 'whisper-1' }, // распознавание речи гостя, см. grok-ветку
+          // gpt-4o-transcribe точнее whisper-1 на русском — но это ТОЛЬКО
+          // текстовая расшифровка для логов и общей истории (её видит
+          // текстовый чат). На то, КАК модель слышит вживую, не влияет:
+          // gpt-realtime обрабатывает аудио напрямую, транскрипт — сбоку.
+          transcription: { model: 'gpt-4o-transcribe' },
         },
         output: {
           format: { type: 'audio/pcm', rate: 24000 },
