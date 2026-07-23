@@ -105,6 +105,14 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
   const hasConfirmedItems = confirmedOrders.length > 0;
   const totalSum = [...cartItems, ...confirmedOrders].reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
 
+  // Калорийность блюда берём из nutritional_info.calories_kcal (на порцию),
+  // умножаем на количество. Блюда без данных считаем как 0 — общий итог не
+  // ломается. newItemsKcal — калорийность только добавляемых блюд; totalKcal —
+  // всего заказа (уже на кухне + добавляемые).
+  const kcalOf = (item) => Number(item?.nutritional_info?.calories_kcal || 0) * Number(item?.count || 0);
+  const newItemsKcal = Math.round(cartItems.reduce((sum, item) => sum + kcalOf(item), 0));
+  const totalKcal = Math.round([...cartItems, ...confirmedOrders].reduce((sum, item) => sum + kcalOf(item), 0));
+
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.fadeOut : ''}`}
@@ -148,7 +156,20 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
             </div>
           )}
 
-          {hasConfirmedItems && (
+          {/* Добавляем новые блюда к уже отправленному заказу — вместо кнопки
+              показываем калорийность добавляемого. Кнопка тут путала: гость
+              думал, что ею надо «досдать» уже выбранное в корзине. */}
+          {hasNewItems && hasConfirmedItems && (
+            <div className={styles.addedCaloriesRow}>
+              <span>Калорийность добавляемых</span>
+              <span>{newItemsKcal} кКал</span>
+            </div>
+          )}
+
+          {/* Кнопку «Добавить к заказу» показываем ТОЛЬКО когда всё из корзины
+              уже отправлено на кухню (новых блюд нет) — тогда она по смыслу
+              верна: гость хочет добавить ещё. */}
+          {!hasNewItems && hasConfirmedItems && (
             <button className={styles.addMoreBtn} onClick={handleClose}>+ Добавить к заказу</button>
           )}
 
@@ -183,7 +204,13 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
             <span>Итого к оплате</span>
             <span>{totalSum} ₽</span>
           </div>
-          <button 
+          {(hasNewItems || hasConfirmedItems) && (
+            <div className={styles.caloriesRow}>
+              <span>Общая калорийность</span>
+              <span>{totalKcal} кКал</span>
+            </div>
+          )}
+          <button
             className={`${styles.orderBtn} ${!hasNewItems ? styles.billBtn : ''}`} 
             onClick={hasNewItems 
               ? () => { onConfirmOrder(cartItems, comment); setComment(''); } 
