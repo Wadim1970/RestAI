@@ -28,7 +28,18 @@ const PROVIDERS = {
       audio: {
         input: {
           format: { type: 'audio/pcm', rate: 24000 },
-          turn_detection: { type: 'server_vad' },
+          // Ресторан шумный: без этого микрофон ловил разговоры за соседними
+          // столами. near_field — шумоподавление под БЛИЗКИЙ микрофон (гость
+          // держит телефон у себя), отсекает дальний фон. threshold выше
+          // дефолтного (0.6 против ~0.5): VAD стартует только на достаточно
+          // громкую речь рядом, тихий фоновый гул/чужую болтовню игнорирует.
+          noise_reduction: { type: 'near_field' },
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.6,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 600,
+          },
           transcription: { model: 'whisper-1' }, // распознавание речи гостя, см. grok-ветку
         },
         output: {
@@ -46,7 +57,10 @@ const PROVIDERS = {
       instructions,
       tools: toolDefinitions(tools),
       tool_choice: 'auto',
-      turn_detection: { type: 'server_vad' },
+      // Тот же порог VAD, что и у OpenAI-ветки — меньше ложных срабатываний
+      // на фоновую болтовню в шумном зале. (noise_reduction для Grok не
+      // задаём — совместимость этого поля не гарантирована.)
+      turn_detection: { type: 'server_vad', threshold: 0.6, prefix_padding_ms: 300, silence_duration_ms: 600 },
       audio: {
         // transcription.model включает распознавание речи ГОСТЯ — без него
         // Grok не шлёт conversation.item.input_audio_transcription.* и в
