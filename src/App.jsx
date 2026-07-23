@@ -299,6 +299,10 @@ useEffect(() => {
   // Голосовой ИИ показывает гостю корзину (show_cart).
   const handleVoiceShowCart = () => setIsVoiceCartOpen(true);
 
+  // Голосовой ИИ убирает корзину с экрана (hide_cart) — гость сказал
+  // «убери/закрой корзину».
+  const handleVoiceHideCart = () => setIsVoiceCartOpen(false);
+
   // Заставка началась (гость нажал «войти», видео заиграло) — СРАЗУ
   // открываем голосовой чат в режиме прогрева (prewarm): под видео молча
   // готовятся соединение, сессия Grok и контекст, но приветствие ждёт.
@@ -929,6 +933,7 @@ const handlePayFlowPaid = async () => {
           onExpandDish={setExpandedDish}
           onCartAdd={handleVoiceCartAdd}
           onShowCart={handleVoiceShowCart}
+          onHideCart={handleVoiceHideCart}
         />
 
         {/* Полная карточка блюда по тапу в кубе-слайдере голосового ассистента —

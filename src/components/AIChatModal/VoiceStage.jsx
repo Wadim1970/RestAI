@@ -89,7 +89,7 @@ function rmsLevel(float32) {
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, onExpandDish, onCartAdd, onShowCart }) {
+export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, onExpandDish, onCartAdd, onShowCart, onHideCart }) {
   const orbRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
@@ -103,8 +103,10 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   // без рефа новая функция заставляла бы переподключать сокет.
   const onCartAddRef = useRef(onCartAdd);
   const onShowCartRef = useRef(onShowCart);
+  const onHideCartRef = useRef(onHideCart);
   onCartAddRef.current = onCartAdd;
   onShowCartRef.current = onShowCart;
+  onHideCartRef.current = onHideCart;
 
   // setLevel задаёт лишь ЦЕЛЬ уровня; сам шар плавно подтягивается к ней в
   // visualLoop каждый кадр (интерполяция) — поэтому движение гладкое, без
@@ -290,6 +292,8 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         onCartAddRef.current?.(msg.items);
       } else if (msg.type === 'show_cart') {
         onShowCartRef.current?.();
+      } else if (msg.type === 'hide_cart') {
+        onHideCartRef.current?.();
       }
     };
 
