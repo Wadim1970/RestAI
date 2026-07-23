@@ -134,6 +134,10 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
             cost_rub: dish.cost_rub,
             image_url: dish.image_url,
             image_url_thumbnail: dish.image_url_thumbnail,
+            // Нужно корзине для подсчёта общей калорийности заказа
+            // (nutritional_info.calories_kcal). Без этого блюда, добавленные
+            // голосом, считались бы как 0 ккал.
+            nutritional_info: dish.nutritional_info || null,
             quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
           });
         }

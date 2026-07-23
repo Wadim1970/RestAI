@@ -231,11 +231,34 @@
 }
 
 .totalRow {
-    display: flex; 
+    display: flex;
     justify-content: space-between;
     font-size: clamp(16px, 4.5vw, 20px);
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
+}
+
+/* Общая калорийность заказа — тоньше и бледнее «Итого к оплате», сидит
+   между ним и кнопкой (которая за счёт этого опускается чуть ниже). */
+.caloriesRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: clamp(13px, 3.6vw, 15px);
+    font-weight: 400;
+    color: #9a9a9a;
+    margin-bottom: 16px;
+}
+
+/* Калорийность добавляемых блюд — на месте бывшей кнопки «+ Добавить»,
+   когда докидываем блюда к уже отправленному на кухню заказу. */
+.addedCaloriesRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 2px;
+    font-size: clamp(13px, 3.6vw, 15px);
+    font-weight: 400;
+    color: #9a9a9a;
 }
 
 .orderBtn {
