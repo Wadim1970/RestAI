@@ -360,7 +360,11 @@ useEffect(() => {
     // использует Waiter-app.
     const itemsToSend = cartItems.map(item => ({
       item_id: item.id,
-      quantity: item.count
+      quantity: item.count,
+      // Пожелания к блюду, записанные голосовым ИИ (add_to_cart -> comment).
+      // place_guest_order кладёт их в order_items.comment — официант видит.
+      // У блюд, добавленных из меню, поля нет — уходит undefined, это ок.
+      comment: item.comment || undefined,
     }));
 
     try {
