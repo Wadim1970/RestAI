@@ -731,17 +731,14 @@ const handlePayFlowPaid = async () => {
       window.location.replace(rid ? `/?restaurant_id=${encodeURIComponent(rid)}` : '/');
     };
 
-    // Как только гость положил ЧТО-ТО в корзину — открываем сессию стола со
-    // статусом «Занят», ещё ДО отправки заказа: официант сразу видит, что за
-    // столом кто-то заказывает. Триггер именно на добавление в корзину (а не
-    // на простой просмотр меню), чтобы «зашёл посмотреть и ушёл» не занимал
-    // стол. Идемпотентно — если сессия уже идёт (в т.ч. «готовится»), RPC не
-    // трогает её статус, а только возвращает id для отслеживания закрытия.
+    // Как только стол известен (гость отсканировал QR / вошёл по ссылке с
+    // &table) — сразу открываем сессию стола со статусом «Занят», ещё ДО
+    // первого заказа: официант видит, что за столом кто-то есть. Идемпотентно —
+    // если сессия уже идёт (в т.ч. «готовится»), RPC не трогает её статус, а
+    // только возвращает id, который нужен для отслеживания закрытия и таймера.
     useEffect(() => {
       if (!restaurantId || !tableNumber) return;
       if (tableSessionId) return; // уже отметили — повторно не дёргаем
-      const hasActivity = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
-      if (!hasActivity) return;
       let cancelled = false;
       (async () => {
         try {
@@ -764,7 +761,7 @@ const handlePayFlowPaid = async () => {
         }
       })();
       return () => { cancelled = true; };
-    }, [restaurantId, tableNumber, cart, confirmedOrders, tableSessionId]);
+    }, [restaurantId, tableNumber, tableSessionId]);
 
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
@@ -802,28 +799,29 @@ const handlePayFlowPaid = async () => {
       document.addEventListener('visibilitychange', onVisible);
       window.addEventListener('focus', checkSessionAlive);
 
-      // (2) Таймер бездействия — только когда заказывать гость ещё не начал
-      // (корзина пуста и подтверждённых заказов нет). Любое касание/скролл
-      // сбрасывает отсчёт.
+      // (2) Таймер бездействия. Пока гость НЕ отправил заказ на кухню, стол
+      // держит статус «Занят» ограниченное время. Отсчёт (10 минут) сбрасывает
+      // только РЕАЛЬНАЯ активность заказа: добавление блюда в корзину или
+      // отправка заказа — оба меняют cart/confirmedOrders, которые есть в
+      // зависимостях эффекта, поэтому эффект перезапускается и таймер стартует
+      // заново. Простой просмотр/скролл меню отсчёт НЕ сбрасывает. Если за 10
+      // минут ни одного добавления и заказ так и не отправлен — освобождаем
+      // стол (release_table_if_occupied снимает только статус 'occupied') и
+      // уводим гостя на скан QR. После отправки заказа стол уже «готовится» —
+      // таймер не нужен (гость дегустирует), поэтому idleActive=false.
       const IDLE_MS = 10 * 60 * 1000; // 10 минут
-      const idleEligible = Object.keys(cart).length === 0 && confirmedOrders.length === 0;
+      const idleActive = confirmedOrders.length === 0;
       let idleTimer = null;
       const onIdleFire = async () => {
         if (stopped) return;
-        // Состояние могло измениться за время отсчёта — сверяемся ещё раз.
-        if (Object.keys(cart).length !== 0 || confirmedOrders.length !== 0) return;
+        // За время отсчёта могли отправить заказ — тогда стол занят реально.
+        if (confirmedOrders.length !== 0) return;
         try {
           await supabase.rpc('release_table_if_occupied', { p_session_id: tableSessionId });
         } catch { /* всё равно уводим гостя на скан QR */ }
         endGuestSession();
       };
-      const resetIdle = () => {
-        if (idleTimer) clearTimeout(idleTimer);
-        idleTimer = setTimeout(onIdleFire, IDLE_MS);
-      };
-      const interactionEvents = idleEligible ? ['pointerdown', 'keydown', 'scroll', 'touchstart'] : [];
-      interactionEvents.forEach((e) => window.addEventListener(e, resetIdle, { passive: true }));
-      if (idleEligible) resetIdle();
+      if (idleActive) idleTimer = setTimeout(onIdleFire, IDLE_MS);
 
       return () => {
         stopped = true;
@@ -831,7 +829,6 @@ const handlePayFlowPaid = async () => {
         document.removeEventListener('visibilitychange', onVisible);
         window.removeEventListener('focus', checkSessionAlive);
         if (idleTimer) clearTimeout(idleTimer);
-        interactionEvents.forEach((e) => window.removeEventListener(e, resetIdle));
       };
     }, [tableSessionId, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted, cart, confirmedOrders]);
 
