@@ -365,6 +365,11 @@ useEffect(() => {
       // place_guest_order кладёт их в order_items.comment — официант видит.
       // У блюд, добавленных из меню, поля нет — уходит undefined, это ок.
       comment: item.comment || undefined,
+      // Выбранные опции блюда (прожарка/соус/…) — только id; place_guest_order
+      // сам берёт наценку из БД и пишет order_item_modifiers.
+      modifiers: Array.isArray(item.modifiers) && item.modifiers.length
+        ? item.modifiers.map(m => m.id)
+        : undefined,
     }));
 
     try {
