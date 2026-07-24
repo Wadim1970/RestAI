@@ -731,13 +731,17 @@ const handlePayFlowPaid = async () => {
       window.location.replace(rid ? `/?restaurant_id=${encodeURIComponent(rid)}` : '/');
     };
 
-    // Как только стол известен (скан QR или вход по ссылке с &table) —
-    // открываем сессию стола со статусом «Занят», ещё ДО первого заказа:
-    // официант сразу видит, что за столом кто-то есть. Идемпотентно — если
-    // сессия уже идёт (в т.ч. «готовится»), RPC не трогает её статус, а
-    // только возвращает id, который нам нужен для отслеживания закрытия.
+    // Как только гость положил ЧТО-ТО в корзину — открываем сессию стола со
+    // статусом «Занят», ещё ДО отправки заказа: официант сразу видит, что за
+    // столом кто-то заказывает. Триггер именно на добавление в корзину (а не
+    // на простой просмотр меню), чтобы «зашёл посмотреть и ушёл» не занимал
+    // стол. Идемпотентно — если сессия уже идёт (в т.ч. «готовится»), RPC не
+    // трогает её статус, а только возвращает id для отслеживания закрытия.
     useEffect(() => {
       if (!restaurantId || !tableNumber) return;
+      if (tableSessionId) return; // уже отметили — повторно не дёргаем
+      const hasActivity = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
+      if (!hasActivity) return;
       let cancelled = false;
       (async () => {
         try {
@@ -745,16 +749,22 @@ const handlePayFlowPaid = async () => {
             p_restaurant_id: restaurantId,
             p_table_number: String(tableNumber),
           });
-          if (!error && !cancelled) {
+          if (error) {
+            // Раньше ошибка глоталась молча — если RPC нет в БД (миграция не
+            // накатана) или упала, «Занят» просто не появлялся без следов.
+            console.error('mark_table_occupied вернул ошибку:', error);
+            return;
+          }
+          if (!cancelled) {
             const row = Array.isArray(data) ? data[0] : data;
             if (row?.session_id) setTableSessionId(row.session_id);
           }
         } catch (err) {
-          console.warn('Не удалось отметить стол занятым:', err);
+          console.error('Не удалось отметить стол занятым:', err);
         }
       })();
       return () => { cancelled = true; };
-    }, [restaurantId, tableNumber]);
+    }, [restaurantId, tableNumber, cart, confirmedOrders, tableSessionId]);
 
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
