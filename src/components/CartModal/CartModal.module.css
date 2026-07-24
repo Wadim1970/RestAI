@@ -126,6 +126,23 @@
     word-wrap: break-word;
 }
 
+/* Выбранные опции блюда (прожарка/соус/гарнир) — чипсами под ценой */
+.itemMods {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+}
+
+.itemMod {
+    font-size: clamp(11px, 3vw, 12px);
+    color: #304D22;
+    background: #EEF3E9;
+    border-radius: 8px;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
 .counter { 
     display: flex; 
     align-items: center; 

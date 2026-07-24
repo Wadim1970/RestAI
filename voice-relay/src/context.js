@@ -88,6 +88,11 @@ async function loadMenuSummary(restaurantId) {
   // строками ради попадания в разные разделы меню (напр. «Борщ» и в
   // «Популярное», и в «Супы») — в промте это дубль, из-за которого ИИ
   // думает, что таких блюд несколько. Оставляем первое вхождение.
+  // Какие блюда имеют модификаторы — помечаем прямо в меню названиями групп
+  // («выбор опций: Прожарка, Соус»), чтобы ИИ знал, что по ним надо спросить
+  // (сами опции достаёт по требованию через get_dish_modifiers).
+  const { byName: modsByName } = await loadRestaurantModifiers(restaurantId);
+
   const seen = new Set();
   const text = (items || [])
     .filter((i) => {
@@ -102,12 +107,89 @@ async function loadMenuSummary(restaurantId) {
       if (i.nutritional_info?.calories_kcal != null) extras.push(`${i.nutritional_info.calories_kcal} ккал`);
       if (i.cook_time_min != null) extras.push(`~${i.cook_time_min} мин готовка`);
       const suffix = extras.length ? `, ${extras.join(', ')}` : '';
-      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}`;
+      const modDish = modsByName.get(normalizeDishName(i.dish_name));
+      const modSuffix = modDish?.groups?.length
+        ? ` · выбор опций: ${modDish.groups.map((g) => g.name).join(', ')}`
+        : '';
+      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}${modSuffix}`;
     })
     .join('\n');
 
   menuCache.set(restaurantId, { text, expiresAt: Date.now() + MENU_CACHE_TTL_MS });
   return text;
+}
+
+// ── Модификаторы блюд (прожарка/соус/гарнир) ──────────────────────────
+// Голосовой relay ходит под anon; читаем модификаторы через SECURITY
+// DEFINER-функцию get_restaurant_modifiers. Кэшируем на минуту, как меню.
+const modifiersCache = new Map(); // restaurantId -> { list, byName, expiresAt }
+
+function normalizeDishName(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+async function loadRestaurantModifiers(restaurantId) {
+  const empty = { list: [], byName: new Map() };
+  if (!restaurantId) return empty;
+
+  const cached = modifiersCache.get(restaurantId);
+  if (cached && cached.expiresAt > Date.now()) return cached;
+
+  let list = [];
+  try {
+    const { data, error } = await getSupabase().rpc('get_restaurant_modifiers', {
+      p_restaurant_id: restaurantId,
+    });
+    if (error) throw error;
+    if (Array.isArray(data)) list = data;
+  } catch (err) {
+    console.warn('Не удалось загрузить модификаторы:', err);
+    return cached || empty; // протухший кэш лучше, чем ничего
+  }
+
+  const byName = new Map();
+  for (const dish of list) {
+    if (dish?.dish_name) byName.set(normalizeDishName(dish.dish_name), dish);
+  }
+  const entry = { list, byName, expiresAt: Date.now() + MENU_CACHE_TTL_MS };
+  modifiersCache.set(restaurantId, entry);
+  return entry;
+}
+
+// Группы модификаторов конкретного блюда (по названию) — для инструмента
+// get_dish_modifiers и правила «спроси про опции».
+export async function getDishModifierGroups(restaurantId, dishName) {
+  const { byName } = await loadRestaurantModifiers(restaurantId);
+  const dish = byName.get(normalizeDishName(dishName));
+  return dish?.groups || [];
+}
+
+// Резолв выбранных гостем ОПЦИЙ (по названиям) в объекты {id, name,
+// price_delta} для конкретного блюда. Матчим без учёта регистра; чего не
+// нашли — молча пропускаем (ИИ мог оговориться, заказ из-за этого не рушим).
+export async function resolveModifierSelections(restaurantId, dishName, optionNames) {
+  if (!Array.isArray(optionNames) || optionNames.length === 0) return [];
+  const groups = await getDishModifierGroups(restaurantId, dishName);
+  if (!groups.length) return [];
+
+  const allOptions = groups.flatMap((g) => g.options || []);
+  const picked = [];
+  const seen = new Set();
+  for (const raw of optionNames) {
+    const want = normalizeDishName(raw);
+    if (!want) continue;
+    const opt =
+      allOptions.find((o) => normalizeDishName(o.name) === want) ||
+      allOptions.find((o) => {
+        const on = normalizeDishName(o.name);
+        return on.includes(want) || want.includes(on);
+      });
+    if (opt && !seen.has(opt.id)) {
+      seen.add(opt.id);
+      picked.push({ id: opt.id, name: opt.name, price_delta: Number(opt.price_delta) || 0 });
+    }
+  }
+  return picked;
 }
 
 // Общий поиск по требованию — используется и текстовым инструментом
@@ -482,6 +564,13 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
   add_to_cart, кратко и своими словами. Пожелания выясняй ДО добавления и
   клади блюдо сразу с комментарием, а не отдельным вызовом. Подтверди
   гостю, что учёл пожелание.
+- ОПЦИИ БЛЮДА (модификаторы). У части блюд в меню помечено «выбор опций:
+  <группы>» (напр. у стейка — Прожарка, Соус, Гарнир). Если гость заказывает
+  такое блюдо — ПРЕЖДЕ чем класть в корзину, вызови get_dish_modifiers по
+  этому блюду, узнай варианты и спроси выбор гостя по каждой группе
+  (по обязательным — обязательно, по остальным — предложи, но не навязывай).
+  Затем в add_to_cart передай выбранные опции в поле modifiers (их названиями,
+  как в меню). У блюда без пометки опций — ничего не спрашивай.
 - Ты помогаешь ВЫБРАТЬ, но сам заказ на кухню НЕ отправляешь. Когда
   гость закончил выбор — как настоящий официант, вслух подытожь весь
   заказ (перечисли блюда и количество, уточни, всё ли верно, ничего не

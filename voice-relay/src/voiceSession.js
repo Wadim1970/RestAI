@@ -1,4 +1,4 @@
-import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn } from './context.js';
+import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn, getDishModifierGroups, resolveModifierSelections } from './context.js';
 import { openRealtimeSession } from './realtimeProvider.js';
 import { config } from './config.js';
 
@@ -94,6 +94,34 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
       },
     },
     {
+      name: 'get_dish_modifiers',
+      description:
+        'Возвращает опции (модификаторы) блюда: группы вроде «Прожарка», «Соус», «Гарнир» с ' +
+        'вариантами и наценкой. Вызывай для блюда, у которого в меню помечено «выбор опций», ' +
+        'ПРЕЖДЕ чем класть его в корзину, чтобы спросить у гостя выбор по каждой группе. Если у ' +
+        'блюда опций нет — вернётся пустой список, тогда добавляй блюдо как обычно.',
+      parameters: {
+        type: 'object',
+        properties: {
+          dish_name: { type: 'string', description: 'Название блюда, как в меню / как назвал гость.' },
+        },
+        required: ['dish_name'],
+      },
+      execute: async ({ dish_name }) => {
+        const groups = await getDishModifierGroups(restaurantId, dish_name);
+        return {
+          dish_name,
+          groups: groups.map((g) => ({
+            group: g.name,
+            required: !!g.required,
+            options: (g.options || []).map((o) =>
+              Number(o.price_delta) ? `${o.name} (+${o.price_delta}₽)` : o.name
+            ),
+          })),
+        };
+      },
+    },
+    {
       name: 'add_to_cart',
       description:
         'Добавляет выбранные гостем блюда в его корзину в приложении (реально кладёт их туда, ' +
@@ -113,6 +141,7 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
                 dish_name: { type: 'string', description: 'Название блюда.' },
                 quantity: { type: 'number', description: 'Сколько порций. По умолчанию 1.' },
                 comment: { type: 'string', description: 'Особые пожелания гостя по этому блюду (убрать/добавить ингредиент, «без лука», «поострее»). Кратко, своими словами. Если пожеланий нет — не передавай это поле.' },
+                modifiers: { type: 'array', items: { type: 'string' }, description: 'Выбранные гостем опции блюда по их названиям из get_dish_modifiers (напр. ["Medium", "Барбекю", "Картофель"]). Передавай, только если у блюда есть опции и гость выбрал.' },
               },
               required: ['dish_name'],
             },
@@ -131,6 +160,10 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
             continue;
           }
           const dish = matches[0]; // берём первое совпадение — для заказа неоднозначность решает контекст беседы
+          // Выбранные опции (прожарка/соус/…): резолвим названия в объекты
+          // {id, name, price_delta} — id уедут в place_guest_order, name+delta
+          // нужны корзине для показа и подсчёта наценки.
+          const chosenMods = await resolveModifierSelections(restaurantId, dish.dish_name, it.modifiers);
           cartItems.push({
             id: dish.id,
             dish_name: dish.dish_name,
@@ -144,6 +177,7 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
             // Особые пожелания гостя — уедут в order_items.comment при
             // отправке заказа (place_guest_order уже принимает per-item comment).
             comment: (it.comment && String(it.comment).trim()) || null,
+            modifiers: chosenMods,
             quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
           });
         }
@@ -151,7 +185,10 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
           guestSocket.send(JSON.stringify({ type: 'cart_add', items: cartItems }));
         }
         return {
-          added: cartItems.map((c) => `${c.dish_name} x${c.quantity}${c.comment ? ` (${c.comment})` : ''}`),
+          added: cartItems.map((c) => {
+            const mods = (c.modifiers || []).map((m) => m.name).join(', ');
+            return `${c.dish_name} x${c.quantity}${mods ? ` [${mods}]` : ''}${c.comment ? ` (${c.comment})` : ''}`;
+          }),
           not_found: notFound,
         };
       },

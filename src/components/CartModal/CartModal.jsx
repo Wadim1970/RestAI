@@ -103,7 +103,12 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
 
   const hasNewItems = cartItems.length > 0;
   const hasConfirmedItems = confirmedOrders.length > 0;
-  const totalSum = [...cartItems, ...confirmedOrders].reduce((sum, item) => sum + (Number(item.cost_rub || 0) * Number(item.count || 0)), 0);
+
+  // Наценка за выбранные опции блюда (сумма price_delta модификаторов) и
+  // итоговая цена порции = базовая цена + наценка.
+  const modDeltaOf = (item) => (item?.modifiers || []).reduce((s, m) => s + (Number(m?.price_delta) || 0), 0);
+  const unitPriceOf = (item) => Number(item.cost_rub || 0) + modDeltaOf(item);
+  const totalSum = [...cartItems, ...confirmedOrders].reduce((sum, item) => sum + (unitPriceOf(item) * Number(item.count || 0)), 0);
 
   // Калорийность блюда берём из nutritional_info.calories_kcal (на порцию),
   // умножаем на количество. Блюда без данных считаем как 0 — общий итог не
@@ -144,7 +149,16 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
                   <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
-                    <div className={styles.itemPrice}>{item.cost_rub} ₽</div>
+                    <div className={styles.itemPrice}>{unitPriceOf(item)} ₽</div>
+                    {item.modifiers?.length > 0 && (
+                      <div className={styles.itemMods}>
+                        {item.modifiers.map((m, idx) => (
+                          <span key={idx} className={styles.itemMod}>
+                            {m.name}{Number(m.price_delta) ? ` +${m.price_delta}₽` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {item.comment && <div className={styles.itemComment}>{item.comment}</div>}
                   </div>
                   <div className={styles.counter}>
@@ -182,7 +196,16 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
                   <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
-                    <div className={styles.itemPrice}>{item.count} шт. · {item.cost_rub * item.count} ₽</div>
+                    <div className={styles.itemPrice}>{item.count} шт. · {unitPriceOf(item) * item.count} ₽</div>
+                    {item.modifiers?.length > 0 && (
+                      <div className={styles.itemMods}>
+                        {item.modifiers.map((m, idx) => (
+                          <span key={idx} className={styles.itemMod}>
+                            {m.name}{Number(m.price_delta) ? ` +${m.price_delta}₽` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {item.comment && <div className={styles.itemComment}>{item.comment}</div>}
                   </div>
                 </div>
