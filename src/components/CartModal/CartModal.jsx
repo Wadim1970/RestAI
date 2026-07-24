@@ -145,6 +145,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
                     <div className={styles.itemPrice}>{item.cost_rub} ₽</div>
+                    {item.comment && <div className={styles.itemComment}>{item.comment}</div>}
                   </div>
                   <div className={styles.counter}>
                     <button onClick={() => updateCart(-1, item.id)} className={styles.countBtn}>-</button>
@@ -182,6 +183,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
                     <div className={styles.itemPrice}>{item.count} шт. · {item.cost_rub * item.count} ₽</div>
+                    {item.comment && <div className={styles.itemComment}>{item.comment}</div>}
                   </div>
                 </div>
               ))}

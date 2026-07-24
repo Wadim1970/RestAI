@@ -98,8 +98,10 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
       description:
         'Добавляет выбранные гостем блюда в его корзину в приложении (реально кладёт их туда, ' +
         'а не просто на словах). Вызывай, когда гость решил что-то заказать. Передавай название ' +
-        'и количество каждого блюда. Само по себе НЕ отправляет заказ на кухню — только наполняет ' +
-        'корзину; отправляет заказ сам гость кнопкой в корзине (см. show_cart).',
+        'и количество каждого блюда, а если у гостя есть особые пожелания по блюду (убрать/добавить ' +
+        'ингредиент, «без лука», «поострее», «кинзу убрать») — передавай их в поле comment. Само по ' +
+        'себе НЕ отправляет заказ на кухню — только наполняет корзину; отправляет заказ сам гость ' +
+        'кнопкой в корзине (см. show_cart).',
       parameters: {
         type: 'object',
         properties: {
@@ -110,10 +112,11 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
               properties: {
                 dish_name: { type: 'string', description: 'Название блюда.' },
                 quantity: { type: 'number', description: 'Сколько порций. По умолчанию 1.' },
+                comment: { type: 'string', description: 'Особые пожелания гостя по этому блюду (убрать/добавить ингредиент, «без лука», «поострее»). Кратко, своими словами. Если пожеланий нет — не передавай это поле.' },
               },
               required: ['dish_name'],
             },
-            description: 'Блюда с количеством, которые гость хочет заказать.',
+            description: 'Блюда с количеством (и пожеланиями), которые гость хочет заказать.',
           },
         },
         required: ['items'],
@@ -138,13 +141,19 @@ function buildTools(restaurantId, tableNumber, guestSocket) {
             // (nutritional_info.calories_kcal). Без этого блюда, добавленные
             // голосом, считались бы как 0 ккал.
             nutritional_info: dish.nutritional_info || null,
+            // Особые пожелания гостя — уедут в order_items.comment при
+            // отправке заказа (place_guest_order уже принимает per-item comment).
+            comment: (it.comment && String(it.comment).trim()) || null,
             quantity: Math.max(1, Math.round(Number(it.quantity) || 1)),
           });
         }
         if (cartItems.length > 0 && guestSocket.readyState === guestSocket.OPEN) {
           guestSocket.send(JSON.stringify({ type: 'cart_add', items: cartItems }));
         }
-        return { added: cartItems.map((c) => `${c.dish_name} x${c.quantity}`), not_found: notFound };
+        return {
+          added: cartItems.map((c) => `${c.dish_name} x${c.quantity}${c.comment ? ` (${c.comment})` : ''}`),
+          not_found: notFound,
+        };
       },
     },
     {
