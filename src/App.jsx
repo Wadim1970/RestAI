@@ -763,6 +763,35 @@ const handlePayFlowPaid = async () => {
       return () => { cancelled = true; };
     }, [restaurantId, tableNumber, tableSessionId]);
 
+    // Черновик корзины на сервер: официант видит, что гость набирает, ещё ДО
+    // отправки заказа. Регистрирует устройство как гостя (даже с пустой
+    // корзиной сразу после скана — попадает в счётчик гостей) и обновляет
+    // содержимое по мере изменения. Дебаунс, чтобы не слать на каждый +/-.
+    // Форма items совпадает с place_guest_order (item_id/quantity/comment/
+    // modifiers) — модификаторы/комментарий берём из данных блюда (их кладёт
+    // голосовой ИИ), у блюд из меню их просто нет.
+    useEffect(() => {
+      if (!restaurantId || !tableNumber) return;
+      const deviceId = getOrCreateDeviceId();
+      const items = Object.entries(cart).map(([id, count]) => {
+        const d = voiceDishesById[id] || {};
+        const mods = Array.isArray(d.modifiers) ? d.modifiers.map(m => m?.id).filter(Boolean) : [];
+        const payload = { item_id: id, quantity: count };
+        if (d.comment) payload.comment = d.comment;
+        if (mods.length) payload.modifiers = mods;
+        return payload;
+      });
+      const t = setTimeout(() => {
+        supabase.rpc('sync_guest_cart', {
+          p_restaurant_id: restaurantId,
+          p_table_number: String(tableNumber),
+          p_device_id: deviceId,
+          p_items: items,
+        }).then(({ error }) => { if (error) console.warn('sync_guest_cart:', error); });
+      }, 500);
+      return () => clearTimeout(t);
+    }, [restaurantId, tableNumber, cart, voiceDishesById]);
+
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
     //   (1) официант закрыл стол / оплата -> сессия стала неактивной ->
