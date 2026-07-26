@@ -1066,7 +1066,7 @@ const handlePayFlowPaid = async () => {
           currentCount={expandedDish ? (cart[expandedDish.id] || 0) : 0}
           updateCart={updateCart}
           onOpenChat={handleOpenChatFromDish}
-          overlayZIndex={1000000}
+          overlayZIndex={1000001}
         />
 
         {/* Корзина, вызванная голосовым ИИ (show_cart) — тот же CartModal,
@@ -1084,6 +1084,7 @@ const handlePayFlowPaid = async () => {
           onConfirmOrder={handleConfirmOrder}
           onRequestBill={handleRequestBill}
           overlayZIndex={1000000}
+          onDishClick={(item) => setExpandedDish(item)}
         />
 
         <SplitBillModal

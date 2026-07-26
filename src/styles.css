@@ -3,7 +3,7 @@
 /* src/styles.css - Адаптивная версия */
 
 /* === 1. ГЛОБАЛЬНЫЕ СТИЛИ (База для всего приложения) === */
-html, body { 
+html, body {
     margin: 0; /* Убираем стандартные внешние отступы браузера */
     padding: 0; /* Убираем стандартные внутренние отступы браузера */
     width: 100%; /* Растягиваем документ на всю ширину */
@@ -12,6 +12,18 @@ html, body {
     overflow-x: hidden; /* Запрещаем горизонтальный скролл (чтобы страница не шаталась влево-вправо) */
     overflow-y: auto; /* Разрешаем вертикальный скролл для страницы меню */
     -webkit-overflow-scrolling: touch; /* Плавный инерционный скролл на iPhone/iPad */
+    /* Тач-интерфейс: не выделяем текст/иконки и не мигаем синей подсветкой
+       тапа при касании надписей. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* В полях ввода выделение текста НУЖНО (комментарии, ответы) — возвращаем. */
+input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 #root {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 
-const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex }) => {
+const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex, onDishClick }) => {
   const [comment, setComment] = useState(''); // Состояние для текста комментария
   const [isClosing, setIsClosing] = useState(false); // Состояние для запуска анимации закрытия
      
@@ -146,7 +146,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
             <div className={styles.newItemsSection}>
               {cartItems.map(item => (
                 <div key={`new-${item.id}`} className={styles.cartItem}>
-                  <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
+                  <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} onClick={() => onDishClick?.(item)} style={onDishClick ? { cursor: 'pointer' } : undefined} />
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
                     <div className={styles.itemPrice}>{unitPriceOf(item)} ₽</div>
@@ -193,7 +193,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
               <h3 className={styles.sectionDivider}>Уже готовится</h3>
               {confirmedOrders.map((item, index) => (
                 <div key={`conf-${item.id}-${index}`} className={`${styles.cartItem} ${styles.confirmedItem}`}>
-                  <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} />
+                  <img src={item.image_url} alt={item.dish_name} className={styles.itemImg} onClick={() => onDishClick?.(item)} style={onDishClick ? { cursor: 'pointer' } : undefined} />
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{item.dish_name}</div>
                     <div className={styles.itemPrice}>{item.count} шт. · {unitPriceOf(item) * item.count} ₽</div>
