@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
@@ -309,6 +309,12 @@ useEffect(() => {
   // Так к концу 7-сек анимации остаётся только сгенерировать приветствие
   // (~2-3с) вместо всей цепочки (~10с).
   const handleIntroStart = () => {
+    // Заставку показываем ОДИН раз за визит: помечаем, что она уже была.
+    // Пока стол открыт, повторные заходы (свернул/закрыл приложение) минуют
+    // заставку и ведут сразу в меню (см. маршрут "/"). Флаг снимается в
+    // endGuestSession — когда стол закрыт/оплачен, следующий гость снова
+    // увидит заставку.
+    localStorage.setItem('intro_seen', '1');
     if (!currentSessionId) {
       setCurrentSessionId(`sess_${Date.now()}`);
     }
@@ -727,6 +733,9 @@ const handlePayFlowPaid = async () => {
       localStorage.removeItem('chat_history');
       localStorage.removeItem('ai_chat_session');
       localStorage.removeItem('table_number');
+      // Сессия закончилась (оплата/закрытие/таймаут) — снимаем метку заставки,
+      // чтобы следующий гость за этим столом снова увидел её при входе.
+      localStorage.removeItem('intro_seen');
       const rid = localStorage.getItem('restaurant_id') || restaurantId || '';
       window.location.replace(rid ? `/?restaurant_id=${encodeURIComponent(rid)}` : '/');
     };
@@ -772,6 +781,11 @@ const handlePayFlowPaid = async () => {
     // голосовой ИИ), у блюд из меню их просто нет.
     useEffect(() => {
       if (!restaurantId || !tableNumber) return;
+      // Не синкаем в потоке счёта/оплаты: там стол уже закрывается
+      // (pay_table_seats при полной оплате освобождает сессию), а лишний
+      // sync_guest_cart создал бы новую «занятую» сессию — из-за этого стол
+      // после полной оплаты «залипал» в статусе «Занят» вместо «Свободен».
+      if (isBillRequested || payFlowSeats !== null || quizTrigger !== null || isReviewSubmitted) return;
       const deviceId = getOrCreateDeviceId();
       const items = Object.entries(cart).map(([id, count]) => {
         const d = voiceDishesById[id] || {};
@@ -790,7 +804,7 @@ const handlePayFlowPaid = async () => {
         }).then(({ error }) => { if (error) console.warn('sync_guest_cart:', error); });
       }, 500);
       return () => clearTimeout(t);
-    }, [restaurantId, tableNumber, cart, voiceDishesById]);
+    }, [restaurantId, tableNumber, cart, voiceDishesById, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted]);
 
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
@@ -923,7 +937,13 @@ const handlePayFlowPaid = async () => {
           <Route
             path="/"
             element={
-              entryResolved ? (
+              !entryResolved ? (
+                <div style={{ position: 'fixed', inset: 0, background: '#000' }} />
+              ) : (tableNumber && localStorage.getItem('intro_seen') === '1') ? (
+                // Гость уже за столом и заставку видел (свернул/закрыл и вернулся)
+                // — минуем заставку, сразу в меню. Заставка только на первом входе.
+                <Navigate to="/menu" replace />
+              ) : (
                 <HomeGate
                   restaurantId={restaurantId}
                   tableNumber={tableNumber}
@@ -932,8 +952,6 @@ const handlePayFlowPaid = async () => {
                   onIntroEnd={handleIntroEnd}
                   isChatOpen={isChatOpen}
                 />
-              ) : (
-                <div style={{ position: 'fixed', inset: 0, background: '#000' }} />
               )
             }
           />
