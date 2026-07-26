@@ -35,6 +35,10 @@ export default function MenuPage({
     const [selectedDishForModal, setSelectedDishForModal] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    // z-index карточки блюда: из меню — по умолчанию; открытая из корзины
+    // (клик по фото) — выше самой корзины (её overlay 100000), чтобы легла
+    // поверх, а не под неё.
+    const [dishModalZ, setDishModalZ] = useState(undefined);
 
     const sectionRefs = useRef({});
     const isScrollingRef = useRef(false);
@@ -175,13 +179,14 @@ useEffect(() => {
     const visibleSections = sections.slice(0, visibleSectionsCount); // 🆕 Только видимые секции
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
-    const handleOpenModal = async (dish) => {
+    const handleOpenModal = async (dish, z = undefined) => {
     console.log('🔍 Открываем модалку для:', dish.dish_name);
     console.log('🖼️ image_url:', dish.image_url);
-    
+
     trackDishView(dish.dish_name);
-    
+
     // Сразу показываем модалку с тем, что есть
+    setDishModalZ(z);
     setSelectedDishForModal(dish);
     setIsModalOpen(true);
     
@@ -288,16 +293,17 @@ useEffect(() => {
                 isCallPending={isCallPending}
             />
 
-            <DishModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <DishModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
                 dish={selectedDishForModal}
                 currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
                 updateCart={updateCart}
-                onOpenChat={onOpenChat} 
+                onOpenChat={onOpenChat}
+                overlayZIndex={dishModalZ}
             />
 
-            <CartModal 
+            <CartModal
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 cartItems={cartItems}
@@ -305,6 +311,7 @@ useEffect(() => {
                 updateCart={updateCart}
                 onConfirmOrder={onConfirmOrder}
                 onRequestBill={onRequestBill}
+                onDishClick={(item) => handleOpenModal(item, 100001)}
             />
         </>
     );
