@@ -124,6 +124,11 @@ useEffect(() => {
   // отслеживает, не закрыл ли официант стол (тогда сбрасываем сессию гостя),
   // и по нему же освобождает стол при авто-закрытии по бездействию.
   const [tableSessionId, setTableSessionId] = useState(null);
+  // Пропускать ли заставку — РЕШАЕМ ОДИН РАЗ при запуске. Если метка intro_seen
+  // уже стоит (гость входил в этот визит, приложение перезапустилось) — минуем
+  // заставку. Нельзя читать localStorage на каждый рендер: intro_seen ставится
+  // в handleIntroStart, и это оборвало бы саму заставку в момент первого входа.
+  const [skipIntro] = useState(() => localStorage.getItem('intro_seen') === '1');
 
   useEffect(() => {
     const initializeGuest = async () => {
@@ -748,6 +753,10 @@ const handlePayFlowPaid = async () => {
     useEffect(() => {
       if (!restaurantId || !tableNumber) return;
       if (tableSessionId) return; // уже отметили — повторно не дёргаем
+      // На ПОВТОРНОМ входе (skipIntro) сессию не создаём: стол мог закрыться,
+      // пока приложение было закрыто, а mark_table_occupied пересоздала бы
+      // «занятую» сессию. Проверку/возобновление делает эффект-резюме ниже.
+      if (skipIntro) return;
       let cancelled = false;
       (async () => {
         try {
@@ -772,6 +781,44 @@ const handlePayFlowPaid = async () => {
       return () => { cancelled = true; };
     }, [restaurantId, tableNumber, tableSessionId]);
 
+    // Возврат в приложение (skipIntro): проверяем, жива ли ещё сессия стола —
+    // его могли закрыть (официант / полная оплата), пока приложение было
+    // закрыто. Жива — продолжаем (ставим tableSessionId, маршрут ведёт в
+    // /menu). Нет — уводим гостя на скан QR (endGuestSession чистит всё).
+    useEffect(() => {
+      if (!restaurantId || !tableNumber) return;
+      if (!skipIntro) return;      // это первый вход, а не возврат
+      if (tableSessionId) return;  // сессия уже подтверждена
+      let cancelled = false;
+      (async () => {
+        try {
+          const { data, error } = await supabase.rpc('get_active_table_session', {
+            p_restaurant_id: restaurantId,
+            p_table_number: String(tableNumber),
+          });
+          if (cancelled) return;
+          const row = Array.isArray(data) ? data[0] : data;
+          if (!error && row?.session_id) {
+            setTableSessionId(row.session_id);   // стол жив — продолжаем
+          } else {
+            endGuestSession();                    // стол закрыт — на скан QR
+          }
+        } catch {
+          // Сеть подвела — не роняем гостя на скан: занимаем/возобновляем как
+          // обычно (редкий случай; фантом при закрытом столе снимется таймером).
+          try {
+            const { data } = await supabase.rpc('mark_table_occupied', {
+              p_restaurant_id: restaurantId,
+              p_table_number: String(tableNumber),
+            });
+            const r = Array.isArray(data) ? data[0] : data;
+            if (!cancelled && r?.session_id) setTableSessionId(r.session_id);
+          } catch { /* следующий заход/фокус повторит */ }
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [restaurantId, tableNumber, skipIntro, tableSessionId]);
+
     // Черновик корзины на сервер: официант видит, что гость набирает, ещё ДО
     // отправки заказа. Регистрирует устройство как гостя (даже с пустой
     // корзиной сразу после скана — попадает в счётчик гостей) и обновляет
@@ -781,6 +828,10 @@ const handlePayFlowPaid = async () => {
     // голосовой ИИ), у блюд из меню их просто нет.
     useEffect(() => {
       if (!restaurantId || !tableNumber) return;
+      // Синкаем только когда сессия установлена/подтверждена (mark на первом
+      // входе либо проверка-резюме на возврате) — иначе на закрытом столе
+      // sync_guest_cart пересоздал бы «занятую» сессию.
+      if (!tableSessionId) return;
       // Не синкаем в потоке счёта/оплаты: там стол уже закрывается
       // (pay_table_seats при полной оплате освобождает сессию), а лишний
       // sync_guest_cart создал бы новую «занятую» сессию — из-за этого стол
@@ -804,7 +855,7 @@ const handlePayFlowPaid = async () => {
         }).then(({ error }) => { if (error) console.warn('sync_guest_cart:', error); });
       }, 500);
       return () => clearTimeout(t);
-    }, [restaurantId, tableNumber, cart, voiceDishesById, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted]);
+    }, [restaurantId, tableNumber, tableSessionId, cart, voiceDishesById, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted]);
 
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
@@ -939,10 +990,16 @@ const handlePayFlowPaid = async () => {
             element={
               !entryResolved ? (
                 <div style={{ position: 'fixed', inset: 0, background: '#000' }} />
-              ) : (tableNumber && localStorage.getItem('intro_seen') === '1') ? (
-                // Гость уже за столом и заставку видел (свернул/закрыл и вернулся)
-                // — минуем заставку, сразу в меню. Заставка только на первом входе.
-                <Navigate to="/menu" replace />
+              ) : (tableNumber && skipIntro) ? (
+                // Возврат в приложение при открытом столе — минуем заставку.
+                // Пока эффект-резюме проверяет, жива ли сессия, держим чёрный
+                // экран: подтвердилась (tableSessionId) — уходим в меню; стол
+                // закрыт — эффект сам уводит на скан QR (перезагрузкой).
+                tableSessionId ? (
+                  <Navigate to="/menu" replace />
+                ) : (
+                  <div style={{ position: 'fixed', inset: 0, background: '#000' }} />
+                )
               ) : (
                 <HomeGate
                   restaurantId={restaurantId}
