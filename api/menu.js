@@ -17,7 +17,12 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('menu_items')
-    .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min')
+    // description/ingredients/product_type/specific_details нужны карточке
+    // блюда (DishModal). Отдаём их сразу вместе с меню, чтобы карточка НЕ
+    // ходила отдельным запросом напрямую в Supabase из браузера — такой
+    // прямой запрос падал по таймауту/CORS в сетях, где хост Supabase
+    // недоступен, хотя /api (этот same-origin роут) работает.
+    .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min, description, ingredients, product_type, specific_details')
     .eq('restaurant_id', restaurantId)
     .order('section_order', { ascending: true })
     .order('dish_name', { ascending: true })

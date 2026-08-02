@@ -1,6 +1,5 @@
 // src/components/MenuPage.jsx
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabaseClient';
 import styles from './MenuPage.module.css';
 
 // Импорт дочерних компонентов страницы
@@ -179,36 +178,18 @@ useEffect(() => {
     const visibleSections = sections.slice(0, visibleSectionsCount); // 🆕 Только видимые секции
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
 
-    const handleOpenModal = async (dish, z = undefined) => {
-    console.log('🔍 Открываем модалку для:', dish.dish_name);
-    console.log('🖼️ image_url:', dish.image_url);
-
+    const handleOpenModal = (dish, z = undefined) => {
     trackDishView(dish.dish_name);
 
-    // Сразу показываем модалку с тем, что есть
+    // Все поля карточки (описание, состав, product_type, specific_details)
+    // приходят вместе с меню через /api/menu (same-origin, кэш Vercel).
+    // Раньше здесь был отдельный запрос НАПРЯМУЮ в Supabase за полными
+    // данными — он падал по таймауту/CORS в сетях, где хост Supabase
+    // недоступен из браузера (при этом /api работает), из-за чего на части
+    // десктопов не грузились описание и состав. Больше прямых запросов нет.
     setDishModalZ(z);
     setSelectedDishForModal(dish);
     setIsModalOpen(true);
-    
-    // 🆕 ЗАТЕМ (в фоне) догружаем полные данные, если нужно
-    if (!dish.description || !dish.ingredients) {
-        try {
-            const { data: fullDish, error } = await supabase
-                .from('menu_items')
-                .select('*')
-                .eq('id', dish.id)
-                .single();
-            
-            if (error) throw error;
-            
-            console.log('✅ Полные данные загружены:', fullDish);
-            
-            // Обновляем данные в модалке без закрытия
-            setSelectedDishForModal(fullDish);
-        } catch (err) {
-            console.error('Ошибка загрузки полных данных блюда:', err);
-        }
-    }
 };
 
     const toggleDishSelection = (e, dishId) => {
