@@ -15,7 +15,7 @@
     /* Общий фон практически не размываем — 1px, еле-еле. Сильное размытие
        живёт на самих пузырях диалога (см. .modal-botMessage / .userMessage). */
     -webkit-backdrop-filter: blur(1px) saturate(150%) contrast(100%); /* Размытие (Safari) */
-    backdrop-filter: blur(1px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
+    backdrop-filter: blur(3px) saturate(150%) contrast(100%); /* Размытие (Chrome/FF) */
     display: flex;
     flex-direction: column; /* Элементы (чат, кнопки) идут сверху вниз */
     justify-content: flex-end; /* Прижимаем всё управление к низу экрана */
