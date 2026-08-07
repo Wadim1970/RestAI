@@ -1,0 +1,87 @@
+/* Поверх всего, включая обе корзины (z-index 100000 / 1000000). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.card {
+  width: 100%;
+  max-width: 340px;
+  background: #FBFBF9;
+  border-radius: 22px;
+  padding: 30px 24px 24px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.icon {
+  font-size: 46px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2126;
+  margin: 0 0 10px;
+}
+
+.text {
+  font-size: 15px;
+  line-height: 1.45;
+  color: #6a7078;
+  margin: 0 0 18px;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  margin: 2px auto 18px;
+  border: 3px solid #E5E0D4;
+  border-top-color: #2b2d33;
+  border-radius: 50%;
+  animation: ageSpin 0.9s linear infinite;
+}
+
+@keyframes ageSpin {
+  to { transform: rotate(360deg); }
+}
+
+.primaryBtn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 14px;
+  background: #2b2d33;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn:active {
+  opacity: 0.85;
+}
+
+.linkBtn {
+  margin-top: 2px;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  color: #9aa0a7;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.linkBtn:active {
+  opacity: 0.7;
+}
