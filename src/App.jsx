@@ -6,6 +6,7 @@ import MenuPage from './components/MenuPage';
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
 import CartModal from './components/CartModal/CartModal';
+import AgeConfirmOverlay from './components/AgeConfirmOverlay/AgeConfirmOverlay';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
@@ -35,6 +36,15 @@ function getOrCreateDeviceId() {
   const activeCallChannelRef = useRef(null); // realtime-канал текущего вызова
   const callBusyRef = useRef(false); // замок: запрос вызова/отмены в полёте — игнорируем повторные тапы
   const callTimeoutRef = useRef(null); // таймер авто-сброса залипшего pending
+  // Подтверждение возраста официантом при заказе алкоголя (waiter_calls
+  // kind='age_check'). Заказ НЕ уходит на кухню, пока официант не подтвердит;
+  // корзина гостя всё это время цела.
+  const [ageCheckStatus, setAgeCheckStatus] = useState('idle'); // 'idle' | 'waiting' | 'declined'
+  const ageCheckCallIdRef = useRef(null);
+  const ageCheckChannelRef = useRef(null);
+  const ageCheckTimeoutRef = useRef(null);
+  const ageBusyRef = useRef(false); // замок от повторных отправок, пока запрос в полёте
+  const pendingOrderRef = useRef(null); // { items, comment } — что отправить после «Подтвердить»
   // Пока эффект ниже не отработал — ещё не знаем, известен ли стол из
   // URL/localStorage. Без этого флага HomeGate на первом рендере успевал
   // бы мигнуть сканером камеры даже тогда, когда стол на самом деле уже
@@ -347,7 +357,10 @@ useEffect(() => {
     });
   };
 
-  const handleConfirmOrder = async (cartItems, comment = '') => {
+  // Фактическая отправка заказа на кухню. Вынесена из handleConfirmOrder,
+  // чтобы вызываться из двух мест: сразу (в заказе нет алкоголя) и после
+  // того, как официант подтвердил возраст (см. requestAgeConfirmation).
+  const sendOrderToKitchen = async (cartItems, comment = '') => {
     // 1. ПРОВЕРКА ЗАМКА: Если процесс уже идет, игнорируем клик
     if (isProcessing) return;
 
@@ -409,6 +422,126 @@ useEffect(() => {
       // 2. СНИМАЕМ ЗАМОК в любом случае (даже если была ошибка)
       setIsProcessing(false);
     }
+  };
+
+  const clearAgeCheck = () => {
+    if (ageCheckChannelRef.current) {
+      supabase.removeChannel(ageCheckChannelRef.current);
+      ageCheckChannelRef.current = null;
+    }
+    ageCheckCallIdRef.current = null;
+    if (ageCheckTimeoutRef.current) {
+      clearTimeout(ageCheckTimeoutRef.current);
+      ageCheckTimeoutRef.current = null;
+    }
+  };
+
+  // Гость передумал ждать («Отменить»). Кроме сброса своей стороны отменяем
+  // и сам вызов в БД (cancel_waiter_call работает по id для любого рода) —
+  // иначе брошенный age_check остался бы висеть в оверлее у официанта.
+  const cancelAgeCheck = () => {
+    const callId = ageCheckCallIdRef.current;
+    clearAgeCheck();
+    pendingOrderRef.current = null;
+    setAgeCheckStatus('idle');
+    if (callId) {
+      supabase.rpc('cancel_waiter_call', { p_call_id: callId }).then(
+        () => {},
+        (err) => console.error('Не удалось отменить запрос подтверждения возраста:', err),
+      );
+    }
+  };
+
+  // Гость с алкоголем в корзине жмёт «Отправить заказ»: заказ на кухню НЕ
+  // уходит, пока официант не подтвердит возраст. Создаём age_check-вызов —
+  // тот же механизм, что и обычный вызов официанта (звук/вибро/пуш/оверлей),
+  // и ждём его решения по Realtime.
+  const requestAgeConfirmation = async (cartItems, comment) => {
+    if (ageBusyRef.current || ageCheckStatus === 'waiting') return;
+    ageBusyRef.current = true;
+    try {
+      const { data: callId, error } = await supabase.rpc('request_age_confirmation', {
+        p_restaurant_id: restaurantId,
+        p_table_number: String(tableNumber),
+      });
+      if (error || !callId) {
+        console.error('Ошибка запроса подтверждения возраста:', error);
+        alert('Не удалось отправить запрос официанту. Позовите, пожалуйста, официанта.');
+        return;
+      }
+
+      // Что отправить на кухню, когда возраст подтвердят.
+      pendingOrderRef.current = { items: cartItems, comment };
+
+      clearAgeCheck();
+      ageCheckCallIdRef.current = callId;
+      setAgeCheckStatus('waiting');
+
+      const channel = supabase
+        .channel(`age_check:${callId}`)
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `id=eq.${callId}`,
+        }, (payload) => {
+          const st = payload.new.status;
+          if (st === 'confirmed') {
+            clearAgeCheck();
+            setAgeCheckStatus('idle');
+            const pending = pendingOrderRef.current;
+            pendingOrderRef.current = null;
+            if (pending) sendOrderToKitchen(pending.items, pending.comment);
+          } else if (st === 'declined') {
+            clearAgeCheck();
+            pendingOrderRef.current = null;
+            setAgeCheckStatus('declined');
+          }
+        })
+        .subscribe();
+      ageCheckChannelRef.current = channel;
+
+      // Авто-сброс залипшего ожидания: официант не ответил за 2 минуты —
+      // снимаем оверлей, корзина остаётся, гость может отправить заново.
+      ageCheckTimeoutRef.current = setTimeout(() => {
+        if (ageCheckCallIdRef.current === callId) {
+          clearAgeCheck();
+          pendingOrderRef.current = null;
+          setAgeCheckStatus('idle');
+        }
+      }, 120000);
+
+      // Пуш официанту — чтобы сигнал пробился и при свёрнутом приложении.
+      // Тот же эндпоинт, что и у обычного вызова; текст «Требуется подтвердить
+      // возраст» уже зашит в reason age_check-вызова на стороне БД.
+      const waiterApiUrl = import.meta.env.VITE_WAITER_API_URL;
+      if (waiterApiUrl) {
+        fetch(`${waiterApiUrl.replace(/\/$/, '')}/api/send-waiter-call-push`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callId }),
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('Системная ошибка при запросе подтверждения возраста:', err);
+    } finally {
+      ageBusyRef.current = false;
+    }
+  };
+
+  const handleConfirmOrder = async (cartItems, comment = '') => {
+    if (isProcessing || ageBusyRef.current) return;
+    if (!restaurantId || !tableNumber) {
+      alert("Не удалось определить ваш столик. Пожалуйста, отсканируйте QR-код на столе заново.");
+      return;
+    }
+
+    // В заказе есть алкоголь (product_type='alcohol') — сперва официант
+    // подтверждает возраст, и только после «Подтвердить» заказ уходит на кухню.
+    const hasAlcohol = cartItems.some(i => i.product_type === 'alcohol');
+    if (hasAlcohol) {
+      await requestAgeConfirmation(cartItems, comment);
+      return;
+    }
+
+    await sendOrderToKitchen(cartItems, comment);
   };
 const handleRequestBill = async () => {
   // Если есть подтвержденные заказы, предлагаем выбор
@@ -591,6 +724,37 @@ useEffect(() => {
   document.addEventListener('visibilitychange', handleVisibility);
   return () => document.removeEventListener('visibilitychange', handleVisibility);
 }, [callStatus]);
+
+// Тот же класс бага для подтверждения возраста: гость свернул приложение,
+// пока ждал официанта, и UPDATE (confirmed/declined) не долетел. При возврате
+// видимости сверяем статус age_check напрямую и доводим сценарий до конца.
+useEffect(() => {
+  const check = async () => {
+    const callId = ageCheckCallIdRef.current;
+    if (!callId || ageCheckStatus !== 'waiting') return;
+    try {
+      const { data, error } = await supabase
+        .from('waiter_calls').select('status').eq('id', callId).single();
+      if (error || !data) return;
+      if (data.status === 'confirmed') {
+        clearAgeCheck();
+        setAgeCheckStatus('idle');
+        const pending = pendingOrderRef.current;
+        pendingOrderRef.current = null;
+        if (pending) sendOrderToKitchen(pending.items, pending.comment);
+      } else if (data.status === 'declined') {
+        clearAgeCheck();
+        pendingOrderRef.current = null;
+        setAgeCheckStatus('declined');
+      }
+    } catch (err) {
+      console.error('Ошибка проверки статуса подтверждения возраста:', err);
+    }
+  };
+  const handleVisibility = () => { if (document.visibilityState === 'visible') check(); };
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, [ageCheckStatus]);
 
 // Общий хвост обеих веток оплаты: гость уходит — чистим его локальные
 // данные и показываем экран благодарности. Оплата (какие места помечены
@@ -1085,6 +1249,14 @@ const handlePayFlowPaid = async () => {
           onRequestBill={handleRequestBill}
           overlayZIndex={1000000}
           onDishClick={(item) => setExpandedDish(item)}
+        />
+
+        {/* Подтверждение возраста официантом при заказе алкоголя. Поверх
+            всего; заказ уходит на кухню только после «Подтвердить». */}
+        <AgeConfirmOverlay
+          status={ageCheckStatus}
+          onCancelWaiting={cancelAgeCheck}
+          onDismissDeclined={() => setAgeCheckStatus('idle')}
         />
 
         <SplitBillModal
