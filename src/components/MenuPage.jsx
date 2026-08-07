@@ -42,6 +42,9 @@ export default function MenuPage({
     const sectionRefs = useRef({});
     const isScrollingRef = useRef(false);
     const loadMoreTriggerRef = useRef(null); // 🆕 Ref для триггера подгрузки
+    // Секция, к которой нужно доскроллить, как только она подгрузится в DOM
+    // (тап по ещё не отрендеренной категории — см. handleSectionClick).
+    const pendingScrollRef = useRef(null);
 
     // Загрузка меню из Supabase
     // Загрузка меню из Supabase
@@ -147,25 +150,49 @@ useEffect(() => {
         return () => observer.disconnect();
     }, [loading, groupedMenu, visibleSectionsCount, isLoadingMore]);
 
+    // Прокрутка к секции. Возвращает false, если DOM-элемента секции ещё нет
+    // (значит, её надо сперва подгрузить — см. pendingScrollRef).
+    const scrollToSection = (sectionName) => {
+        const element = sectionRefs.current[sectionName];
+        if (!element) return false;
+        const yOffset = -160; // под высоту фиксированного хедера
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+        setTimeout(() => { isScrollingRef.current = false; }, 1000);
+        return true;
+    };
+
     const handleSectionClick = (sectionName) => {
         isScrollingRef.current = true;
-        setActiveSection(sectionName); 
-        
-        // 🆕 Если кликнули на секцию, которая ещё не загружена — показываем её
+        setActiveSection(sectionName);
+
         const sections = Object.keys(groupedMenu);
         const sectionIndex = sections.indexOf(sectionName);
+
+        // Секция ещё не отрендерена (ленивая подгрузка показывает их по мере
+        // прокрутки). Её DOM-элемента пока нет — прокрутить сразу нельзя, из-за
+        // этого первый тап «не срабатывал», а доезжало только со второго.
+        // Показываем секцию и запоминаем цель — доскроллим в useEffect ниже,
+        // как только она появится в DOM.
         if (sectionIndex >= visibleSectionsCount) {
+            pendingScrollRef.current = sectionName;
             setVisibleSectionsCount(sectionIndex + 1);
+            return;
         }
-        
-        const element = sectionRefs.current[sectionName];
-        if (element) {
-            const yOffset = -160; // +10px под возросшую высоту хедера
-            const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-            window.scrollTo({ top: y, behavior: 'smooth' });
-            setTimeout(() => { isScrollingRef.current = false; }, 1000);
-        }
+
+        scrollToSection(sectionName);
     };
+
+    // Доскролл к только что подгруженной секции (тап по категории, которой ещё
+    // не было в DOM). Срабатывает, когда отрендерятся новые секции.
+    useEffect(() => {
+        const target = pendingScrollRef.current;
+        if (!target || !sectionRefs.current[target]) return;
+        // rAF — дать браузеру применить layout вставленных секций перед замером.
+        requestAnimationFrame(() => {
+            if (scrollToSection(target)) pendingScrollRef.current = null;
+        });
+    }, [visibleSectionsCount, groupedMenu]);
 
     const cartItems = groupedMenu && Object.keys(groupedMenu).length > 0 
     ? Object.values(groupedMenu).flat().filter(dish => cart && cart[dish.id]).map(dish => ({
