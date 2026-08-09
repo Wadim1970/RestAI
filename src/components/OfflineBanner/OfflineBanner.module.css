@@ -1,0 +1,25 @@
+/* Тонкая плашка сверху. Выше корзин (100000 / 1000000), но ниже оверлея
+   подтверждения возраста (2000000), чтобы не перекрывать его кнопки. */
+.banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500000;
+  padding: 6px 12px;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.offline {
+  background: #C0392B;
+}
+
+.syncing {
+  background: #2FA84F;
+}

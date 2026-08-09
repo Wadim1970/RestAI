@@ -7,6 +7,8 @@ import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
 import CartModal from './components/CartModal/CartModal';
 import AgeConfirmOverlay from './components/AgeConfirmOverlay/AgeConfirmOverlay';
+import OfflineBanner from './components/OfflineBanner/OfflineBanner';
+import { enqueue, flushOutbox } from './lib/outbox';
 import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
@@ -357,6 +359,18 @@ useEffect(() => {
     });
   };
 
+  // Сетевой сбой (нет связи / сервер недоступен) в ответе Supabase RPC.
+  // Отличаем его от «сервер отклонил по делу» (у того есть осмысленный
+  // error.code) — повторять в очереди имеет смысл только сетевой сбой.
+  const isOfflineError = (err) => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+    const msg = (err?.message || '').toLowerCase();
+    return err?.name === 'TypeError'
+      || msg.includes('fetch')
+      || msg.includes('network')
+      || msg.includes('failed to send');
+  };
+
   // Фактическая отправка заказа на кухню. Вынесена из handleConfirmOrder,
   // чтобы вызываться из двух мест: сразу (в заказе нет алкоголя) и после
   // того, как официант подтвердил возраст (см. requestAgeConfirmation).
@@ -396,6 +410,21 @@ useEffect(() => {
         : undefined,
     }));
 
+    // Связь пропала прямо на отправке — не теряем заказ: кладём в очередь
+    // (outbox до-отправит его при появлении связи) и оптимистично показываем
+    // как оформленный, как и при обычной успешной отправке.
+    const queueOrderOffline = () => {
+      enqueue({ type: 'order', rpc: 'place_guest_order', params: {
+        p_restaurant_id: restaurantId,
+        p_table_number: String(tableNumber),
+        p_device_id: getOrCreateDeviceId(),
+        p_items: itemsToSend,
+        p_comment: comment || null,
+      }});
+      setConfirmedOrders(prev => [...prev, ...cartItems]);
+      setCart({});
+    };
+
     try {
       const { data, error } = await supabase.rpc('place_guest_order', {
         p_restaurant_id: restaurantId,
@@ -406,6 +435,12 @@ useEffect(() => {
       });
 
       if (error) {
+        // Строгая проверка (не isOfflineError): в очередь заказ ставим только
+        // при явном оффлайне устройства — тогда запрос точно не дошёл до
+        // сервера и повтор не создаст дубль. При «онлайн, но сбой» — честная
+        // ошибка (для железобетонной защиты от дублей нужен ключ идемпотентности
+        // в place_guest_order — отдельный шаг).
+        if (!navigator.onLine) { queueOrderOffline(); return; }
         console.error("Ошибка записи заказа в БД:", error);
         alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
         return;
@@ -417,6 +452,7 @@ useEffect(() => {
       setCart({});
 
     } catch (err) {
+      if (!navigator.onLine) { queueOrderOffline(); return; }
       console.error("Системная ошибка при оформлении:", err);
     } finally {
       // 2. СНИМАЕМ ЗАМОК в любом случае (даже если была ошибка)
@@ -543,6 +579,23 @@ useEffect(() => {
 
     await sendOrderToKitchen(cartItems, comment);
   };
+
+  // Очередь отложенных действий (заказ/вызов, не ушедшие из-за оффлайна):
+  // при появлении связи и на старте прогоняем её. Каждый элемент —
+  // самодостаточный вызов RPC, так что повтор не зависит от текущего экрана.
+  useEffect(() => {
+    const perform = async (action) => {
+      const { error } = await supabase.rpc(action.rpc, action.params);
+      if (!error) return 'done';
+      if (isOfflineError(error)) return 'retry'; // связи снова нет — до лучших времён
+      console.error('Отложенное действие отклонено сервером, убираю из очереди:', error);
+      return 'drop'; // серверная ошибка — не зацикливаемся на битом действии
+    };
+    const run = () => { flushOutbox(perform); };
+    window.addEventListener('online', run);
+    run(); // вдруг связь уже есть, а в очереди осталось с прошлой сессии
+    return () => window.removeEventListener('online', run);
+  }, []);
 const handleRequestBill = async () => {
   // Если есть подтвержденные заказы, предлагаем выбор
   if (confirmedOrders.length > 0) {
@@ -634,6 +687,14 @@ const handleCallWaiter = async () => {
     });
 
     if (error) {
+      if (isOfflineError(error)) {
+        // Нет связи — ставим вызов в очередь, уйдёт при восстановлении.
+        enqueue({ type: 'call', rpc: 'call_waiter', params: {
+          p_restaurant_id: restaurantId,
+          p_table_number: String(tableNumber),
+        }});
+        return;
+      }
       console.error('Ошибка вызова официанта:', error);
       return;
     }
@@ -684,7 +745,14 @@ const handleCallWaiter = async () => {
       }).catch(() => {});
     }
   } catch (err) {
-    console.error('Системная ошибка при вызове официанта:', err);
+    if (isOfflineError(err)) {
+      enqueue({ type: 'call', rpc: 'call_waiter', params: {
+        p_restaurant_id: restaurantId,
+        p_table_number: String(tableNumber),
+      }});
+    } else {
+      console.error('Системная ошибка при вызове официанта:', err);
+    }
   } finally {
     callBusyRef.current = false;
   }
@@ -1258,6 +1326,9 @@ const handlePayFlowPaid = async () => {
           onCancelWaiting={cancelAgeCheck}
           onDismissDeclined={() => setAgeCheckStatus('idle')}
         />
+
+        {/* Плашка «нет связи / отправляем очередь» — молчит, когда всё ок. */}
+        <OfflineBanner />
 
         <SplitBillModal
           isOpen={isSplitBillOpen}
