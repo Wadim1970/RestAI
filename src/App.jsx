@@ -18,6 +18,10 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
 import { supabase } from './supabaseClient';
 
+// Прерванная регистрация из викторины: держим её в localStorage, чтобы
+// пережить сворачивание/выгрузку приложения (гость ушёл за номером телефона).
+const PENDING_REG_KEY = 'restai_pending_registration';
+
 // Общий источник device_id и для register_guest_visit, и для place_guest_order —
 // одно устройство должно всегда попадать в одно и то же место (seat) за столом.
 function getOrCreateDeviceId() {
@@ -238,6 +242,19 @@ useEffect(() => {
   const pendingAfterQuizRef = useRef(null);
   const [isCabinetOpen, setIsCabinetOpen] = useState(false);
   const [cabinetRegistrationContext, setCabinetRegistrationContext] = useState(null); // { questionId, selectedIndex } | null
+
+  // Гость прервал регистрацию (свернул приложение) и вернулся — восстанавливаем
+  // кабинет на шаге регистрации. Кабинет отрендерится, как только определится
+  // стол (см. gate по tableNumber ниже).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PENDING_REG_KEY);
+      if (raw) {
+        setCabinetRegistrationContext(JSON.parse(raw));
+        setIsCabinetOpen(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingFood, setRatingFood] = useState(0); // Оценка кухни (0-5)
   const [ratingService, setRatingService] = useState(0); // Оценка сервиса (0-5)
@@ -931,7 +948,12 @@ const handleQuizDone = () => {
 // кабинет с баннером регистрации поверх него (там же телефон/имя/SMS).
 const handleQuizCorrectAnswer = (questionId, selectedIndex) => {
   setQuizTrigger(null);
-  setCabinetRegistrationContext({ questionId, selectedIndex });
+  const ctx = { questionId, selectedIndex };
+  // Сохраняем «регистрация начата», чтобы пережить сворачивание приложения:
+  // гость часто уходит искать свой номер телефона и возвращается — окно
+  // регистрации должно открыться заново, а не пропасть.
+  try { localStorage.setItem(PENDING_REG_KEY, JSON.stringify(ctx)); } catch { /* ignore */ }
+  setCabinetRegistrationContext(ctx);
   setIsCabinetOpen(true);
 };
 
@@ -941,6 +963,9 @@ const handleQuizCorrectAnswer = (questionId, selectedIndex) => {
 // свайпом — это обычное закрытие, откладывать нечего.
 const handleCabinetClose = () => {
   setIsCabinetOpen(false);
+  // Осознанное закрытие (✕/свайп) или успешная регистрация — снимаем «начато»,
+  // чтобы при следующем заходе окно регистрации не всплывало навязчиво.
+  try { localStorage.removeItem(PENDING_REG_KEY); } catch { /* ignore */ }
   if (cabinetRegistrationContext) {
     setCabinetRegistrationContext(null);
     handleQuizDone();
