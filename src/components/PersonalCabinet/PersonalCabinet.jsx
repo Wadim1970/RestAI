@@ -249,6 +249,12 @@ export default function PersonalCabinet({
               </div>
             )}
 
+            {smsStep === 'idle' && !profile?.phone && (
+              <p className={styles.loginHint}>
+                Уже регистрировались на другом телефоне? Введите тот же номер — имя и баллы вернутся на это устройство.
+              </p>
+            )}
+
             {smsStep === 'idle' && (
               <div className={styles.form}>
                 <label className={styles.fieldLabel}>Имя</label>
