@@ -37,24 +37,7 @@ export default function PersonalCabinet({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  // Зарегистрирован = телефон подтверждён по SMS + указано имя. Только таким
-  // гостям показываем флажок «Профиль» (см. showTab). Узнаём отдельным лёгким
-  // запросом при монтировании, не дожидаясь открытия кабинета.
-  const [isRegistered, setIsRegistered] = useState(false);
-
   const swipeHandlers = useSwipeLeftOpen(onOpen);
-
-  useEffect(() => {
-    if (!deviceId) return;
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.rpc('get_guest_profile', { p_device_id: deviceId });
-      if (cancelled) return;
-      const row = data?.[0];
-      setIsRegistered(!!(row?.phone && row?.name));
-    })();
-    return () => { cancelled = true; };
-  }, [deviceId]);
 
   useEffect(() => {
     if (!isOpen || !deviceId) return;
@@ -217,7 +200,6 @@ export default function PersonalCabinet({
         birthday_month: birthdayMonth ? Number(birthdayMonth) : null,
         dislikes: dislikes.trim() || null,
       }));
-      setIsRegistered(true); // телефон подтверждён — теперь показываем флажок на /menu
       setSmsStep('idle');
       setSmsCode('');
 
@@ -240,11 +222,12 @@ export default function PersonalCabinet({
 
   return (
     <>
-      {/* Флажок «Профиль» (с ним и свайп-открытие) — только на экране меню
-          (showTab) и только у зарегистрированных гостей. На заставке и на
-          голосовом экране флажка нет. Сам кабинет при этом можно открыть
-          программно (викторина → регистрация) независимо от флажка. */}
-      {!isOpen && showTab && isRegistered && (
+      {/* Флажок «Профиль» (с ним и свайп-открытие) — на экране меню (showTab)
+          для ЛЮБОГО гостя за столом, а не только зарегистрированного: иначе
+          новичок и тот, кто прервал регистрацию, не имеют входа в кабинет
+          вообще (кабинет сам показывает форму регистрации, если не вошёл).
+          На заставке и голосовом экране флажка нет. */}
+      {!isOpen && showTab && (
         <div className={styles.edgeTab} onClick={onOpen} {...swipeHandlers}>
           <span className={styles.edgeTabText}>ПРОФИЛЬ</span>
         </div>
@@ -264,6 +247,12 @@ export default function PersonalCabinet({
               <div className={styles.registrationBanner}>
                 Чтобы сохранить результат и начислить баллы, подтвердите короткую регистрацию
               </div>
+            )}
+
+            {smsStep === 'idle' && !profile?.phone && (
+              <p className={styles.loginHint}>
+                Уже регистрировались на другом телефоне? Введите тот же номер — имя и баллы вернутся на это устройство.
+              </p>
             )}
 
             {smsStep === 'idle' && (

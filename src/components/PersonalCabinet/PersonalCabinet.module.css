@@ -105,6 +105,14 @@
     text-align: center;
 }
 
+.loginHint {
+    margin: -4px 0 16px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-muted, #7b7970);
+    text-align: center;
+}
+
 .form {
     display: flex;
     flex-direction: column;
