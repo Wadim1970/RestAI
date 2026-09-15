@@ -19,12 +19,16 @@ import { config } from './config.js';
 
 const LIVE_URL = 'wss://api.openai.com/v1/live/sessions';
 
-// Инструменты в формате делегирования Responses: {type:'function', function:{…}}
-// (вложенная форма, в отличие от плоской у Realtime API).
+// Инструменты для делегирования responses — ПЛОСКАЯ форма Responses API:
+// name/description/parameters на верхнем уровне (НЕ вложенные в function, как в
+// Chat Completions). Иначе GPT-Live отбивает session.start с
+// "Missing required parameter: session.delegation.responses.tools[0].name".
 function toolDefinitions(tools) {
   return (tools || []).map((t) => ({
     type: 'function',
-    function: { name: t.name, description: t.description, parameters: t.parameters },
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters,
   }));
 }
 
