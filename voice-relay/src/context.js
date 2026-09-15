@@ -644,7 +644,12 @@ export async function buildSessionContext({ guestId, restaurantId, sessionId }) 
   // Имена голосов не переносятся между провайдерами (alloy у OpenAI ничего
   // не значит для Grok и наоборот) — профиль ресторана может задать голос
   // под каждого провайдера отдельно, полем voice.<provider>_voice.
-  const voiceField = config.voiceProvider === 'grok' ? 'grok_voice' : 'openai_voice';
+  // GPT-Live использует свой набор голосов (напр. marin) — имена не совпадают
+  // ни с Realtime-openai, ни с Grok, поэтому отдельное поле gptlive_voice; если
+  // не задано, провайдер подставит дефолт (config.gptLiveVoice).
+  const voiceField = config.voiceProvider === 'grok' ? 'grok_voice'
+    : config.voiceProvider === 'gptlive' ? 'gptlive_voice'
+    : 'openai_voice';
   const voice = aiProfile?.character_profile?.voice?.[voiceField] || null;
 
   return { instructions, voice, hasHistory };

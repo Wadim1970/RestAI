@@ -1,5 +1,5 @@
 import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn, getDishModifierGroups, resolveModifierSelections } from './context.js';
-import { openRealtimeSession } from './realtimeProvider.js';
+import { openVoiceSession } from './voiceProvider.js';
 import { config } from './config.js';
 
 // show_dish_card/hide_dish_card — единственные инструменты, которые
@@ -278,7 +278,7 @@ export async function voiceRoutes(app) {
     try {
       const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
 
-      openaiSession = openRealtimeSession({
+      openaiSession = openVoiceSession({
         instructions,
         voice,
         hasHistory,
