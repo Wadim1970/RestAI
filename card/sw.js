@@ -9,12 +9,12 @@
 // Стратегия для своих файлов — «кэш-первым»: карточка статическая, весит копейки,
 // а обновление прилетает при следующем онлайн-заходе (см. revalidate ниже).
 // При смене версии в CACHE старый кэш удаляется целиком.
-const CACHE = 'card-v4'
+const CACHE = 'card-v5'
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './img/photo.jpg',
+  './img/foto.jpg',
   './img/logo.png',
   './img/qr.png',
   './icons/icon-192.png',

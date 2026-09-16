@@ -81,8 +81,12 @@
     transition:transform .15s ease}
   .avatar:active{transform:scale(.97)}
   .avatar:focus-visible{outline:2px solid var(--orange-hi);outline-offset:4px}
-  .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;
-    border:3px solid var(--navy)}
+  /* Снимок в кружке — фоном, а не <img>: только так его можно приблизить,
+     не заводя отдельный обрезанный файл. Масштаб и точку кадра задают
+     photoZoom и photoFocus в CARD. */
+  .avatar-inner{width:100%;height:100%;border-radius:50%;display:block;
+    border:3px solid var(--navy);background-color:var(--navy-deep);
+    background-repeat:no-repeat}
 
   /* ——— снимок целиком ———
      Фотография занимает столько экрана, сколько позволяет её пропорция:
@@ -177,7 +181,7 @@
   </div>
 
   <button class="avatar" id="photoBtn" type="button" aria-label="Открыть фотографию целиком">
-    <img id="photo" src="img/photo.jpg" alt="" width="148" height="148">
+    <span class="avatar-inner" id="photo"></span>
   </button>
 
   <h1 id="name">Имя Фамилия</h1>
@@ -224,7 +228,7 @@
 
 <dialog id="photoDlg">
   <button class="x" id="photoClose" aria-label="Закрыть">&times;</button>
-  <img id="photoFull" src="img/photo.jpg" alt="">
+  <img id="photoFull" src="" alt="">
 </dialog>
 
 <dialog id="qrDlg">
@@ -258,10 +262,14 @@ const CARD = {
   website:    'https://restai.pro',
   address:    '',                        // город / офис, необязательно
 
-  // Какая часть фотографии попадёт в круг. '50% 50%' — центр снимка.
-  // У обычного портрета лицо выше центра, поэтому уменьшаем второе
-  // число: '50% 30%' поднимает кадр к лицу. Подбирается на глаз.
-  photoFocus: '50% 35%',
+  // ——— фотография ———
+  photo: 'img/foto.jpg',     // один файл и на кружок, и на полный размер
+  // Насколько приблизить кадр в кружке: 100% — снимок вписан целиком,
+  // больше — крупнее. Нужно, чтобы в кружке было лицо, а не весь кадр.
+  photoZoom: 150,
+  // Какая точка снимка окажется в кружке. 50% 50% — середина, меньше —
+  // выше и левее. Подбирается на глаз за пару правок.
+  photoFocus: '56% 22%',
 }
 /* ════════════════════════════════════════════════════════════════════
    ▲▲▲ Дальше менять ничего не нужно ▲▲▲
@@ -275,8 +283,10 @@ $('role').textContent = CARD.role
 $('companyLine').textContent = CARD.companyLine
 $('about').textContent = CARD.about
 $('brandName').textContent = CARD.company
-$('photo').alt = fullName
-$('photo').style.objectPosition = CARD.photoFocus || '50% 50%'
+$('photo').style.backgroundImage = `url("${CARD.photo}")`
+$('photo').style.backgroundSize = `auto ${CARD.photoZoom || 100}%`
+$('photo').style.backgroundPosition = CARD.photoFocus || '50% 50%'
+$('photoFull').src = CARD.photo
 $('footer').textContent = `© ${new Date().getFullYear()} ${CARD.company}`
 document.title = `${fullName} — ${CARD.company}`
 
