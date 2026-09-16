@@ -1,14 +1,14 @@
 {
   "id": "./",
-  "name": "RestAI — визитка",
-  "short_name": "RestAI",
+  "name": "Вадим Фоменко — RestAI",
+  "short_name": "В. Фоменко",
   "description": "Электронная визитка: контакты и коротко о компании.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#11131B",
-  "background_color": "#0A0C14",
+  "theme_color": "#030D4D",
+  "background_color": "#020934",
   "lang": "ru",
   "categories": ["business"],
   "icons": [

@@ -4,49 +4,61 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-<title>RestAI — визитка</title>
-<meta name="description" content="Электронная визитка RestAI: контакты, коротко о компании, сохранение в телефонную книгу.">
+<title>Вадим Фоменко — RestAI</title>
+<meta name="description" content="Электронная визитка: контакты, коротко о компании, сохранение в телефонную книгу.">
 
 <!-- PWA: манифест + цвет системной строки -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#11131B">
+<meta name="theme-color" content="#030D4D">
 
 <!-- iOS не читает иконки из манифеста — ему нужен apple-touch-icon и свой набор мет -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RestAI">
+<meta name="apple-mobile-web-app-title" content="В. Фоменко">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 
 <!-- Превью при отправке ссылки в мессенджер -->
 <meta property="og:type" content="profile">
-<meta property="og:title" content="RestAI — визитка">
+<meta property="og:title" content="Вадим Фоменко — RestAI">
 <meta property="og:description" content="Контакты и коротко о компании. Открой и добавь на экран телефона.">
 <meta property="og:image" content="icons/icon-512.png">
 
 <style>
+  /* Палитра: глубокий синий уходит вверху в голубое свечение, весь акцент —
+     оранжевый логотипа. Комплементарная пара, поэтому оранжевого ровно
+     столько, сколько нужно: кольцо фото, название компании, главная кнопка.
+     Нейтральные тона уведены в синеву, чтобы не спорить с фоном. */
   :root{
-    --bg:#0A0C14;
-    --bg-2:#11131B;
-    --card:rgba(255,255,255,.055);
-    --stroke:rgba(255,255,255,.10);
-    --text:#F3F5FA;
-    --muted:#98A1B5;
-    --a1:#3A7BFF;
-    --a2:#8B44FF;
+    --navy-deep:#020934;
+    --navy:#030D4D;
+    --navy-lift:#0A2A93;
+
+    --orange:#EB651A;
+    --orange-hi:#F5913F;
+    --orange-deep:#C8500F;
+
+    --ink:#EEF2FB;
+    --muted:#9DAAC9;
+    --dim:#6E7CA3;
+
+    --surface:rgba(255,255,255,.06);
+    --surface-hi:rgba(255,255,255,.11);
+    --stroke:rgba(140,175,255,.17);
+
     --radius:22px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--text)}
+  html,body{margin:0;background:var(--navy);color:var(--ink)}
   body{
     font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     min-height:100svh;
-    /* мягкое фирменное свечение на фоне */
     background:
-      radial-gradient(90rem 42rem at 50% -18rem, rgba(58,123,255,.20), transparent 60%),
-      radial-gradient(70rem 38rem at 110% 8%, rgba(139,68,255,.16), transparent 62%),
-      var(--bg);
+      radial-gradient(85rem 40rem at 50% -16rem, rgba(58,140,255,.34), transparent 62%),
+      radial-gradient(58rem 34rem at 112% 6%, rgba(45,190,235,.15), transparent 60%),
+      linear-gradient(180deg, #061A78 0%, var(--navy) 40%, var(--navy-deep) 100%);
+    background-attachment:fixed;
     padding:
       calc(env(safe-area-inset-top) + 28px) 16px
       calc(env(safe-area-inset-bottom) + 28px);
@@ -59,61 +71,76 @@
   .brand img{width:30px;height:30px}
   .brand span{font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--muted);text-transform:uppercase}
 
-  /* ——— фото в градиентном кольце ——— */
+  /* ——— фото в оранжевом кольце ——— */
   .avatar{width:148px;height:148px;margin:0 auto 20px;padding:3px;border-radius:50%;
-    background:linear-gradient(140deg,var(--a1),var(--a2));
-    box-shadow:0 18px 50px -18px rgba(58,123,255,.65)}
+    background:linear-gradient(140deg,var(--orange-hi),var(--orange-deep));
+    box-shadow:0 18px 50px -18px rgba(235,101,26,.75)}
   .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;
-    border:3px solid var(--bg)}
+    border:3px solid var(--navy)}
 
-  h1{font-size:27px;line-height:1.2;margin:0 0 6px;text-align:center;letter-spacing:-.01em}
-  .role{margin:0 0 4px;text-align:center;color:var(--muted);font-size:15px}
-  .company{margin:0 0 24px;text-align:center;font-size:15px;font-weight:600;
-    background:linear-gradient(90deg,var(--a1),var(--a2));
-    -webkit-background-clip:text;background-clip:text;color:transparent}
+  h1{font-size:27px;line-height:1.2;margin:0 0 6px;text-align:center;letter-spacing:-.01em;
+    text-wrap:balance}
+  .role{margin:0 0 6px;text-align:center;color:var(--muted);font-size:15px}
+  .company{margin:0 0 24px;text-align:center;font-size:15px;font-weight:600;color:var(--orange-hi);
+    text-wrap:balance}
 
   /* ——— блоки ——— */
-  .panel{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+  .panel{background:var(--surface);border:1px solid var(--stroke);border-radius:var(--radius);
     padding:18px;margin-bottom:14px;backdrop-filter:blur(12px)}
-  .panel h2{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
-  .panel p{margin:0;color:#D7DCE8;font-size:15px}
+  .panel h2{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:600}
+  .panel p{margin:0;color:#D6DEF2;font-size:15px}
 
   /* ——— кнопки ——— */
   .btn{display:flex;align-items:center;gap:12px;width:100%;padding:15px 18px;margin-bottom:10px;
-    border:1px solid var(--stroke);border-radius:16px;background:var(--card);color:var(--text);
+    border:1px solid var(--stroke);border-radius:16px;background:var(--surface);color:var(--ink);
     font:inherit;font-weight:500;text-align:left;text-decoration:none;cursor:pointer;
     transition:transform .12s ease,background .2s ease}
-  .btn:active{transform:scale(.985);background:rgba(255,255,255,.10)}
-  .btn .ico{flex:0 0 22px;width:22px;height:22px;opacity:.9}
+  .btn:active{transform:scale(.985);background:var(--surface-hi)}
+  .btn:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+  .btn .ico{flex:0 0 22px;width:22px;height:22px;color:var(--orange-hi)}
   .btn .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
-  .btn--primary{background:linear-gradient(120deg,var(--a1),var(--a2));border-color:transparent;
-    font-weight:600;justify-content:center;padding:17px;
-    box-shadow:0 16px 36px -16px rgba(88,96,255,.9)}
-  .btn--primary .ico{flex:0 0 20px;width:20px;height:20px}
+  /* Текст на оранжевом — тёмно-синий, а не белый: контраст 5.5:1 против 3.3:1,
+     и кнопка читается на солнце. */
+  .btn--primary{background:linear-gradient(120deg,var(--orange-hi),var(--orange));
+    border-color:transparent;color:#160A02;font-weight:700;justify-content:center;padding:17px;
+    box-shadow:0 16px 36px -16px rgba(235,101,26,.85)}
+  .btn--primary .ico{flex:0 0 20px;width:20px;height:20px;color:#160A02}
 
   .row{display:flex;gap:10px}
   .row .btn{margin-bottom:10px;justify-content:center}
 
-  footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+  footer{margin-top:22px;text-align:center;color:var(--dim);font-size:12px}
 
   /* ——— подсказка про установку на экран ——— */
   .install{display:none;align-items:flex-start;gap:12px;padding:16px;margin-bottom:14px;
-    border:1px dashed rgba(58,123,255,.55);border-radius:var(--radius);
-    background:rgba(58,123,255,.08);font-size:14px;color:#DCE3F5}
-  .install.on{display:flex}
+    border:1px dashed rgba(235,101,26,.55);border-radius:var(--radius);
+    background:rgba(235,101,26,.10);font-size:14px;color:#F0E4DA;
+    opacity:0;transform:translateY(-4px);transition:opacity .45s ease,transform .45s ease}
+  .install.on{display:flex;opacity:1;transform:none}
+  .install.on.fading{opacity:0;transform:translateY(-6px)}
   .install b{color:#fff}
-  .install button{margin-top:10px}
+  .install .ico{flex:0 0 22px;width:22px;height:22px;color:var(--orange-hi)}
   .install .x{margin-left:auto;background:none;border:0;color:var(--muted);font-size:20px;
     line-height:1;padding:0 2px;cursor:pointer}
 
+  /* Свёрнутая подсказка: после автоскрытия остаётся тихой строчкой,
+     чтобы инструкция не пропадала совсем. */
+  .install-link{display:none;width:100%;margin-bottom:14px;padding:11px;border:0;
+    border-radius:14px;background:none;color:var(--muted);font:inherit;font-size:13px;
+    cursor:pointer;text-align:center}
+  .install-link.on{display:block}
+  .install-link:hover{color:var(--orange-hi)}
+  .install-link:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+
   /* ——— модалка с QR ——— */
   dialog{border:0;padding:0;background:transparent;max-width:92vw}
-  dialog::backdrop{background:rgba(5,7,12,.82);backdrop-filter:blur(4px)}
-  .qr{background:#fff;border-radius:20px;padding:20px;text-align:center;color:#0A0C14}
+  dialog::backdrop{background:rgba(2,9,52,.86);backdrop-filter:blur(4px)}
+  .qr{background:#fff;border-radius:20px;padding:20px;text-align:center;color:var(--navy-deep)}
   .qr img{width:min(260px,70vw);height:auto;display:block;margin:0 auto 12px}
   .qr p{margin:0 0 14px;font-size:14px;color:#4A5165}
   .qr button{border:0;border-radius:12px;padding:12px 22px;font:inherit;font-weight:600;
-    background:#11131B;color:#fff;cursor:pointer}
+    background:var(--navy);color:#fff;cursor:pointer}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -134,7 +161,7 @@
 
   <!-- Подсказка «поставь на экран». Показывается только тем, кто ещё не установил. -->
   <div class="install" id="install">
-    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#7FA6FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 22px;width:22px;height:22px"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
     <div style="flex:1">
       <b>Добавьте визитку на экран телефона</b>
       <div id="installHint" style="margin-top:4px"></div>
@@ -142,6 +169,7 @@
     </div>
     <button class="x" id="installClose" aria-label="Скрыть">&times;</button>
   </div>
+  <button class="install-link" id="installLink">Как добавить на экран телефона</button>
 
   <section class="panel">
     <h2>О компании</h2>
@@ -180,25 +208,25 @@
 <script>
 /* ════════════════════════════════════════════════════════════════════
    ▼▼▼ ЕДИНСТВЕННОЕ МЕСТО, КОТОРОЕ НУЖНО ОТРЕДАКТИРОВАТЬ ▼▼▼
-   Заполните своими данными. Пустую строку '' — оставьте пустой,
-   тогда соответствующая кнопка просто не появится.
+   Пустую строку '' оставьте пустой — соответствующая кнопка не появится.
    ════════════════════════════════════════════════════════════════════ */
 const CARD = {
-  firstName: 'Имя',                    // ЗАМЕНИТЬ
-  lastName:  'Фамилия',                // ЗАМЕНИТЬ
-  role:      'Основатель',             // ЗАМЕНИТЬ — должность
-  company:   'RestAI',
-  companyLine: 'RestAI · Интеллектуальное меню для ресторанов',
-  about:     'RestAI — ИИ-помощник для ресторана: гость сканирует QR на столе, ' +
-             'получает интерактивное меню с голосовым выбором блюд, оформляет заказ ' +
-             'и вызывает официанта без приложения и ожидания.',   // ЗАМЕНИТЬ при желании
+  firstName: 'Вадим',
+  lastName:  'Фоменко',
+  role:      'Генеральный директор',
+  company:   'RestAI',                                  // бренд: шапка и подвал
+  companyLine: 'ООО «Интеллектуальные системы»',        // строка под должностью
+  about:     'Интеллектуальное управление рестораном. Соединяем в один ' +
+             'интеллектуальный контур посетителя, официанта и кухню. ' +
+             'Повышаем средний чек, снижаем расходы, усиливаем контроль.',
 
-  phone:    '',                        // ЗАМЕНИТЬ, формат '+79991234567'
-  email:    '',                        // ЗАМЕНИТЬ
-  telegram: '',                        // ЗАМЕНИТЬ, только username без @
-  whatsapp: '',                        // цифры номера без + и пробелов
-  website:  '',                        // 'https://restai.ru'
-  address:  '',                        // город / офис, необязательно
+  phone:      '+79034432868',            // для набора — только цифры и плюс
+  phoneLabel: '+7 (903) 443-28-68',      // как показать на экране
+  email:      'fomenko19011970@gmail.com',
+  telegram:   'GermanTirol',             // без @
+  whatsapp:   '79034432868',             // цифры без плюса
+  website:    'https://restai.pro',
+  address:    '',                        // город / офис, необязательно
 
   // Какая часть фотографии попадёт в круг. '50% 50%' — центр снимка.
   // У обычного портрета лицо выше центра, поэтому уменьшаем второе
@@ -239,7 +267,7 @@ const link = (icon, href, title, sub, ext) => href
   : ''
 
 $('links').innerHTML = [
-  link('phone', CARD.phone && `tel:${CARD.phone}`, 'Позвонить', CARD.phone),
+  link('phone', CARD.phone && `tel:${CARD.phone}`, 'Позвонить', CARD.phoneLabel || CARD.phone),
   link('wa', CARD.whatsapp && `https://wa.me/${CARD.whatsapp}`, 'WhatsApp', 'Написать в мессенджере', true),
   link('tg', CARD.telegram && `https://t.me/${CARD.telegram}`, 'Telegram', '@' + CARD.telegram, true),
   link('mail', CARD.email && `mailto:${CARD.email}`, 'Написать письмо', CARD.email),
@@ -252,7 +280,7 @@ function vcard() {
   const l = ['BEGIN:VCARD', 'VERSION:3.0',
     `N:${CARD.lastName};${CARD.firstName};;;`,
     `FN:${fullName}`,
-    `ORG:${CARD.company}`,
+    `ORG:${CARD.companyLine || CARD.company}`,
     `TITLE:${CARD.role}`]
   if (CARD.phone)    l.push(`TEL;TYPE=CELL:${CARD.phone}`)
   if (CARD.email)    l.push(`EMAIL;TYPE=INTERNET:${CARD.email}`)
@@ -291,34 +319,65 @@ $('qrBtn').onclick = () => $('qrDlg').showModal()
 
 /* ——— установка на домашний экран ———
    Android/Chrome: ловим beforeinstallprompt и показываем свою кнопку.
-   iOS/Safari: системного промпта нет вообще — показываем инструкцию.        */
+   iOS/Safari: системного промпта нет вообще — показываем инструкцию.
+   Важный нюанс iOS: из вкладки Safari невозможно узнать, что иконка уже
+   стоит на экране — такого API нет. Поэтому подсказка там сама гаснет
+   через несколько секунд и сворачивается в тихую строчку, чтобы не
+   мозолить глаза тому, кто уже всё установил, но и не пропасть совсем. */
 const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const IOS_HINT_MS = 12000
 let deferred = null
+let fadeTimer = null
+
+function showInstall(autoHide) {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('fading')
+  $('install').classList.add('on')
+  $('installLink').classList.remove('on')
+  if (autoHide) fadeTimer = setTimeout(() => $('install').classList.add('fading'), IOS_HINT_MS)
+}
+function collapseInstall() {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.add('on')
+}
+// Прячем только после того, как плавное угасание доиграло.
+$('install').addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'opacity' && $('install').classList.contains('fading')) collapseInstall()
+})
 
 if (!installed && !localStorage.getItem('card:install-hidden')) {
   if (isIOS) {
     $('installHint').innerHTML = 'Нажмите <b>«Поделиться»</b> внизу экрана → <b>«На экран «Домой»»</b>.'
-    $('install').classList.add('on')
+    showInstall(true)
   }
   addEventListener('beforeinstallprompt', (e) => {
+    // Android: тут живая кнопка, её гасить по таймеру нельзя.
     e.preventDefault(); deferred = e
     $('installHint').textContent = 'Иконка появится рядом с остальными приложениями.'
     $('installBtn').style.display = 'flex'
-    $('install').classList.add('on')
+    showInstall(false)
   })
 }
+$('installLink').onclick = () => showInstall(false)
 $('installBtn').onclick = async () => {
   if (!deferred) return
   deferred.prompt(); await deferred.userChoice
-  deferred = null; $('install').classList.remove('on')
+  deferred = null; collapseInstall()
 }
 $('installClose').onclick = () => {
-  $('install').classList.remove('on')
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.remove('on')
   try { localStorage.setItem('card:install-hidden', '1') } catch (e) {}
 }
-addEventListener('appinstalled', () => $('install').classList.remove('on'))
+addEventListener('appinstalled', () => {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.remove('on')
+})
 
 /* ——— service worker: без него Android не предложит установку ——— */
 if ('serviceWorker' in navigator) {
