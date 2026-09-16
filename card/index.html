@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>RestAI — визитка</title>
+<meta name="description" content="Электронная визитка RestAI: контакты, коротко о компании, сохранение в телефонную книгу.">
+
+<!-- PWA: манифест + цвет системной строки -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#11131B">
+
+<!-- iOS не читает иконки из манифеста — ему нужен apple-touch-icon и свой набор мет -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RestAI">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+
+<!-- Превью при отправке ссылки в мессенджер -->
+<meta property="og:type" content="profile">
+<meta property="og:title" content="RestAI — визитка">
+<meta property="og:description" content="Контакты и коротко о компании. Открой и добавь на экран телефона.">
+<meta property="og:image" content="icons/icon-512.png">
+
+<style>
+  :root{
+    --bg:#0A0C14;
+    --bg-2:#11131B;
+    --card:rgba(255,255,255,.055);
+    --stroke:rgba(255,255,255,.10);
+    --text:#F3F5FA;
+    --muted:#98A1B5;
+    --a1:#3A7BFF;
+    --a2:#8B44FF;
+    --radius:22px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text)}
+  body{
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    min-height:100svh;
+    /* мягкое фирменное свечение на фоне */
+    background:
+      radial-gradient(90rem 42rem at 50% -18rem, rgba(58,123,255,.20), transparent 60%),
+      radial-gradient(70rem 38rem at 110% 8%, rgba(139,68,255,.16), transparent 62%),
+      var(--bg);
+    padding:
+      calc(env(safe-area-inset-top) + 28px) 16px
+      calc(env(safe-area-inset-bottom) + 28px);
+    display:flex;justify-content:center;
+  }
+  .wrap{width:100%;max-width:440px}
+
+  /* ——— шапка с логотипом ——— */
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px}
+  .brand img{width:30px;height:30px}
+  .brand span{font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--muted);text-transform:uppercase}
+
+  /* ——— фото в градиентном кольце ——— */
+  .avatar{width:148px;height:148px;margin:0 auto 20px;padding:3px;border-radius:50%;
+    background:linear-gradient(140deg,var(--a1),var(--a2));
+    box-shadow:0 18px 50px -18px rgba(58,123,255,.65)}
+  .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;
+    border:3px solid var(--bg)}
+
+  h1{font-size:27px;line-height:1.2;margin:0 0 6px;text-align:center;letter-spacing:-.01em}
+  .role{margin:0 0 4px;text-align:center;color:var(--muted);font-size:15px}
+  .company{margin:0 0 24px;text-align:center;font-size:15px;font-weight:600;
+    background:linear-gradient(90deg,var(--a1),var(--a2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* ——— блоки ——— */
+  .panel{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+    padding:18px;margin-bottom:14px;backdrop-filter:blur(12px)}
+  .panel h2{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .panel p{margin:0;color:#D7DCE8;font-size:15px}
+
+  /* ——— кнопки ——— */
+  .btn{display:flex;align-items:center;gap:12px;width:100%;padding:15px 18px;margin-bottom:10px;
+    border:1px solid var(--stroke);border-radius:16px;background:var(--card);color:var(--text);
+    font:inherit;font-weight:500;text-align:left;text-decoration:none;cursor:pointer;
+    transition:transform .12s ease,background .2s ease}
+  .btn:active{transform:scale(.985);background:rgba(255,255,255,.10)}
+  .btn .ico{flex:0 0 22px;width:22px;height:22px;opacity:.9}
+  .btn .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+  .btn--primary{background:linear-gradient(120deg,var(--a1),var(--a2));border-color:transparent;
+    font-weight:600;justify-content:center;padding:17px;
+    box-shadow:0 16px 36px -16px rgba(88,96,255,.9)}
+  .btn--primary .ico{flex:0 0 20px;width:20px;height:20px}
+
+  .row{display:flex;gap:10px}
+  .row .btn{margin-bottom:10px;justify-content:center}
+
+  footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+
+  /* ——— подсказка про установку на экран ——— */
+  .install{display:none;align-items:flex-start;gap:12px;padding:16px;margin-bottom:14px;
+    border:1px dashed rgba(58,123,255,.55);border-radius:var(--radius);
+    background:rgba(58,123,255,.08);font-size:14px;color:#DCE3F5}
+  .install.on{display:flex}
+  .install b{color:#fff}
+  .install button{margin-top:10px}
+  .install .x{margin-left:auto;background:none;border:0;color:var(--muted);font-size:20px;
+    line-height:1;padding:0 2px;cursor:pointer}
+
+  /* ——— модалка с QR ——— */
+  dialog{border:0;padding:0;background:transparent;max-width:92vw}
+  dialog::backdrop{background:rgba(5,7,12,.82);backdrop-filter:blur(4px)}
+  .qr{background:#fff;border-radius:20px;padding:20px;text-align:center;color:#0A0C14}
+  .qr img{width:min(260px,70vw);height:auto;display:block;margin:0 auto 12px}
+  .qr p{margin:0 0 14px;font-size:14px;color:#4A5165}
+  .qr button{border:0;border-radius:12px;padding:12px 22px;font:inherit;font-weight:600;
+    background:#11131B;color:#fff;cursor:pointer}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <img src="img/logo.png" alt="">
+    <span id="brandName">RestAI</span>
+  </div>
+
+  <div class="avatar"><img id="photo" src="img/photo.jpg" alt="" width="148" height="148"></div>
+
+  <h1 id="name">Имя Фамилия</h1>
+  <p class="role" id="role">Должность</p>
+  <p class="company" id="companyLine">Компания</p>
+
+  <!-- Подсказка «поставь на экран». Показывается только тем, кто ещё не установил. -->
+  <div class="install" id="install">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#7FA6FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 22px;width:22px;height:22px"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    <div style="flex:1">
+      <b>Добавьте визитку на экран телефона</b>
+      <div id="installHint" style="margin-top:4px"></div>
+      <button class="btn btn--primary" id="installBtn" style="display:none;margin:10px 0 0">Установить</button>
+    </div>
+    <button class="x" id="installClose" aria-label="Скрыть">&times;</button>
+  </div>
+
+  <section class="panel">
+    <h2>О компании</h2>
+    <p id="about">Краткое описание компании.</p>
+  </section>
+
+  <nav id="links" aria-label="Контакты"></nav>
+
+  <button class="btn btn--primary" id="saveContact">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    Сохранить контакт
+  </button>
+
+  <div class="row">
+    <button class="btn" id="shareBtn">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M12 16V3m0 0L8 7m4-4 4 4"/></svg>
+      Поделиться
+    </button>
+    <button class="btn" id="qrBtn">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14h1M14 20h3M20 17v4" stroke-linecap="round"/></svg>
+      QR-код
+    </button>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<dialog id="qrDlg">
+  <div class="qr">
+    <img src="img/qr.png" alt="QR-код визитки">
+    <p>Наведите камеру телефона</p>
+    <button onclick="qrDlg.close()">Закрыть</button>
+  </div>
+</dialog>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ▼▼▼ ЕДИНСТВЕННОЕ МЕСТО, КОТОРОЕ НУЖНО ОТРЕДАКТИРОВАТЬ ▼▼▼
+   Заполните своими данными. Пустую строку '' — оставьте пустой,
+   тогда соответствующая кнопка просто не появится.
+   ════════════════════════════════════════════════════════════════════ */
+const CARD = {
+  firstName: 'Имя',                    // ЗАМЕНИТЬ
+  lastName:  'Фамилия',                // ЗАМЕНИТЬ
+  role:      'Основатель',             // ЗАМЕНИТЬ — должность
+  company:   'RestAI',
+  companyLine: 'RestAI · Интеллектуальное меню для ресторанов',
+  about:     'RestAI — ИИ-помощник для ресторана: гость сканирует QR на столе, ' +
+             'получает интерактивное меню с голосовым выбором блюд, оформляет заказ ' +
+             'и вызывает официанта без приложения и ожидания.',   // ЗАМЕНИТЬ при желании
+
+  phone:    '',                        // ЗАМЕНИТЬ, формат '+79991234567'
+  email:    '',                        // ЗАМЕНИТЬ
+  telegram: '',                        // ЗАМЕНИТЬ, только username без @
+  whatsapp: '',                        // цифры номера без + и пробелов
+  website:  '',                        // 'https://restai.ru'
+  address:  '',                        // город / офис, необязательно
+}
+/* ════════════════════════════════════════════════════════════════════
+   ▲▲▲ Дальше менять ничего не нужно ▲▲▲
+   ════════════════════════════════════════════════════════════════════ */
+
+const $ = (id) => document.getElementById(id)
+const fullName = `${CARD.firstName} ${CARD.lastName}`.trim()
+
+$('name').textContent = fullName
+$('role').textContent = CARD.role
+$('companyLine').textContent = CARD.companyLine
+$('about').textContent = CARD.about
+$('brandName').textContent = CARD.company
+$('photo').alt = fullName
+$('footer').textContent = `© ${new Date().getFullYear()} ${CARD.company}`
+document.title = `${fullName} — ${CARD.company}`
+
+/* ——— кнопки-контакты: рисуем только заполненные ——— */
+const ICONS = {
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
+  mail:  '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/>',
+  tg:    '<path d="M21.5 4.3 2.9 11.4c-.9.3-.9 1.6.1 1.8l4.7 1.2 1.8 5.4c.3.8 1.3 1 1.9.3l2.5-2.6 4.8 3.5c.7.5 1.7.1 1.9-.8l3-13.8c.2-1-.7-1.8-1.6-1.4Z"/><path d="m8 14.4 9.3-6.8-6.8 8"/>',
+  wa:    '<path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.5-4.4a8.4 8.4 0 1 1 15.5-4.5Z"/><path d="M8.6 8.5c.5-.1.8 0 1 .5l.7 1.5c.1.3 0 .5-.2.7l-.5.5c-.2.2-.2.4 0 .7a7 7 0 0 0 2.9 2.4c.3.1.5.1.7-.1l.5-.6c.2-.2.4-.3.7-.2l1.5.7c.4.2.6.5.5 1-.2 1-1.1 1.6-2.2 1.5a9 9 0 0 1-6.3-6.1c-.2-1 .3-2 1.2-2.4"/>',
+  web:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/>',
+  pin:   '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+}
+const link = (icon, href, title, sub, ext) => href
+  ? `<a class="btn" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>
+       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">${ICONS[icon]}</svg>
+       <span>${title}<span class="sub">${sub}</span></span></a>`
+  : ''
+
+$('links').innerHTML = [
+  link('phone', CARD.phone && `tel:${CARD.phone}`, 'Позвонить', CARD.phone),
+  link('wa', CARD.whatsapp && `https://wa.me/${CARD.whatsapp}`, 'WhatsApp', 'Написать в мессенджере', true),
+  link('tg', CARD.telegram && `https://t.me/${CARD.telegram}`, 'Telegram', '@' + CARD.telegram, true),
+  link('mail', CARD.email && `mailto:${CARD.email}`, 'Написать письмо', CARD.email),
+  link('web', CARD.website, 'Сайт компании', CARD.website.replace(/^https?:\/\//, ''), true),
+  link('pin', CARD.address && `https://yandex.ru/maps/?text=${encodeURIComponent(CARD.address)}`, 'Адрес', CARD.address, true),
+].join('')
+
+/* ——— vCard: собираем на лету, работает и офлайн ——— */
+function vcard() {
+  const l = ['BEGIN:VCARD', 'VERSION:3.0',
+    `N:${CARD.lastName};${CARD.firstName};;;`,
+    `FN:${fullName}`,
+    `ORG:${CARD.company}`,
+    `TITLE:${CARD.role}`]
+  if (CARD.phone)    l.push(`TEL;TYPE=CELL:${CARD.phone}`)
+  if (CARD.email)    l.push(`EMAIL;TYPE=INTERNET:${CARD.email}`)
+  if (CARD.website)  l.push(`URL:${CARD.website}`)
+  if (CARD.address)  l.push(`ADR;TYPE=WORK:;;${CARD.address};;;;`)
+  if (CARD.telegram) l.push(`X-SOCIALPROFILE;TYPE=telegram:https://t.me/${CARD.telegram}`)
+  l.push(`NOTE:${CARD.about.replace(/[\r\n]+/g, ' ')}`, 'END:VCARD')
+  return l.join('\r\n')
+}
+$('saveContact').onclick = () => {
+  const url = URL.createObjectURL(new Blob([vcard()], { type: 'text/vcard;charset=utf-8' }))
+  const a = Object.assign(document.createElement('a'), {
+    href: url, download: `${CARD.lastName}_${CARD.company}.vcf`,
+  })
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+/* ——— поделиться ——— */
+$('shareBtn').onclick = async () => {
+  const data = { title: fullName, text: `${fullName} — ${CARD.role}, ${CARD.company}`, url: location.href }
+  try {
+    if (navigator.share) return await navigator.share(data)
+    await navigator.clipboard.writeText(location.href)
+    $('shareBtn').lastChild.textContent = ' Ссылка скопирована'
+  } catch (e) { /* пользователь закрыл шторку — это не ошибка */ }
+}
+$('qrBtn').onclick = () => $('qrDlg').showModal()
+
+/* QR ещё не сгенерирован (см. tools/make-qr.py) — тогда просто прячем кнопку. */
+{
+  const probe = new Image()
+  probe.onerror = () => { $('qrBtn').style.display = 'none' }
+  probe.src = 'img/qr.png'
+}
+
+/* ——— установка на домашний экран ———
+   Android/Chrome: ловим beforeinstallprompt и показываем свою кнопку.
+   iOS/Safari: системного промпта нет вообще — показываем инструкцию.        */
+const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+let deferred = null
+
+if (!installed && !localStorage.getItem('card:install-hidden')) {
+  if (isIOS) {
+    $('installHint').innerHTML = 'Нажмите <b>«Поделиться»</b> внизу экрана → <b>«На экран «Домой»»</b>.'
+    $('install').classList.add('on')
+  }
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferred = e
+    $('installHint').textContent = 'Иконка появится рядом с остальными приложениями.'
+    $('installBtn').style.display = 'flex'
+    $('install').classList.add('on')
+  })
+}
+$('installBtn').onclick = async () => {
+  if (!deferred) return
+  deferred.prompt(); await deferred.userChoice
+  deferred = null; $('install').classList.remove('on')
+}
+$('installClose').onclick = () => {
+  $('install').classList.remove('on')
+  try { localStorage.setItem('card:install-hidden', '1') } catch (e) {}
+}
+addEventListener('appinstalled', () => $('install').classList.remove('on'))
+
+/* ——— service worker: без него Android не предложит установку ——— */
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}))
+}
+</script>
+</body>
+</html>

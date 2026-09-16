@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "RestAI — визитка",
+  "short_name": "RestAI",
+  "description": "Электронная визитка: контакты и коротко о компании.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#11131B",
+  "background_color": "#0A0C14",
+  "lang": "ru",
+  "categories": ["business"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
