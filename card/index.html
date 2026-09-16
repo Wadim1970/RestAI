@@ -199,6 +199,11 @@ const CARD = {
   whatsapp: '',                        // цифры номера без + и пробелов
   website:  '',                        // 'https://restai.ru'
   address:  '',                        // город / офис, необязательно
+
+  // Какая часть фотографии попадёт в круг. '50% 50%' — центр снимка.
+  // У обычного портрета лицо выше центра, поэтому уменьшаем второе
+  // число: '50% 30%' поднимает кадр к лицу. Подбирается на глаз.
+  photoFocus: '50% 35%',
 }
 /* ════════════════════════════════════════════════════════════════════
    ▲▲▲ Дальше менять ничего не нужно ▲▲▲
@@ -213,6 +218,7 @@ $('companyLine').textContent = CARD.companyLine
 $('about').textContent = CARD.about
 $('brandName').textContent = CARD.company
 $('photo').alt = fullName
+$('photo').style.objectPosition = CARD.photoFocus || '50% 50%'
 $('footer').textContent = `© ${new Date().getFullYear()} ${CARD.company}`
 document.title = `${fullName} — ${CARD.company}`
 
