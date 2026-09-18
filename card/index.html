@@ -160,6 +160,38 @@
   .install-link:hover{color:var(--orange-hi)}
   .install-link:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
 
+  /* ——— переворот карточки ———
+     Обе стороны лежат друг на друге absolute, поэтому высоту контейнера
+     задаёт скрипт по активной стороне — иначе на короткой обратной
+     стороне осталась бы пустота во весь рост лицевой. */
+  /* overflow:clip обрезает неактивную сторону: она лежит absolute и иначе
+     растягивала бы область прокрутки — на короткой обратной стороне
+     страница листалась бы в пустоту во весь рост лицевой. Именно clip,
+     а не hidden: hidden завёл бы контейнер прокрутки. Запас в 40px
+     оставлен свечению оранжевых кнопок, чтобы его не срезало. */
+  .flip{perspective:1800px;overflow:clip;overflow-clip-margin:40px}
+  .flip-inner{position:relative;transform-style:preserve-3d;
+    transition:transform .75s cubic-bezier(.22,.68,.24,1),
+               height .75s cubic-bezier(.22,.68,.24,1)}
+  .flip.flipped .flip-inner{transform:rotateY(180deg)}
+  .face{position:absolute;top:0;left:0;width:100%;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .face--back{transform:rotateY(180deg)}
+
+  /* ——— обратная сторона: реквизиты ——— */
+  .back-title{margin:0 0 4px;text-align:center;font-size:22px;letter-spacing:-.01em}
+  .back-org{margin:0 0 22px;text-align:center;font-size:15px;font-weight:600;
+    color:var(--orange-hi);text-wrap:balance}
+  .details{margin:0;padding:0}
+  .details > div{padding:13px 0;border-bottom:1px solid var(--stroke)}
+  .details > div:first-child{padding-top:0}
+  .details > div:last-child{padding-bottom:0;border-bottom:0}
+  .details dt{margin:0 0 3px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted)}
+  /* Счета и ИНН читаются цифра к цифре, поэтому моноширинные цифры. */
+  .details dd{margin:0;font-size:15px;color:var(--ink);overflow-wrap:anywhere;
+    font-variant-numeric:tabular-nums}
+
   /* ——— модалка с QR ——— */
   dialog{border:0;padding:0;background:transparent;max-width:92vw}
   dialog::backdrop{background:rgba(2,9,52,.86);backdrop-filter:blur(4px)}
@@ -174,6 +206,11 @@
 </head>
 <body>
 <div class="wrap">
+<div class="flip" id="flip">
+<div class="flip-inner" id="flipInner">
+
+<!-- ——————————— лицевая сторона ——————————— -->
+<div class="face face--front" id="faceFront">
 
   <div class="brand">
     <img src="img/logo.png" alt="">
@@ -223,7 +260,44 @@
     </button>
   </div>
 
+  <button class="btn" id="detailsBtn">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    <span>Реквизиты<span class="sub">Обратная сторона визитки</span></span>
+  </button>
+
   <footer id="footer"></footer>
+</div>
+
+<!-- ——————————— обратная сторона ——————————— -->
+<div class="face face--back" id="faceBack" inert>
+
+  <div class="brand">
+    <img src="img/logo.png" alt="">
+    <span id="brandNameBack">RestAI</span>
+  </div>
+
+  <h2 class="back-title">Реквизиты</h2>
+  <p class="back-org" id="detailsOrg"></p>
+
+  <section class="panel">
+    <dl class="details" id="details"></dl>
+  </section>
+
+  <button class="btn btn--primary" id="copyDetails">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+    Скопировать реквизиты
+  </button>
+
+  <button class="btn" id="flipBack">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+    На лицевую сторону
+  </button>
+
+  <footer id="footerBack"></footer>
+</div>
+
+</div>
+</div>
 </div>
 
 <dialog id="photoDlg">
@@ -270,6 +344,22 @@ const CARD = {
   // Какая точка снимка окажется в кружке. 50% 50% — середина, меньше —
   // выше и левее. Подбирается на глаз за пару правок.
   photoFocus: '56% 22%',
+
+  // ——— реквизиты, обратная сторона ———
+  // Заполните значения. Пустые строки не показываются, а если не заполнено
+  // ни одной — кнопка «Реквизиты» на лицевой стороне вообще не появится.
+  // Порядок строк здесь = порядок на экране, лишние можно удалить.
+  details: [
+    { label: 'Полное наименование',     value: '' },
+    { label: 'ИНН',                     value: '' },
+    { label: 'КПП',                     value: '' },
+    { label: 'ОГРН',                    value: '' },
+    { label: 'Юридический адрес',       value: '' },
+    { label: 'Банк',                    value: '' },
+    { label: 'Расчётный счёт',          value: '' },
+    { label: 'Корреспондентский счёт',  value: '' },
+    { label: 'БИК',                     value: '' },
+  ],
 }
 /* ════════════════════════════════════════════════════════════════════
    ▲▲▲ Дальше менять ничего не нужно ▲▲▲
@@ -288,6 +378,9 @@ $('photo').style.backgroundSize = `auto ${CARD.photoZoom || 100}%`
 $('photo').style.backgroundPosition = CARD.photoFocus || '50% 50%'
 $('photoFull').src = CARD.photo
 $('footer').textContent = `© ${new Date().getFullYear()} ${CARD.company}`
+$('footerBack').textContent = $('footer').textContent
+$('brandNameBack').textContent = CARD.company
+$('detailsOrg').textContent = CARD.companyLine
 document.title = `${fullName} — ${CARD.company}`
 
 /* ——— кнопки-контакты: рисуем только заполненные ——— */
@@ -314,6 +407,67 @@ $('links').innerHTML = [
   link('web', CARD.website, 'Сайт компании', CARD.website.replace(/^https?:\/\//, ''), true),
   link('pin', CARD.address && `https://yandex.ru/maps/?text=${encodeURIComponent(CARD.address)}`, 'Адрес', CARD.address, true),
 ].join('')
+
+/* ——— реквизиты и переворот карточки ——— */
+const esc = (v) => String(v).replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+const details = (CARD.details || []).filter((d) => d.value && d.value.trim())
+if (details.length) {
+  $('details').innerHTML = details
+    .map((d) => `<div><dt>${esc(d.label)}</dt><dd>${esc(d.value)}</dd></div>`)
+    .join('')
+} else {
+  // Ничего не заполнено — обратную сторону не показываем вовсе,
+  // пустая карточка хуже отсутствующей кнопки.
+  $('detailsBtn').style.display = 'none'
+}
+
+{
+  const flip = $('flip'), inner = $('flipInner')
+  const front = $('faceFront'), back = $('faceBack')
+
+  // Стороны лежат друг на друге absolute, поэтому высоту держим вручную.
+  const syncHeight = () => {
+    const active = flip.classList.contains('flipped') ? back : front
+    inner.style.height = active.offsetHeight + 'px'
+  }
+  const setFlipped = (on) => {
+    flip.classList.toggle('flipped', on)
+    // Скрытая сторона не должна ловить фокус табом и читаться скринридером —
+    // backface-visibility прячет её только визуально.
+    front.inert = on
+    back.inert = !on
+    syncHeight()
+    scrollTo({ top: 0, behavior: 'smooth' })
+    ;(on ? $('flipBack') : $('detailsBtn')).focus({ preventScroll: true })
+  }
+
+  $('detailsBtn').onclick = () => setFlipped(true)
+  $('flipBack').onclick = () => setFlipped(false)
+
+  // Высота меняется не только при перевороте: появляется и сворачивается
+  // подсказка об установке, догружаются шрифты.
+  syncHeight()
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(syncHeight)
+    ro.observe(front); ro.observe(back)
+  }
+  addEventListener('load', syncHeight)
+
+  $('copyDetails').onclick = async () => {
+    const text = [CARD.companyLine, ...details.map((d) => `${d.label}: ${d.value}`)].join('\n')
+    const label = $('copyDetails').lastChild
+    try {
+      await navigator.clipboard.writeText(text)
+      label.textContent = ' Скопировано'
+      setTimeout(() => { label.textContent = ' Скопировать реквизиты' }, 2500)
+    } catch (e) {
+      label.textContent = ' Не удалось скопировать'
+      setTimeout(() => { label.textContent = ' Скопировать реквизиты' }, 2500)
+    }
+  }
+}
 
 /* ——— vCard: собираем на лету, работает и офлайн ——— */
 function vcard() {
