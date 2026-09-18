@@ -191,6 +191,8 @@
   /* Счета и ИНН читаются цифра к цифре, поэтому моноширинные цифры. */
   .details dd{margin:0;font-size:15px;color:var(--ink);overflow-wrap:anywhere;
     font-variant-numeric:tabular-nums}
+  .details a{color:var(--orange-hi);text-decoration:none;border-bottom:1px solid rgba(245,145,63,.35)}
+  .details a:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
 
   /* ——— модалка с QR ——— */
   dialog{border:0;padding:0;background:transparent;max-width:92vw}
@@ -350,15 +352,19 @@ const CARD = {
   // ни одной — кнопка «Реквизиты» на лицевой стороне вообще не появится.
   // Порядок строк здесь = порядок на экране, лишние можно удалить.
   details: [
-    { label: 'Полное наименование',     value: '' },
-    { label: 'ИНН',                     value: '' },
-    { label: 'КПП',                     value: '' },
-    { label: 'ОГРН',                    value: '' },
-    { label: 'Юридический адрес',       value: '' },
-    { label: 'Банк',                    value: '' },
-    { label: 'Расчётный счёт',          value: '' },
-    { label: 'Корреспондентский счёт',  value: '' },
-    { label: 'БИК',                     value: '' },
+    { label: 'Полное наименование', value: 'Общество с ограниченной ответственностью «Интеллектуальные системы»' },
+    { label: 'ИНН',  value: '9719082866' },
+    { label: 'КПП',  value: '771901001' },
+    { label: 'ОГРН', value: '1257700438907' },
+    { label: 'Юридический адрес', value: '105203, г. Москва, вн.тер.г. муниципальный округ Восточное Измайлово, ул. 14-я Парковая, д. 3А, помещ. 8/1' },
+    { label: 'Генеральный директор', value: 'Фоменко Вадим Ильич' },
+    // href делает значение ссылкой: телефон набирается, почта открывает письмо
+    { label: 'Телефон компании', value: '+7 (915) 496-88-18', href: 'tel:+79154968818' },
+    { label: 'Почта компании',   value: 'info@insis.pro',     href: 'mailto:info@insis.pro' },
+    { label: 'Банк', value: 'Московский филиал АО КБ «Модульбанк»' },
+    { label: 'Расчётный счёт',         value: '40702810770010447384' },
+    { label: 'Корреспондентский счёт', value: '30101810645250000092' },
+    { label: 'БИК', value: '044525092' },
   ],
 }
 /* ════════════════════════════════════════════════════════════════════
@@ -415,7 +421,12 @@ const esc = (v) => String(v).replace(/[&<>"]/g, (c) =>
 const details = (CARD.details || []).filter((d) => d.value && d.value.trim())
 if (details.length) {
   $('details').innerHTML = details
-    .map((d) => `<div><dt>${esc(d.label)}</dt><dd>${esc(d.value)}</dd></div>`)
+    .map((d) => {
+      const v = d.href
+        ? `<a href="${esc(d.href)}">${esc(d.value)}</a>`
+        : esc(d.value)
+      return `<div><dt>${esc(d.label)}</dt><dd>${v}</dd></div>`
+    })
     .join('')
 } else {
   // Ничего не заполнено — обратную сторону не показываем вовсе,
