@@ -1,0 +1,2215 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Как работают приложения RestAI: вечер за одним столом глазами гостя, официанта и кухни.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="RestAI за столом">
+<meta property="og:description" content="Как работают приложения RestAI: вечер за одним столом глазами гостя, официанта и кухни.">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary">
+
+<style>
+  :root {
+    color-scheme: light;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body {
+    margin: 0;
+    font: 14px system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #faf9f7;
+  }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+
+<title>RestAI за столом</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ============================================================
+     RestAI — как это выглядит в зале.
+     Палитра взята из самих приложений: навигационный тёмно-синий
+     #102A45 (экран официанта), сигнальный зелёный #15B400 (его же
+     активные состояния) и янтарный #FF9500 — цвет гостя в схеме
+     мест за столом. Экраны телефонов остаются тёмными в любой
+     теме страницы: оба приложения действительно тёмные.
+     ============================================================ */
+
+  :root {
+    color-scheme: dark;
+
+    --bg:        #0A1724;
+    --bg-2:      #0F2334;
+    --panel:     #132A3D;
+    --line:      rgba(233, 241, 248, 0.12);
+    --line-soft: rgba(233, 241, 248, 0.07);
+    --text:      #E9F1F8;
+    --text-2:    #B7C8D8;
+    --muted:     #8296A9;
+
+    --guest:      #FFA426;
+    --guest-ink:  #FFC978;
+    --guest-soft: rgba(255, 164, 38, 0.13);
+    --waiter:     #34CE4B;
+    --waiter-ink: #6FE07F;
+    --waiter-soft: rgba(52, 206, 75, 0.12);
+    --alert:      #FF5C5C;
+    --alert-soft: rgba(255, 92, 92, 0.13);
+
+    /* Экраны телефонов — постоянные, не зависят от темы страницы */
+    --screen:        #0C1C2B;
+    --screen-2:      #16293A;
+    --screen-3:      #1E3548;
+    --screen-line:   rgba(233, 241, 248, 0.10);
+    --screen-text:   #E8EFF6;
+    --screen-muted:  #8AA1B6;
+
+    --radius: 14px;
+    --shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+
+    --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+    --body:    "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  /* Светлая тема: страница светлеет, экраны телефонов — нет */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg:        #EDF1F5;
+      --bg-2:      #FFFFFF;
+      --panel:     #FFFFFF;
+      --line:      rgba(16, 42, 69, 0.14);
+      --line-soft: rgba(16, 42, 69, 0.08);
+      --text:      #0C2137;
+      --text-2:    #37516B;
+      --muted:     #5D7590;
+      --guest:      #B4640A;
+      --guest-ink:  #8A4C06;
+      --guest-soft: rgba(255, 149, 0, 0.14);
+      --waiter:     #14892B;
+      --waiter-ink: #0E6C21;
+      --waiter-soft: rgba(21, 180, 0, 0.13);
+      --alert:      #C6262B;
+      --alert-soft: rgba(198, 38, 43, 0.10);
+      --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+    }
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg:        #EDF1F5;
+    --bg-2:      #FFFFFF;
+    --panel:     #FFFFFF;
+    --line:      rgba(16, 42, 69, 0.14);
+    --line-soft: rgba(16, 42, 69, 0.08);
+    --text:      #0C2137;
+    --text-2:    #37516B;
+    --muted:     #5D7590;
+    --guest:      #B4640A;
+    --guest-ink:  #8A4C06;
+    --guest-soft: rgba(255, 149, 0, 0.14);
+    --waiter:     #14892B;
+    --waiter-ink: #0E6C21;
+    --waiter-soft: rgba(21, 180, 0, 0.13);
+    --alert:      #C6262B;
+    --alert-soft: rgba(198, 38, 43, 0.10);
+    --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 0;
+  }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ---------- Шапка ---------- */
+
+  .hero { padding-block: 56px 40px; }
+
+  .hero__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+  .hero__logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+  }
+  .hero__logo span { color: var(--guest); }
+  .hero__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(30px, 6.2vw, 58px);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    max-width: 16ch;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--guest);
+  }
+
+  .hero__lede {
+    margin-top: 22px;
+    max-width: 62ch;
+    font-size: clamp(16px, 2.3vw, 19px);
+    color: var(--text-2);
+  }
+
+  .claims {
+    margin-top: 36px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .claim {
+    background: var(--bg);
+    padding: 20px 22px;
+  }
+  .claim h3 {
+    font-family: var(--body);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .claim p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  /* ---------- Три приложения ---------- */
+
+  section { padding-block: 46px; }
+
+  .sec-head { margin-bottom: 28px; }
+  .sec-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(22px, 3.6vw, 32px);
+    letter-spacing: -0.02em;
+    margin-top: 10px;
+  }
+  .sec-head p {
+    margin: 12px 0 0;
+    max-width: 64ch;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+
+  .apps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .app {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .app__who {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .app--guest  .app__who { color: var(--guest); }
+  .app--waiter .app__who { color: var(--waiter); }
+  .app--owner  .app__who { color: var(--text-2); }
+  .app--kitchen .app__who { color: var(--guest); }
+  .app h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+  }
+  .app p { margin: 0; font-size: 14.5px; color: var(--text-2); }
+  .app__how {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ---------- Управление таймлайном ---------- */
+
+  .controls {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-block: 12px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line-soft);
+    margin-bottom: 8px;
+  }
+  .controls__label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 2px;
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--body);
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 7px 15px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); }
+  .seg button:focus-visible { outline: 2px solid var(--guest); outline-offset: -2px; }
+
+  /* ---------- Таймлайн ---------- */
+
+  .step {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 0 20px;
+    padding-block: 30px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .step:first-of-type { border-top: 0; }
+
+  .step__idx {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--muted);
+    padding-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .step__idx b {
+    display: block;
+    font-size: 30px;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .step__when {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 8px;
+    color: var(--muted);
+  }
+
+  .step__body { min-width: 0; }
+  .step__body > h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(19px, 3vw, 24px);
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .step__lede {
+    margin: 0 0 20px;
+    max-width: 66ch;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+
+  .panes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .timeline[data-view="guest"]  .pane--waiter,
+  .timeline[data-view="waiter"] .pane--guest { display: none; }
+  .timeline[data-view="guest"]  .panes,
+  .timeline[data-view="waiter"] .panes { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
+
+  .pane__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 9px;
+  }
+  .pane__label::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+  .pane--guest  .pane__label { color: var(--guest); }
+  .pane--waiter .pane__label { color: var(--waiter); }
+
+  /* Шаги, где меняется экран только одной стороны */
+  .only-note {
+    display: none;
+    margin: 0;
+    padding: 15px 17px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-size: 14px;
+    max-width: 520px;
+  }
+  .timeline[data-view="guest"]  .only-note[data-show="guest"],
+  .timeline[data-view="waiter"] .only-note[data-show="waiter"] { display: block; }
+
+  .pane__note {
+    margin: 10px 0 0;
+    font-size: 13.5px;
+    color: var(--muted);
+    max-width: 44ch;
+  }
+
+  /* ---------- Мини-экран телефона ---------- */
+
+  .scr {
+    background: var(--screen);
+    border: 1px solid var(--screen-line);
+    border-radius: 18px;
+    padding: 12px;
+    color: var(--screen-text);
+    box-shadow: var(--shadow);
+    font-size: 13px;
+  }
+  .scr__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--screen-muted);
+    padding: 2px 4px 10px;
+    border-bottom: 1px solid var(--screen-line);
+    margin-bottom: 12px;
+  }
+  .scr__bar b { color: var(--screen-text); font-weight: 500; }
+  .scr__stack { display: flex; flex-direction: column; gap: 9px; }
+
+  .scr h4 {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .scr p { margin: 0; font-size: 12.5px; color: var(--screen-muted); line-height: 1.45; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+    white-space: nowrap;
+  }
+  .chip--on {
+    background: var(--guest-soft);
+    border-color: var(--guest);
+    color: var(--guest-ink);
+  }
+  .chip--go {
+    background: var(--waiter-soft);
+    border-color: var(--waiter);
+    color: var(--waiter-ink);
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--screen-2);
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+  }
+  .line span:first-child { min-width: 0; }
+  .line small { display: block; color: var(--screen-muted); font-size: 11px; }
+  .line b {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .line--ready { border-color: color-mix(in srgb, var(--waiter) 55%, transparent); }
+
+  .bubble {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 92%;
+  }
+  .bubble--guest {
+    background: var(--screen-3);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+  }
+  .bubble--ai {
+    background: var(--guest-soft);
+    border: 1px solid color-mix(in srgb, var(--guest) 45%, transparent);
+    border-bottom-left-radius: 4px;
+    color: var(--guest-ink);
+  }
+
+  .cta {
+    display: block;
+    text-align: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--guest);
+    color: #12100B;
+  }
+  .cta--waiter { background: var(--waiter); color: #04260A; }
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+  .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .alert {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--alert-soft);
+    border: 1px solid color-mix(in srgb, var(--alert) 55%, transparent);
+  }
+  .alert strong { color: var(--alert); font-size: 13.5px; }
+  .alert p { color: var(--screen-text); margin-top: 3px; }
+
+  .bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+    color: var(--alert);
+    font-size: 16px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--alert) 40%, transparent); }
+    50%      { box-shadow: 0 0 0 7px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bell { animation: none; }
+    * { scroll-behavior: auto !important; }
+  }
+
+  .seats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seat {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+  }
+  .seat--me { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .seat--paid { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .tables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .tbl {
+    aspect-ratio: 1;
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--screen-muted);
+    max-width: 100%;
+  }
+  .tbl--busy { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .tbl--call { border-color: var(--alert); color: var(--alert); background: var(--alert-soft); }
+  .tbl--pay  { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .coach {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--waiter-soft);
+    border: 1px solid color-mix(in srgb, var(--waiter) 45%, transparent);
+  }
+  .coach__tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+  }
+  .coach__say { margin-top: 5px; font-size: 12.5px; color: var(--screen-text); }
+  .coach__say q { font-weight: 600; }
+  .coach__why {
+    margin-top: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--screen-3);
+    color: var(--screen-muted);
+  }
+
+  /* ---------- Строка «в системе» ---------- */
+
+  .sys {
+    margin: 18px 0 0;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .sys > span:first-child {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+  .sys code {
+    font-family: var(--mono);
+    color: var(--text-2);
+    background: var(--bg-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  /* ---------- Карточные сетки ---------- */
+
+  .grid-3--stacked { margin-top: 16px; }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 20px;
+  }
+  .card h3 {
+    font-family: var(--body);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 7px;
+  }
+  .card p { margin: 0; font-size: 14.5px; color: var(--text-2); }
+  .card__kicker {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  /* ---------- Где деньги ---------- */
+
+  .money { display: grid; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden; }
+  .money__row {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.6fr);
+    gap: 4px 24px;
+    background: var(--bg);
+    padding: 20px 22px;
+  }
+  .money__row h3 {
+    font-family: var(--body);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .money__row p { margin: 0; color: var(--text-2); font-size: 14.5px; }
+  .money__row p em { font-style: normal; color: var(--guest-ink); }
+
+  /* ---------- Архитектура ---------- */
+
+  .arch {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    background: var(--bg-2);
+    overflow-x: auto;
+  }
+  .arch__inner { min-width: 560px; display: flex; flex-direction: column; gap: 0; }
+  .arch__tier { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .arch__tier--wide { grid-template-columns: repeat(4, 1fr); }
+  .node {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--panel);
+  }
+  .node b { display: block; font-size: 13.5px; font-weight: 600; }
+  .node span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .node--guest  { border-color: color-mix(in srgb, var(--guest) 50%, transparent); }
+  .node--waiter { border-color: color-mix(in srgb, var(--waiter) 50%, transparent); }
+  .node--core {
+    border-color: var(--line);
+    background: var(--panel);
+    text-align: center;
+  }
+  .rail {
+    height: 26px;
+    margin-inline: auto;
+    width: 1px;
+    background: var(--line);
+  }
+  .arch__caption {
+    margin: 16px 0 0;
+    font-size: 13.5px;
+    color: var(--muted);
+    max-width: 70ch;
+  }
+
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding-block: 34px 48px;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer p { margin: 0; max-width: 70ch; }
+  footer strong { color: var(--text-2); font-weight: 600; }
+
+  .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .bullets li {
+    font-size: 14px;
+    color: var(--text-2);
+    padding-left: 22px;
+    position: relative;
+  }
+  .bullets li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--guest);
+  }
+  .kitchen__lead { margin-top: 0; }
+  .kitchen h3.sub {
+    font-family: var(--body);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .kitchen .money { margin-top: 0; }
+
+  /* ---------- Сравнение с обычным QR-меню ---------- */
+
+  .compare {
+    display: grid;
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .compare__row {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.7fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 4px 22px;
+    background: var(--bg);
+    padding: 17px 20px;
+  }
+  .compare__row--head {
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare__row--head span:last-child { color: var(--guest); }
+  .compare__what { font-weight: 600; font-size: 14.5px; }
+  .compare__old { color: var(--muted); font-size: 14.5px; }
+  .compare__new { color: var(--text); font-size: 14.5px; }
+  .compare__new b { color: var(--guest-ink); font-weight: 600; }
+
+  /* ---------- Кухонный контур ---------- */
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    counter-reset: flowstep;
+  }
+  .flow__step {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px;
+  }
+  .flow__step::before {
+    counter-increment: flowstep;
+    content: counter(flowstep);
+    display: inline-grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: var(--guest-soft);
+    color: var(--guest-ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-bottom: 11px;
+  }
+  .flow__step h3 {
+    font-family: var(--body);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .flow__step p { margin: 0; font-size: 14px; color: var(--text-2); }
+  .flow__step--close::before { background: var(--waiter-soft); color: var(--waiter-ink); }
+
+  .kitchen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+    gap: 22px;
+    align-items: start;
+    margin-top: 22px;
+  }
+
+  /* Напечатанная наклейка — всегда светлая, она бумажная */
+  .label {
+    --label-bg: #FBFAF6;
+    --label-ink: #14202B;
+    background: var(--label-bg);
+    color: var(--label-ink);
+    border: 1px dashed #9FA8AE;
+    border-radius: 6px;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.5;
+    box-shadow: var(--shadow);
+    max-width: 100%;
+  }
+  .label__top {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .label__name {
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .label__qty { font-size: 12px; margin-top: 3px; }
+  .label .qr { color: var(--label-ink); width: 74px; height: 74px; flex: none; }
+  .label__rows {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(20, 32, 43, 0.22);
+    display: grid;
+    gap: 3px;
+  }
+  .label__row { display: flex; justify-content: space-between; gap: 10px; }
+  .label__row span:first-child { color: #5A6773; }
+  .label__row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .label__row--warn b { color: #A8341A; }
+  .label__caption {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--muted);
+    font-family: var(--body);
+  }
+
+  /* ---------- Настройка политики продаж ---------- */
+
+  .meter {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--screen-3);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .meter i {
+    display: block;
+    height: 100%;
+    background: var(--guest);
+    border-radius: 999px;
+  }
+  .rule {
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: var(--screen-2);
+    border: 1px solid var(--screen-line);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .rule b { color: var(--guest-ink); font-weight: 600; }
+
+  /* ---------- Контроль официантов ---------- */
+
+  .audit { overflow-x: auto; }
+  .audit table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .audit th, .audit td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .audit th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .audit td { color: var(--text-2); }
+  .audit td:first-child { color: var(--text); font-weight: 600; }
+  .audit td b {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .audit tr:last-child td { border-bottom: 0; }
+  .demo-note {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--body);
+  }
+
+  /* ---------- Узкий экран ---------- */
+
+  @media (max-width: 720px) {
+    .step { grid-template-columns: 1fr; gap: 0; }
+    .step__idx {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding-top: 0;
+      margin-bottom: 10px;
+    }
+    .step__idx b { font-size: 22px; }
+    .step__when { margin-top: 0; }
+    .panes { grid-template-columns: minmax(0, 1fr); }
+    .money__row { grid-template-columns: minmax(0, 1fr); }
+    .compare__row { grid-template-columns: minmax(0, 1fr); }
+    .compare__row--head { display: none; }
+    .compare__old::before {
+      content: "Обычное QR-меню: ";
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .compare__new::before {
+      content: "RestAI: ";
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--guest);
+    }
+    .kitchen { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero__mark">
+      <div class="hero__logo">Rest<span>AI</span></div>
+      <div class="hero__tag">Как это работает в зале</div>
+    </div>
+
+    <h1>Один стол. <em>Два экрана.</em> Ни одной потерянной минуты.</h1>
+
+    <p class="hero__lede">
+      Гость наводит камеру на QR-код у себя на столе — и попадает в приложение вашего
+      ресторана: с вашим логотипом, вашим меню и ИИ-помощником, с которым можно говорить
+      голосом или переписываться. В ту же секунду стол загорается у официанта в телефоне.
+      А на кухне тот же ИИ видит по наклейкам, какие заготовки есть прямо сейчас и у каких
+      завтра истекает срок. Ниже — один вечер за одним столом, шаг за шагом.
+    </p>
+
+    <div class="claims">
+      <div class="claim">
+        <h3>Гость не ждёт, чтобы заказать</h3>
+        <p>Меню, советы и заказ доступны сразу, как он сел. Официант приходит к готовому решению.</p>
+      </div>
+      <div class="claim">
+        <h3>Помощник не забывает предложить</h3>
+        <p>Десерт после горячего, второй бокал к концу первого — по правилам, которые задали вы.</p>
+      </div>
+      <div class="claim">
+        <h3>Кухня и зал знают одно и то же</h3>
+        <p>Заготовка списана сканером — и ИИ в ту же секунду перестаёт её предлагать.</p>
+      </div>
+      <div class="claim">
+        <h3>Гость возвращается узнанным</h3>
+        <p>Что любит, чего не ест, что брал в прошлый раз — остаётся у вас, а не в голове официанта.</p>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Из чего состоит</p>
+      <h2>Четыре части, одна база</h2>
+      <p>
+        Гостю ничего не нужно устанавливать — приложение открывается по QR прямо в браузере
+        телефона и работает даже при слабом Wi-Fi. У официанта, кухни и управляющего — свои
+        рабочие места, но данные общие: то, что списали на кухне, в ту же секунду видит зал.
+      </p>
+    </div>
+
+    <div class="apps">
+      <div class="app app--guest">
+        <div class="app__who">Гость</div>
+        <h3>Приложение гостя</h3>
+        <p>
+          Меню с фото, ИИ-помощник голосом или текстом, корзина, вызов официанта, счёт и
+          оплата, викторина за баллы, отзыв о вечере.
+        </p>
+        <div class="app__how">открывается по QR · без установки</div>
+      </div>
+
+      <div class="app app--kitchen">
+        <div class="app__who">Кухня</div>
+        <h3>Терминал заготовок</h3>
+        <p>
+          Повар отмечает готовую заготовку — принтер печатает наклейку с QR. На раздаче
+          сканер списывает упаковку. Журнал брокеража ведётся сам.
+        </p>
+        <div class="app__how">терминал · принтер · сканер</div>
+      </div>
+
+      <div class="app app--waiter">
+        <div class="app__who">Официант</div>
+        <h3>Приложение официанта</h3>
+        <p>
+          Столы зала в реальном времени, заказ по местам, ИИ-подсказки апсейла, вызовы
+          со звуком и вибрацией, смены и доход.
+        </p>
+        <div class="app__how">устанавливается на телефон · работает в фоне</div>
+      </div>
+
+      <div class="app app--owner">
+        <div class="app__who">Ресторан</div>
+        <h3>Кабинет управляющего</h3>
+        <p>
+          Бренд приложения (логотип, цвета, шрифты, заставка), QR-коды столов, заявки
+          официантов на смены, карта зала.
+        </p>
+        <div class="app__how">браузер на компьютере</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Главное отличие</p>
+      <h2>Это не QR-меню с картинками</h2>
+      <p>
+        Обычное QR-меню — это ваш бумажный альбом, переложенный в телефон. Оно показывает
+        и молчит. Наше — разговаривает с гостем и продаёт: помнит его вкусы и никогда не
+        забывает вовремя предложить десерт или второй бокал.
+      </p>
+    </div>
+
+    <div class="compare">
+      <div class="compare__row compare__row--head">
+        <span>Что именно</span>
+        <span>Обычное QR-меню</span>
+        <span>RestAI</span>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Как гость выбирает</div>
+        <div class="compare__old">Листает список сам. Не понял состав — зовёт официанта.</div>
+        <div class="compare__new">Спрашивает словами: «что поострее», «я не ем грибы». Отвечает <b>голосом или в переписке</b> — как удобно в шумном зале.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Допродажа</div>
+        <div class="compare__old">Никакой. Меню не знает, что гость уже съел.</div>
+        <div class="compare__new">Видит заказ и <b>сам предлагает вовремя</b>: десерт после горячего, второй бокал к концу первого.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Чьи интересы</div>
+        <div class="compare__old">Ничьи — просто список с ценами.</div>
+        <div class="compare__new">Ваши правила: что предлагать, как активно, до какой цены при разном среднем чеке. <b>Настраивается вами</b>, не нами.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Знание кухни</div>
+        <div class="compare__old">Позиция «есть в меню» до тех пор, пока её не уберут руками.</div>
+        <div class="compare__new">Знает остатки заготовок и сроки: что кончилось — <b>не предложит никогда</b>, что истекает — предложит сегодня.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Память о госте</div>
+        <div class="compare__old">Нет. Каждый визит — с чистого листа.</div>
+        <div class="compare__new">Помнит визиты, вкусы и аллергии. В седьмой приход <b>начинает разговор с этого</b>.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Что остаётся ресторану</div>
+        <div class="compare__old">Ничего, кроме экономии на печати меню.</div>
+        <div class="compare__new">Контакты гостей, их предпочтения, оценки кухни и сервиса, <b>статистика продаж по каждому официанту</b>.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Вечер за одним столом</p>
+      <h2>Девять шагов от посадки до отзыва</h2>
+      <p>
+        Слева — экран гостя, справа — экран официанта, в тот же момент времени.
+        Можно смотреть только одну сторону.
+      </p>
+    </div>
+
+    <div class="controls">
+      <span class="controls__label">Показывать</span>
+      <div class="seg" role="group" aria-label="Чей экран показывать">
+        <button type="button" id="view-both" data-view="both" aria-pressed="true">Оба экрана</button>
+        <button type="button" id="view-guest" data-view="guest" aria-pressed="false">Только гость</button>
+        <button type="button" id="view-waiter" data-view="waiter" aria-pressed="false">Только официант</button>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline" data-view="both">
+
+      <!-- 1 -->
+      <article class="step">
+        <div class="step__idx"><b>01</b><span class="step__when">19:04 · посадка</span></div>
+        <div class="step__body">
+          <h3>Гость сканирует QR на столе</h3>
+          <p class="step__lede">
+            Камера телефона — и всё. Открывается ваше приложение: ваша заставка, ваш логотип,
+            ваши шрифты. Телефон узнаётся: если гость у вас уже был, это его седьмой визит,
+            и приложение об этом знает. Стол при этом сам помечается занятым.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол <b>7</b></span><span>Сыроварня</span></div>
+                <div class="scr__stack">
+                  <h4>Добрый вечер!</h4>
+                  <p>Рады видеть вас снова — это ваш 7-й визит к нам.</p>
+                  <span class="cta">Войти в меню</span>
+                  <p>Приложение открылось в браузере. Устанавливать ничего не нужно.</p>
+                </div>
+              </div>
+              <p class="pane__note">Брендинг подтягивается из вашего кабинета — гость видит ресторан, а не сервис.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Мои столы</span><span><b>Смена</b> 18:00–02:00</span></div>
+                <div class="scr__stack">
+                  <div class="tables">
+                    <div class="tbl">1</div><div class="tbl">2</div><div class="tbl">5</div>
+                    <div class="tbl tbl--busy">7</div><div class="tbl">8</div><div class="tbl">9</div>
+                    <div class="tbl">11</div><div class="tbl">12</div>
+                  </div>
+                  <div class="line">
+                    <span>Стол 7 — заняли<small>только что · отсчёт пошёл</small></span>
+                    <b>0:00</b>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Столы обновляются сами, без обновления экрана. Свои столы отделены от чужих.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            <code>register_guest_visit</code> — гость узнаётся по устройству, счётчик визитов растёт;
+            <code>mark_table_occupied</code> открывает сессию стола.
+          </p>
+        </div>
+      </article>
+
+      <!-- 2 -->
+      <article class="step">
+        <div class="step__idx"><b>02</b><span class="step__when">19:05 · знакомство</span></div>
+        <div class="step__body">
+          <h3>С гостем заговаривает ИИ — голосом или текстом</h3>
+          <p class="step__lede">
+            Не чат-бот с кнопками. Гость просто спрашивает: «что у вас есть острого?»,
+            «я не ем грибы», «что посоветуете к красному?». ИИ знает ваше меню целиком —
+            состав, вес, калорийность, сочетания — и показывает блюда на экране, пока
+            отвечает. В шумном зале, за деловым столом или когда просто неудобно говорить,
+            гость одним касанием переключается на переписку. Разговор при этом не
+            начинается заново: история общая, начал голосом — продолжил текстом.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя · голос</div>
+              <div class="scr">
+                <div class="scr__bar"><span>◉ Слушаю</span><span>Голос · Текст</span></div>
+                <div class="scr__stack">
+                  <div class="bubble bubble--guest">Я грибы не ем. Что посоветуете к красному?</div>
+                  <div class="bubble bubble--ai">
+                    Тогда смотрите сюда — рибай на углях и сырная тарелка с грушей.
+                    Грибов нет ни там, ни там.
+                  </div>
+                  <div class="line"><span>Рибай на углях<small>320 г · говядина, розмарин</small></span><b>2 890 ₽</b></div>
+                  <div class="line"><span>Сырная тарелка<small>210 г · 4 сыра, груша, мёд</small></span><b>1 240 ₽</b></div>
+                </div>
+              </div>
+              <p class="pane__note">Карточки появляются раньше, чем ИИ назовёт блюда вслух — гость смотрит, а не слушает список.</p>
+            </div>
+
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя · текст</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Чат с помощником</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="chips">
+                    <span class="chip">Голос</span>
+                    <span class="chip chip--on">Текст</span>
+                  </div>
+                  <div class="bubble bubble--guest">А сырная тарелка острая?</div>
+                  <div class="bubble bubble--ai">
+                    Нет, она мягкая: бри, камамбер, пармезан и горгонзола дольче.
+                    Острое у нас — в разделе закусок, показать?
+                  </div>
+                  <p>В шумном зале или в компании, где неловко говорить вслух, — тот же помощник в переписке.</p>
+                </div>
+              </div>
+              <p class="pane__note">Одна история диалога на оба режима: гость не пересказывает то, что уже сказал.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Мои столы</span><span><b>4</b> активных</span></div>
+                <div class="scr__stack">
+                  <div class="line"><span>Стол 7<small>гости изучают меню</small></span><b>1:20</b></div>
+                  <div class="line"><span>Стол 2<small>заказ на кухне</small></span><b>18:40</b></div>
+                  <div class="line"><span>Стол 9<small>готово к подаче</small></span><b>32:05</b></div>
+                  <p>Пока гость разговаривает с помощником, официант занят другими столами — и не стоит над душой.</p>
+                </div>
+              </div>
+              <p class="pane__note">Один официант спокойно ведёт больше столов: первый контакт берёт на себя приложение.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            голос и текст идут через наш сервер-посредник, общая история диалога —
+            в <code>conversation_turns</code>. Ключи и меню остаются у нас: гость
+            напрямую к ИИ не подключается.
+          </p>
+        </div>
+      </article>
+
+      <!-- 3 -->
+      <article class="step">
+        <div class="step__idx"><b>03</b><span class="step__when">19:11 · заказ</span></div>
+        <div class="step__body">
+          <h3>Заказ собирается голосом и уходит на кухню</h3>
+          <p class="step__lede">
+            «Давай рибай, средней прожарки, и бокал красного» — ИИ сам открывает опции блюда
+            (прожарка, соус, гарнир — те, что заведены у вас), уточняет и кладёт в корзину.
+            Цена берётся из вашей базы, а не из телефона гостя. Заказ приходит официанту
+            с указанием места: приложение различает, кто за столом что заказал.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Корзина</span><span><b>Место 3</b></span></div>
+                <div class="scr__stack">
+                  <div class="bubble bubble--ai">Прожарка средняя, соус — перечный. Добавил. Что-то ещё?</div>
+                  <div class="line"><span>Рибай на углях<small>medium · перечный соус</small></span><b>2 890 ₽</b></div>
+                  <div class="line"><span>Бокал Кьянти<small>150 мл</small></span><b>690 ₽</b></div>
+                  <div class="line"><span><b>Итого</b></span><b>3 580 ₽</b></div>
+                  <span class="cta">Отправить на кухню</span>
+                </div>
+              </div>
+              <p class="pane__note">Ту же корзину гость видит и в обычном меню — это одна корзина, а не две.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол 7 · заказ</span><span><b>4</b> гостя</span></div>
+                <div class="scr__stack">
+                  <div class="seats">
+                    <div class="seat">1</div><div class="seat">2</div>
+                    <div class="seat seat--me">3</div><div class="seat">4</div>
+                  </div>
+                  <div class="line"><span>Рибай на углях<small>medium · перечный соус</small></span><b>2 890 ₽</b></div>
+                  <div class="line"><span>Бокал Кьянти<small>150 мл</small></span><b>690 ₽</b></div>
+                  <p>Заказ пришёл из приложения гостя. Место 3.</p>
+                  <div class="cta-row">
+                    <span class="cta cta--waiter">Принять</span>
+                    <span class="cta cta--ghost">Дополнить</span>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Все за столом пишутся в один общий заказ — официант ведёт стол, а не четыре разговора.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            <code>place_guest_order</code> — один заказ на стол, место назначается по устройству,
+            цены и наценки за опции берутся из базы ресторана.
+          </p>
+        </div>
+      </article>
+
+      <!-- 4 -->
+      <article class="step">
+        <div class="step__idx"><b>04</b><span class="step__when">19:11 · закон</span></div>
+        <div class="step__body">
+          <h3>В заказе алкоголь — кухня ждёт официанта</h3>
+          <p class="step__lede">
+            Бокал вина в корзине останавливает заказ. Он не уходит на кухню, пока официант
+            не подойдёт и не подтвердит возраст лично. У официанта звонит телефон — тем же
+            сигналом, что и вызов. Подтвердил — заказ пошёл. Отказал — гость видит отказ,
+            а еда без алкоголя остаётся в корзине.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол 7</span><span>Ожидание</span></div>
+                <div class="scr__stack">
+                  <h4>Официант подойдёт к вам</h4>
+                  <p>В заказе есть алкоголь — по закону официант должен подтвердить ваш возраст лично. Заказ отправится сразу после этого.</p>
+                  <span class="cta cta--ghost">Отменить</span>
+                </div>
+              </div>
+              <p class="pane__note">Корзина не теряется ни при отказе, ни при отмене.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>◉ Входящее</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="alert">
+                    <strong>Подтвердите возраст</strong>
+                    <p>Стол 7, место 3 — бокал Кьянти 150 мл.</p>
+                  </div>
+                  <div class="cta-row">
+                    <span class="cta cta--waiter">Возраст подтверждён</span>
+                    <span class="cta cta--ghost">Отказать</span>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Ответственность остаётся на человеке — приложение только доводит запрос до него мгновенно.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            <code>request_age_confirmation</code> создаёт вызов вида <code>age_check</code>;
+            заказ отправляется только после ответа официанта.
+          </p>
+        </div>
+      </article>
+
+      <!-- 5 -->
+      <article class="step">
+        <div class="step__idx"><b>05</b><span class="step__when">19:14 · допродажа</span></div>
+        <div class="step__body">
+          <h3>Официант получает подсказку — что предложить и как сказать</h3>
+          <p class="step__lede">
+            Подойдя к столу, официант в два касания отмечает гостей: пол, возраст, повод —
+            свидание, деловая встреча, семья, компания. И открывает меню. ИИ смотрит на то,
+            что уже в заказе, и предлагает дополнение вместе с готовой фразой. Подсказка не
+            случайная: она поднимает наверх то, где у вас больше прибыль, и то, что сегодня
+            нужно продать в первую очередь. То, что в стоп-листе, не предлагается никогда.
+          </p>
+
+          <p class="only-note" data-show="guest">
+            Этот шаг целиком на стороне официанта — у гостя в этот момент экран не меняется.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта · гости</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол 7 · гости</span><span><b>Место 3</b></span></div>
+                <div class="scr__stack">
+                  <p>Повод за столом</p>
+                  <div class="chips">
+                    <span class="chip">Один</span>
+                    <span class="chip chip--go">Романтическая встреча</span>
+                    <span class="chip">Деловая</span>
+                    <span class="chip">Семья</span>
+                    <span class="chip">Компания</span>
+                  </div>
+                  <p>Гость на месте 3</p>
+                  <div class="chips">
+                    <span class="chip chip--go">Муж</span>
+                    <span class="chip chip--go">30–40</span>
+                    <span class="chip">Спортивное</span>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Два касания на гостя. Это и есть весь ввод, который нужен ИИ.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта · подсказка</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Меню · подсказка RestAI</span><span>к заказу</span></div>
+                <div class="scr__stack">
+                  <div class="chips">
+                    <span class="chip chip--go">к заказу</span>
+                    <span class="chip">закуски</span>
+                    <span class="chip">десерты</span>
+                    <span class="chip">вино</span>
+                  </div>
+                  <div class="coach">
+                    <div class="coach__tag">Что сказать</div>
+                    <div class="coach__say">
+                      Предложите брускетту с томленым томатом:
+                      <q>к рибаю её берут чаще всего — принести, пока готовится стейк?</q>
+                    </div>
+                    <div class="coach__why">
+                      <span class="badge">высокая маржа</span>
+                      <span class="badge">списать сегодня</span>
+                      <span class="badge">сочетание</span>
+                    </div>
+                  </div>
+                  <div class="cta-row">
+                    <span class="cta cta--waiter">Добавить</span>
+                    <span class="cta cta--ghost">Другой вариант</span>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Гость этих пометок не видит — они только для официанта.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            маржа из <code>menu_item_costing</code>, флаги дня (<code>истекает / спец / стоп-лист</code>),
+            текст пишет языковая модель; «добавил / отказался» пишется в лог — подсказки со временем точнее.
+          </p>
+        </div>
+      </article>
+
+      <!-- 6 -->
+      <article class="step">
+        <div class="step__idx"><b>06</b><span class="step__when">20:02 · вызов</span></div>
+        <div class="step__body">
+          <h3>Гостю что-то нужно — официант узнаёт об этом за секунду</h3>
+          <p class="step__lede">
+            Кнопка-колокольчик в меню или просто слова «позовите официанта» голосовому
+            помощнику. У официанта — звук, вибрация и всплывающий вызов с номером стола и
+            причиной, даже если приложение свёрнуто. Одно касание — «Иду», и гость видит,
+            что его услышали. Вызов на стол может быть только один: сорок нажатий не
+            превратятся в сорок сигналов.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Меню</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="line line--ready"><span>Официант идёт к вам<small>вызов принят · 20:02</small></span><b>✓</b></div>
+                  <div class="chips">
+                    <span class="chip">Чат</span>
+                    <span class="chip chip--on">Позвать официанта</span>
+                    <span class="chip">Заказ</span>
+                  </div>
+                  <p>Отменить вызов можно тем же нажатием — официант увидит отмену.</p>
+                </div>
+              </div>
+              <p class="pane__note">Гость перестаёт ловить взгляд — и перестаёт нервничать.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>◉ Вызов</span><span>Звук · вибрация</span></div>
+                <div class="scr__stack">
+                  <div class="alert">
+                    <span class="bell" aria-hidden="true">🔔</span>
+                    <strong>Стол 7 зовёт</strong>
+                    <p>Причина: «принесите ещё воды»</p>
+                  </div>
+                  <span class="cta cta--waiter">Иду</span>
+                  <div class="tables">
+                    <div class="tbl">1</div><div class="tbl">2</div><div class="tbl">5</div>
+                    <div class="tbl tbl--call">7</div><div class="tbl tbl--busy">8</div><div class="tbl">9</div>
+                    <div class="tbl">11</div><div class="tbl">12</div>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Приходит и как пуш-уведомление — телефон в кармане тоже сработает.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            <code>call_waiter</code> + мгновенная доставка по подписке на изменения + веб-пуш;
+            вызов уходит своему официанту, а если он занят — свободному.
+          </p>
+        </div>
+      </article>
+
+      <!-- 7 -->
+      <article class="step">
+        <div class="step__idx"><b>07</b><span class="step__when">20:44 · второй заход</span></div>
+        <div class="step__body">
+          <h3>Помощник сам вспоминает про десерт — вовремя</h3>
+          <p class="step__lede">
+            Горячее съедено, бокал почти пуст. Официант в этот момент на другом столе —
+            а помощник видит заказ и сам заводит разговор. Не «купите что-нибудь ещё»,
+            а к месту: к тому, что гость ел, с учётом того, чего он не ест, и в рамках
+            правил, которые задали вы — насколько активно предлагать, что именно
+            и до какой цены. Это то, что живой официант забывает в девяти случаях
+            из десяти в час пик.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Помощник</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="bubble bubble--ai">
+                    Как рибай? У нас к нему хорошо идёт панна-котта с малиной — она
+                    не тяжёлая после стейка. И бокал Кьянти могу повторить.
+                  </div>
+                  <div class="line"><span>Панна-котта с малиной<small>140 г · холодный десерт</small></span><b>560 ₽</b></div>
+                  <div class="cta-row">
+                    <span class="cta">Добавить</span>
+                    <span class="cta cta--ghost">Спасибо, нет</span>
+                  </div>
+                </div>
+              </div>
+              <p class="pane__note">Отказ запоминается: второй раз то же самое в этот вечер гостю не предложат.</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол 7 · заказ</span><span><b>+1</b> позиция</span></div>
+                <div class="scr__stack">
+                  <div class="line line--ready"><span>Панна-котта с малиной<small>место 3 · добавил гость сам</small></span><b>560 ₽</b></div>
+                  <div class="line"><span>Бокал Кьянти<small>место 3 · повтор</small></span><b>690 ₽</b></div>
+                  <p>Официант не бегал уточнять — заказ дополнился, пока он был на другом столе.</p>
+                </div>
+              </div>
+              <p class="pane__note">Десерт и второй бокал — самые частые «забытые» позиции. Здесь их не забывают.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            коммерческая политика ресторана из <code>restaurant_ai_profiles</code> компилируется
+            в правила для ИИ: активность продаж, что предлагать, потолок цены по среднему чеку.
+          </p>
+        </div>
+      </article>
+
+      <!-- 8 -->
+      <article class="step">
+        <div class="step__idx"><b>08</b><span class="step__when">21:38 · счёт</span></div>
+        <div class="step__body">
+          <h3>Счёт: позвать официанта — или заплатить самому</h3>
+          <p class="step__lede">
+            Гость выбирает сам. Если платит через приложение — видит счёт по местам и решает,
+            за кого платит: только за себя или, скажем, за себя и жену в компании из шести
+            человек. Оплаченные места гаснут, и когда гаснет последнее — стол у официанта
+            закрывается сам.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Счёт</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="cta-row">
+                    <span class="cta cta--ghost">Позвать официанта</span>
+                    <span class="cta">Оплатить самому</span>
+                  </div>
+                  <p>За кого платите</p>
+                  <div class="seats">
+                    <div class="seat seat--me">1</div>
+                    <div class="seat">2</div>
+                    <div class="seat seat--me">3</div>
+                    <div class="seat seat--paid">4</div>
+                  </div>
+                  <div class="line"><span>Места 1 и 3<small>9 позиций</small></span><b>7 420 ₽</b></div>
+                  <span class="cta">Оплатить по СБП</span>
+                </div>
+              </div>
+              <p class="pane__note">Чужие корзины гость видит только после того, как сам выбрал «за весь стол».</p>
+            </div>
+
+            <div class="pane pane--waiter">
+              <div class="pane__label">Экран официанта</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Стол 7</span><span><b>Счёт</b></span></div>
+                <div class="scr__stack">
+                  <div class="line line--ready"><span>Место 4 — оплачено<small>через приложение</small></span><b>3 110 ₽</b></div>
+                  <div class="line line--ready"><span>Места 1, 3 — оплачено<small>через приложение</small></span><b>7 420 ₽</b></div>
+                  <div class="line"><span>Место 2 — наличными<small>принять лично</small></span><b>2 260 ₽</b></div>
+                  <span class="cta cta--waiter">Закрыть стол</span>
+                </div>
+              </div>
+              <p class="pane__note">Официант не носит терминал по залу и не делит чек в уме.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            <code>get_table_bill</code> — счёт по местам с сервера, <code>pay_table_seats</code>
+            помечает места оплаченными только после подтверждения оплаты.
+          </p>
+        </div>
+      </article>
+
+      <!-- 9 -->
+      <article class="step">
+        <div class="step__idx"><b>09</b><span class="step__when">21:41 · уходит</span></div>
+        <div class="step__body">
+          <h3>Гость уходит — и остаётся вашим</h3>
+          <p class="step__lede">
+            Пока формируется счёт, гостю предлагают викторину: наберёшь 100 баллов — ужин на
+            двоих. Чтобы забрать баллы, нужно оставить имя и телефон с подтверждением по SMS.
+            Так у ресторана появляется контакт — не выпрошенный на выходе, а полученный в
+            обмен на понятную выгоду. Следом — оценка кухни и сервиса. И портрет гостя:
+            что любит, чего не ест, что брал. В следующий визит ИИ начнёт разговор уже с этим.
+          </p>
+
+          <p class="only-note" data-show="waiter">
+            Этот шаг целиком на стороне гостя — официант в это время уже закрыл стол.
+          </p>
+
+          <div class="panes">
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя · викторина</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Викторина</span><span><b>+20</b> баллов</span></div>
+                <div class="scr__stack">
+                  <p>Наберите 100 баллов и получите ужин на двоих в одном из ресторанов с RestAI.</p>
+                  <h4>Из какого региона Италии родом сыр таледжо?</h4>
+                  <div class="chips">
+                    <span class="chip">Тоскана</span>
+                    <span class="chip chip--on">Ломбардия</span>
+                    <span class="chip">Сицилия</span>
+                  </div>
+                  <div class="line"><span>Осталось времени</span><b>0:14</b></div>
+                </div>
+              </div>
+              <p class="pane__note">Ответ проверяет сервер, время считает сервер — подкрутить таймер в телефоне бессмысленно.</p>
+            </div>
+
+            <div class="pane pane--guest">
+              <div class="pane__label">Экран гостя · отзыв</div>
+              <div class="scr">
+                <div class="scr__bar"><span>Спасибо!</span><span>Стол 7</span></div>
+                <div class="scr__stack">
+                  <div class="line"><span>Кухня</span><b>★★★★★</b></div>
+                  <div class="line"><span>Сервис</span><b>★★★★☆</b></div>
+                  <p>Отзыв приходит к вам, а не на публичную площадку — недовольство видно раньше, чем оно уйдёт в интернет.</p>
+                  <div class="line"><span>Профиль гостя<small>не ест грибы · любит красное сухое</small></span><b>7 визитов</b></div>
+                </div>
+              </div>
+              <p class="pane__note">Профиль хранится отдельно по каждому ресторану — ваш ИИ советует по вашему меню.</p>
+            </div>
+          </div>
+
+          <p class="sys">
+            <span>в системе</span>
+            баллы начисляются только после подтверждения телефона по SMS;
+            <code>guest_restaurant_stats</code> — портрет гостя именно по вашему ресторану.
+          </p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Чьи интересы</p>
+      <h2>Правила продаж задаёте вы</h2>
+      <p>
+        ИИ-помощник не продаёт «как умеет» — он работает по вашей коммерческой политике.
+        Она настраивается на ресторан и меняется без всякого обновления приложения:
+        поменяли вечером — со следующего гостя действует.
+      </p>
+    </div>
+
+    <div class="kitchen">
+      <div>
+        <div class="scr">
+          <div class="scr__bar"><span>Политика продаж</span><span>Сыроварня</span></div>
+          <div class="scr__stack">
+            <div>
+              <div class="line"><span>Активность продаж</span><b>7 / 10</b></div>
+              <div class="meter"><i style="width:70%"></i></div>
+            </div>
+            <p>Что предлагать к месту</p>
+            <div class="chips">
+              <span class="chip chip--on">апселл</span>
+              <span class="chip chip--on">десерты</span>
+              <span class="chip chip--on">кофе</span>
+              <span class="chip chip--on">алкоголь</span>
+              <span class="chip">закуски</span>
+            </div>
+            <div class="rule">Не больше <b>2 вариантов</b> за раз — и всегда объясняй, почему именно эти.</div>
+            <div class="rule">Средний чек гостя ниже <b>2 500 ₽</b> — не рекомендуй позиции дороже <b>1 200 ₽</b>.</div>
+            <div class="rule">За столом дети — предлагай детское меню и <b>не упоминай алкоголь</b>.</div>
+            <div class="rule">До закрытия меньше часа — <b>не предлагай долгие блюда</b>.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="label__caption kitchen__lead">
+          Эти правила — не картинка с презентации: ровно из них собирается инструкция,
+          с которой ИИ выходит к каждому гостю. Что ещё настраивается:
+        </p>
+        <ul class="bullets">
+          <li>Главная цель помощника — от «помочь выбрать» до «поднять чек»</li>
+          <li>Приоритет рекомендаций: сначала фирменное, потом маржинальное, потом остальное</li>
+          <li>Характер и голос помощника — вплоть до шеф-повара с именем и акцентом</li>
+          <li>Особое внимание VIP-гостям</li>
+          <li>Уточнять предпочтения перед советом — или советовать сразу</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Кухня</p>
+      <h2>Заготовки: от наклейки до подсказки в зале</h2>
+      <p>
+        Обычно повар пишет на наклейке от руки свою фамилию, дату и срок годности, а потом
+        переносит то же самое в журнал брокеража. Мы убираем и почерк, и журнал — и заодно
+        получаем то, чего у ресторана обычно нет: живую картину остатков, которую видит ИИ.
+      </p>
+    </div>
+
+    <div class="flow">
+      <div class="flow__step">
+        <h3>Повар отмечает заготовку</h3>
+        <p>
+          На терминале нажимает название — «Соус демиглас» — и указывает вес или количество.
+          Всё, больше от него ничего не требуется.
+        </p>
+      </div>
+      <div class="flow__step">
+        <h3>Принтер печатает наклейку</h3>
+        <p>
+          Самоклеящаяся этикетка с QR-кодом: название, кто приготовил, дата и время,
+          срок годности. Ничего не пишется от руки — и ничего не подделать задним числом.
+        </p>
+      </div>
+      <div class="flow__step">
+        <h3>Сканер списывает упаковку</h3>
+        <p>
+          На рабочей кухне повар берёт заготовку, проводит QR через сканер — и упаковка
+          уходит из базы. Одно движение, без единой записи.
+        </p>
+      </div>
+      <div class="flow__step flow__step--close">
+        <h3>ИИ узнаёт об этом сразу</h3>
+        <p>
+          База остатков — та же, что читают подсказки официанту и помощник гостя.
+          Кончилось — перестали предлагать. Истекает завтра — предлагаем сегодня.
+        </p>
+      </div>
+    </div>
+
+    <div class="kitchen">
+      <div>
+        <h3 class="sub">Что это закрывает</h3>
+        <div class="money">
+          <div class="money__row">
+            <h3>Журнал брокеража</h3>
+            <p>Ведётся сам, из тех же данных, что напечатаны на наклейке. К проверке готов всегда, а не в ночь перед ней.</p>
+          </div>
+          <div class="money__row">
+            <h3>Просрочка</h3>
+            <p>Заготовка с истекающим сроком поднимается в подсказках официанту и у помощника гостя — <em>сегодня, а не в мусор завтра</em>.</p>
+          </div>
+          <div class="money__row">
+            <h3>Стоп-лист</h3>
+            <p>Кончилась последняя упаковка — позиция гаснет в зале <em>в ту же секунду</em>. Гость не услышит «этого уже нет» после того, как выбрал.</p>
+          </div>
+          <div class="money__row">
+            <h3>Списания и пересорт</h3>
+            <p>Видно, чем затоварились, а что расходится быстрее закупки. Закупка перестаёт быть догадкой.</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">
+          <div class="label__top">
+            <div>
+              <div class="label__name">Соус демиглас</div>
+              <div class="label__qty">1,2 кг · партия 3</div>
+            </div>
+            <svg class="qr" viewBox="0 0 84 84" width="84" height="84" role="img" aria-label="QR-код заготовки"><rect x="0" y="0" width="28" height="28" fill="currentColor"/><rect x="4" y="4" width="20" height="20" fill="var(--label-bg)"/><rect x="8" y="8" width="12" height="12" fill="currentColor"/><rect x="56" y="0" width="28" height="28" fill="currentColor"/><rect x="60" y="4" width="20" height="20" fill="var(--label-bg)"/><rect x="64" y="8" width="12" height="12" fill="currentColor"/><rect x="0" y="56" width="28" height="28" fill="currentColor"/><rect x="4" y="60" width="20" height="20" fill="var(--label-bg)"/><rect x="8" y="64" width="12" height="12" fill="currentColor"/><g fill="currentColor"><rect x="32" y="0" width="4" height="4"/><rect x="36" y="0" width="4" height="4"/><rect x="44" y="0" width="4" height="4"/><rect x="32" y="4" width="4" height="4"/><rect x="36" y="4" width="4" height="4"/><rect x="44" y="4" width="4" height="4"/><rect x="48" y="4" width="4" height="4"/><rect x="32" y="8" width="4" height="4"/><rect x="36" y="8" width="4" height="4"/><rect x="40" y="8" width="4" height="4"/><rect x="48" y="8" width="4" height="4"/><rect x="32" y="12" width="4" height="4"/><rect x="48" y="12" width="4" height="4"/><rect x="36" y="16" width="4" height="4"/><rect x="44" y="16" width="4" height="4"/><rect x="48" y="16" width="4" height="4"/><rect x="32" y="20" width="4" height="4"/><rect x="36" y="20" width="4" height="4"/><rect x="44" y="20" width="4" height="4"/><rect x="36" y="24" width="4" height="4"/><rect x="44" y="24" width="4" height="4"/><rect x="48" y="24" width="4" height="4"/><rect x="32" y="28" width="4" height="4"/><rect x="40" y="28" width="4" height="4"/><rect x="44" y="28" width="4" height="4"/><rect x="4" y="32" width="4" height="4"/><rect x="16" y="32" width="4" height="4"/><rect x="36" y="32" width="4" height="4"/><rect x="44" y="32" width="4" height="4"/><rect x="48" y="32" width="4" height="4"/><rect x="56" y="32" width="4" height="4"/><rect x="64" y="32" width="4" height="4"/><rect x="0" y="36" width="4" height="4"/><rect x="36" y="36" width="4" height="4"/><rect x="56" y="36" width="4" height="4"/><rect x="60" y="36" width="4" height="4"/><rect x="68" y="36" width="4" height="4"/><rect x="76" y="36" width="4" height="4"/><rect x="80" y="36" width="4" height="4"/><rect x="0" y="40" width="4" height="4"/><rect x="8" y="40" width="4" height="4"/><rect x="12" y="40" width="4" height="4"/><rect x="16" y="40" width="4" height="4"/><rect x="24" y="40" width="4" height="4"/><rect x="28" y="40" width="4" height="4"/><rect x="48" y="40" width="4" height="4"/><rect x="52" y="40" width="4" height="4"/><rect x="56" y="40" width="4" height="4"/><rect x="68" y="40" width="4" height="4"/><rect x="72" y="40" width="4" height="4"/><rect x="76" y="40" width="4" height="4"/><rect x="80" y="40" width="4" height="4"/><rect x="8" y="44" width="4" height="4"/><rect x="12" y="44" width="4" height="4"/><rect x="16" y="44" width="4" height="4"/><rect x="20" y="44" width="4" height="4"/><rect x="48" y="44" width="4" height="4"/><rect x="68" y="44" width="4" height="4"/><rect x="72" y="44" width="4" height="4"/><rect x="76" y="44" width="4" height="4"/><rect x="0" y="48" width="4" height="4"/><rect x="4" y="48" width="4" height="4"/><rect x="8" y="48" width="4" height="4"/><rect x="12" y="48" width="4" height="4"/><rect x="16" y="48" width="4" height="4"/><rect x="20" y="48" width="4" height="4"/><rect x="24" y="48" width="4" height="4"/><rect x="28" y="48" width="4" height="4"/><rect x="32" y="48" width="4" height="4"/><rect x="36" y="48" width="4" height="4"/><rect x="40" y="48" width="4" height="4"/><rect x="52" y="48" width="4" height="4"/><rect x="56" y="48" width="4" height="4"/><rect x="60" y="48" width="4" height="4"/><rect x="64" y="48" width="4" height="4"/><rect x="68" y="48" width="4" height="4"/><rect x="36" y="52" width="4" height="4"/><rect x="40" y="52" width="4" height="4"/><rect x="44" y="52" width="4" height="4"/><rect x="48" y="52" width="4" height="4"/><rect x="56" y="52" width="4" height="4"/><rect x="60" y="52" width="4" height="4"/><rect x="72" y="52" width="4" height="4"/><rect x="80" y="52" width="4" height="4"/><rect x="48" y="56" width="4" height="4"/><rect x="52" y="56" width="4" height="4"/><rect x="56" y="56" width="4" height="4"/><rect x="72" y="56" width="4" height="4"/><rect x="76" y="56" width="4" height="4"/><rect x="52" y="60" width="4" height="4"/><rect x="60" y="60" width="4" height="4"/><rect x="64" y="60" width="4" height="4"/><rect x="68" y="60" width="4" height="4"/><rect x="72" y="60" width="4" height="4"/><rect x="76" y="60" width="4" height="4"/><rect x="36" y="64" width="4" height="4"/><rect x="52" y="64" width="4" height="4"/><rect x="56" y="64" width="4" height="4"/><rect x="60" y="64" width="4" height="4"/><rect x="64" y="64" width="4" height="4"/><rect x="68" y="64" width="4" height="4"/><rect x="44" y="68" width="4" height="4"/><rect x="68" y="68" width="4" height="4"/><rect x="76" y="68" width="4" height="4"/><rect x="36" y="72" width="4" height="4"/><rect x="40" y="72" width="4" height="4"/><rect x="52" y="72" width="4" height="4"/><rect x="56" y="72" width="4" height="4"/><rect x="60" y="72" width="4" height="4"/><rect x="72" y="72" width="4" height="4"/><rect x="36" y="76" width="4" height="4"/><rect x="44" y="76" width="4" height="4"/><rect x="48" y="76" width="4" height="4"/><rect x="68" y="76" width="4" height="4"/><rect x="80" y="76" width="4" height="4"/><rect x="32" y="80" width="4" height="4"/><rect x="36" y="80" width="4" height="4"/><rect x="40" y="80" width="4" height="4"/><rect x="48" y="80" width="4" height="4"/><rect x="52" y="80" width="4" height="4"/><rect x="56" y="80" width="4" height="4"/><rect x="64" y="80" width="4" height="4"/><rect x="80" y="80" width="4" height="4"/></g></svg>
+          </div>
+          <div class="label__rows">
+            <div class="label__row"><span>Приготовил</span><b>Орлов А. В.</b></div>
+            <div class="label__row"><span>Изготовлено</span><b>22.09 · 09:40</b></div>
+            <div class="label__row label__row--warn"><span>Годен до</span><b>25.09 · 09:40</b></div>
+            <div class="label__row"><span>Цех</span><b>Заготовочный</b></div>
+          </div>
+        </div>
+        <p class="label__caption">
+          Та же наклейка, что клеится на упаковку. QR-код — ключ к записи в базе:
+          скан на раздаче списывает именно эту упаковку, а не «одну из».
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Персонал</p>
+      <h2>Видно, кто действительно продаёт</h2>
+      <p>
+        Приложение официанта — ещё и инструмент контроля. По каждому сотруднику уже
+        записывается, какие подсказки ему показали, что он принял, что проигнорировал,
+        какой приём продаж сработал и с каким гостем. Не по ощущениям управляющего,
+        а по фактам за смену.
+      </p>
+    </div>
+
+    <div class="card audit">
+      <table>
+        <thead>
+          <tr>
+            <th>Официант</th>
+            <th>Подсказок</th>
+            <th>Принял</th>
+            <th>Средний чек на гостя</th>
+            <th>Оценка сервиса</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Петрова А.</td><td><b>34</b></td><td><b>71%</b></td><td><b>3 240 ₽</b></td><td><b>4,8</b></td></tr>
+          <tr><td>Иванов С.</td><td><b>29</b></td><td><b>52%</b></td><td><b>2 610 ₽</b></td><td><b>4,6</b></td></tr>
+          <tr><td>Козлов Д.</td><td><b>31</b></td><td><b>18%</b></td><td><b>1 980 ₽</b></td><td><b>4,1</b></td></tr>
+          <tr><td>Смирнова О.</td><td><b>22</b></td><td><b>64%</b></td><td><b>3 010 ₽</b></td><td><b>4,7</b></td></tr>
+        </tbody>
+      </table>
+      <p class="demo-note">
+        Пример экрана на демонстрационных данных. Сами эти показатели уже собираются
+        по каждому официанту; отдельный отчёт в кабинете управляющего — ближайший шаг.
+      </p>
+    </div>
+
+    <div class="grid-3 grid-3--stacked">
+      <div class="card">
+        <span class="card__kicker">Собирается сейчас</span>
+        <h3>Кто и как продаёт</h3>
+        <p>
+          По каждому официанту: сколько подсказок показано, сколько принято, отклонено
+          и проигнорировано, какой приём сработал — сочетание вкусов, «берут чаще всего»,
+          выбор без выбора, ограниченность предложения.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Собирается сейчас</span>
+        <h3>Как гости оценили смену</h3>
+        <p>
+          Оценки кухни и сервиса привязаны к столу, а значит — к официанту, который его
+          вёл. Плюс поводы: как человек работает со свиданием и как с деловым столом.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Следующий шаг</span>
+        <h3>Разбор разговоров с гостем</h3>
+        <p>
+          Анализ того, что официант реально говорит за столом: соблюдение стандартов
+          ресторана и выбранных техник продаж. Не прослушка ради прослушки, а обучение
+          на собственных удачных диалогах.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Вторая половина продукта</p>
+      <h2>Официанты приходят к вам сами</h2>
+      <p>
+        В приложении официанта есть не только зал. Это ещё и биржа смен: официант видит
+        на карте города рестораны, где сегодня нужны руки, и бронирует смену. Вы
+        подтверждаете заявку в кабинете — и человек выходит.
+      </p>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card__kicker">Как ищут смену</span>
+        <h3>Карта с открытыми сменами</h3>
+        <p>
+          На карте — метки ресторанов с числом свободных смен и средней оплатой на дату.
+          Официант выбирает ближайший и бронирует.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Как выходят</span>
+        <h3>Смена открывается по QR ресторана</h3>
+        <p>
+          Без подтверждённой на сегодня смены столы просто не откроются. Случайный человек
+          со ссылкой в зал не попадёт.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Как считают</span>
+        <h3>Часы, чаевые, выплаты</h3>
+        <p>
+          Официант видит свой доход по неделям и месяцам. После смены — оценивает ресторан:
+          у заведения появляется рейтинг работодателя.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Ваш кабинет</p>
+      <h2>Что настраиваете вы</h2>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card__kicker">Бренд</span>
+        <h3>Приложение выглядит как ваше</h3>
+        <p>
+          Логотип, цвета, шрифты, видео-заставка. Гость не видит слова «платформа» — он
+          видит ресторан, в который пришёл.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Столы</span>
+        <h3>QR-коды с обновляемым кодом</h3>
+        <p>
+          Каждый стол — свой QR. Код можно обновлять по расписанию, чтобы старые ссылки
+          не жили вечно.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__kicker">Люди</span>
+        <h3>Заявки на смены и карта зала</h3>
+        <p>
+          Подтверждаете или отклоняете официантов на дату. Видите зал по зонам: кто за
+          каким столом, где вызов, где ждут счёт.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Зачем это ресторану</p>
+      <h2>Где здесь деньги</h2>
+      <p>
+        Без обещаний в процентах: вот конкретные места, в которых меняется выручка и
+        расходы. Проверять их лучше на своём зале — цифры у всех разные.
+      </p>
+    </div>
+
+    <div class="money">
+      <div class="money__row">
+        <h3>Средний чек</h3>
+        <p>
+          Допродажа перестаёт зависеть от смелости конкретного официанта. Подсказка приходит
+          сама, с готовой фразой, и выбирает не самое дорогое, а <em>самое выгодное вам</em> —
+          с учётом себестоимости.
+        </p>
+      </div>
+      <div class="money__row">
+        <h3>Списания и просрочка</h3>
+        <p>
+          Кухня знает по наклейкам, что и когда приготовлено. Продукт с коротким сроком
+          поднимается в подсказках наверх <em>сегодня</em>, а не оказывается в мусоре завтра.
+          Кончившееся не предлагается никогда.
+        </p>
+      </div>
+
+      <div class="money__row">
+        <h3>Время поваров и бумага</h3>
+        <p>
+          Наклейки печатаются вместо того, чтобы писаться от руки, а журнал брокеража
+          заполняется сам из тех же данных. К проверке ресторан готов <em>всегда</em>,
+          а не в ночь перед ней.
+        </p>
+      </div>
+      <div class="money__row">
+        <h3>Оборот стола</h3>
+        <p>
+          Гость не ждёт официанта, чтобы сделать заказ, и не ждёт его, чтобы заплатить. Из
+          вечера уходят две самые длинные паузы — <em>в начале и в конце</em>.
+        </p>
+      </div>
+      <div class="money__row">
+        <h3>Фонд оплаты труда</h3>
+        <p>
+          Первый контакт с гостем берёт на себя приложение — один официант спокойно ведёт
+          больше столов. А недостающие смены закрываются через биржу, <em>без агентства</em>.
+        </p>
+      </div>
+      <div class="money__row">
+        <h3>Возвраты гостя</h3>
+        <p>
+          Телефон гостя достаётся в обмен на понятную выгоду, а не выпрашивается. Предпочтения
+          остаются <em>у ресторана</em>, а не уходят вместе с уволившимся официантом.
+        </p>
+      </div>
+      <div class="money__row">
+        <h3>Работа официантов</h3>
+        <p>
+          Видно по фактам, а не по ощущениям: кто предлагает и продаёт, кто игнорирует
+          подсказки, какой приём работает в вашем зале. <em>Разговор с сотрудником</em>
+          опирается на цифры смены.
+        </p>
+      </div>
+
+      <div class="money__row">
+        <h3>Репутация</h3>
+        <p>
+          Оценка кухни и сервиса собирается за столом, пока гость ещё здесь. Недовольство
+          видно <em>до того</em>, как оно станет отзывом на картах.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Под капотом</p>
+      <h2>Что где живёт</h2>
+      <p>
+        Одним взглядом — для вашего IT-специалиста. Ставить сервер в ресторане не нужно:
+        всё работает через интернет, в зале нужен только рабочий Wi-Fi.
+      </p>
+    </div>
+
+    <div class="arch">
+      <div class="arch__inner">
+        <div class="arch__tier arch__tier--wide">
+          <div class="node node--guest">
+            <b>Приложение гостя</b>
+            <span>браузер · по QR · офлайн-очередь</span>
+          </div>
+          <div class="node node--waiter">
+            <b>Приложение официанта</b>
+            <span>телефон · пуш-уведомления</span>
+          </div>
+          <div class="node node--guest">
+            <b>Терминал кухни</b>
+            <span>печать наклеек · сканер списания</span>
+          </div>
+          <div class="node">
+            <b>Кабинет ресторана</b>
+            <span>браузер · компьютер</span>
+          </div>
+        </div>
+
+        <div class="rail"></div>
+
+        <div class="arch__tier">
+          <div></div>
+          <div class="node node--core">
+            <b>Общая база и обмен в реальном времени</b>
+            <span>меню · заказы · столы · вызовы · гости · заготовки · смены</span>
+          </div>
+          <div></div>
+        </div>
+
+        <div class="rail"></div>
+
+        <div class="arch__tier arch__tier--wide">
+          <div class="node">
+            <b>ИИ-помощник гостя</b>
+            <span>голос и текст · ключи не у гостя</span>
+          </div>
+          <div class="node">
+            <b>ИИ-подсказки официанту</b>
+            <span>маржа · остатки · сроки</span>
+          </div>
+          <div class="node">
+            <b>SMS и пуш</b>
+            <span>подтверждение телефона · вызовы</span>
+          </div>
+          <div class="node">
+            <b>Меню и бренд</b>
+            <span>кэш на раздаче · быстрый старт</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="arch__caption">
+      Меню можно загрузить файлом или подтянуть из вашей учётной системы — поля себестоимости
+      специально сделаны такими же, как отдают iiko и r_keeper, чтобы связка была настройкой,
+      а не переделкой.
+    </p>
+  </section>
+
+  <footer>
+    <p>
+      <strong>RestAI</strong> — приложение гостя, приложение официанта, терминал кухни и
+      кабинет ресторана, работающие на одной базе. Схема выше собрана по действующему
+      коду продукта: каждый экран на ней соответствует тому, что уже написано и работает.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var timeline = document.getElementById('timeline');
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.seg button'));
+
+    function apply(view) {
+      timeline.setAttribute('data-view', view);
+      buttons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-view') === view));
+      });
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        apply(b.getAttribute('data-view'));
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
