@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>Алексей Зуев — RestAI</title>
+<meta name="description" content="Электронная визитка: контакты, коротко о компании, сохранение в телефонную книгу.">
+
+<!-- PWA: манифест + цвет системной строки -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#030D4D">
+
+<!-- iOS не читает иконки из манифеста — ему нужен apple-touch-icon и свой набор мет -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Зуев RestAI">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+
+<!-- Превью при отправке ссылки в мессенджер -->
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Алексей Зуев — RestAI">
+<meta property="og:description" content="Контакты и коротко о компании. Открой и добавь на экран телефона.">
+<meta property="og:image" content="icons/icon-512.png">
+
+<style>
+  /* Палитра: глубокий синий уходит вверху в голубое свечение, весь акцент —
+     оранжевый логотипа. Комплементарная пара, поэтому оранжевого ровно
+     столько, сколько нужно: кольцо фото, название компании, главная кнопка.
+     Нейтральные тона уведены в синеву, чтобы не спорить с фоном. */
+  :root{
+    --navy-deep:#020934;
+    --navy:#030D4D;
+    --navy-lift:#0A2A93;
+
+    --orange:#EB651A;
+    --orange-hi:#F5913F;
+    --orange-deep:#C8500F;
+
+    --ink:#EEF2FB;
+    --muted:#9DAAC9;
+    --dim:#6E7CA3;
+
+    --surface:rgba(255,255,255,.06);
+    --surface-hi:rgba(255,255,255,.11);
+    --stroke:rgba(140,175,255,.17);
+
+    --radius:22px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--navy);color:var(--ink)}
+  body{
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    min-height:100svh;
+    background:
+      radial-gradient(85rem 40rem at 50% -16rem, rgba(58,140,255,.34), transparent 62%),
+      radial-gradient(58rem 34rem at 112% 6%, rgba(45,190,235,.15), transparent 60%),
+      linear-gradient(180deg, #061A78 0%, var(--navy) 40%, var(--navy-deep) 100%);
+    background-attachment:fixed;
+    padding:
+      calc(env(safe-area-inset-top) + 28px) 16px
+      calc(env(safe-area-inset-bottom) + 28px);
+    display:flex;justify-content:center;
+  }
+  .wrap{width:100%;max-width:440px}
+
+  /* ——— шапка с логотипом ——— */
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px}
+  .brand img{width:30px;height:30px}
+  .brand span{font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--muted);text-transform:uppercase}
+
+  /* ——— фото в оранжевом кольце ———
+     Это кнопка, а не div: по клику снимок открывается целиком, а кнопка
+     даёт фокус с клавиатуры и нормальное озвучивание скринридером. */
+  .avatar{display:block;width:148px;height:148px;margin:0 auto 20px;padding:3px;border:0;
+    border-radius:50%;cursor:zoom-in;
+    background:linear-gradient(140deg,var(--orange-hi),var(--orange-deep));
+    box-shadow:0 18px 50px -18px rgba(235,101,26,.75);
+    transition:transform .15s ease}
+  .avatar:active{transform:scale(.97)}
+  .avatar:focus-visible{outline:2px solid var(--orange-hi);outline-offset:4px}
+  /* Снимок в кружке — фоном, а не <img>: только так его можно приблизить,
+     не заводя отдельный обрезанный файл. Масштаб и точку кадра задают
+     photoZoom и photoFocus в CARD. */
+  .avatar-inner{width:100%;height:100%;border-radius:50%;display:block;
+    border:3px solid var(--navy);background-color:var(--navy-deep);
+    background-repeat:no-repeat}
+
+  /* ——— снимок целиком ———
+     Фотография занимает столько экрана, сколько позволяет её пропорция:
+     object-fit:contain вписывает её целиком, ничего не обрезая, и при
+     необходимости увеличивает — то есть кадр будет крупным независимо от
+     того, какого размера исходный файл. */
+  #photoDlg{width:100vw;max-width:100vw;height:100svh;max-height:100svh;margin:0;border:0;
+    background:transparent;
+    padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px)}
+  #photoDlg[open]{display:grid;place-items:center}
+  #photoDlg::backdrop{background:rgba(2,9,52,.93);backdrop-filter:blur(6px)}
+  #photoDlg img{width:100%;height:100%;object-fit:contain;display:block;cursor:zoom-out;
+    filter:drop-shadow(0 24px 60px rgba(0,0,0,.85))}
+  #photoDlg .x{position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;
+    width:40px;height:40px;border:0;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.12);color:#fff;font-size:22px;line-height:1}
+  #photoDlg .x:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+
+  h1{font-size:27px;line-height:1.2;margin:0 0 6px;text-align:center;letter-spacing:-.01em;
+    text-wrap:balance}
+  .role{margin:0 0 6px;text-align:center;color:var(--muted);font-size:15px}
+  .company{margin:0 0 24px;text-align:center;font-size:15px;font-weight:600;color:var(--orange-hi);
+    text-wrap:balance}
+
+  /* ——— блоки ——— */
+  .panel{background:var(--surface);border:1px solid var(--stroke);border-radius:var(--radius);
+    padding:18px;margin-bottom:14px;backdrop-filter:blur(12px)}
+  .panel h2{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:600}
+  .panel p{margin:0;color:#D6DEF2;font-size:15px}
+
+  /* ——— кнопки ——— */
+  .btn{display:flex;align-items:center;gap:12px;width:100%;padding:15px 18px;margin-bottom:10px;
+    border:1px solid var(--stroke);border-radius:16px;background:var(--surface);color:var(--ink);
+    font:inherit;font-weight:500;text-align:left;text-decoration:none;cursor:pointer;
+    transition:transform .12s ease,background .2s ease}
+  .btn:active{transform:scale(.985);background:var(--surface-hi)}
+  .btn:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+  .btn .ico{flex:0 0 22px;width:22px;height:22px;color:var(--orange-hi)}
+  .btn .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+  /* Текст на оранжевом — тёмно-синий, а не белый: контраст 5.5:1 против 3.3:1,
+     и кнопка читается на солнце. */
+  .btn--primary{background:linear-gradient(120deg,var(--orange-hi),var(--orange));
+    border-color:transparent;color:#160A02;font-weight:700;justify-content:center;padding:17px;
+    box-shadow:0 16px 36px -16px rgba(235,101,26,.85)}
+  .btn--primary .ico{flex:0 0 20px;width:20px;height:20px;color:#160A02}
+
+  .row{display:flex;gap:10px}
+  .row .btn{margin-bottom:10px;justify-content:center}
+
+  footer{margin-top:22px;text-align:center;color:var(--dim);font-size:12px}
+
+  /* ——— подсказка про установку на экран ——— */
+  .install{display:none;align-items:flex-start;gap:12px;padding:16px;margin-bottom:14px;
+    border:1px dashed rgba(235,101,26,.55);border-radius:var(--radius);
+    background:rgba(235,101,26,.10);font-size:14px;color:#F0E4DA;
+    opacity:0;transform:translateY(-4px);transition:opacity .45s ease,transform .45s ease}
+  .install.on{display:flex;opacity:1;transform:none}
+  .install.on.fading{opacity:0;transform:translateY(-6px)}
+  .install b{color:#fff}
+  .install .ico{flex:0 0 22px;width:22px;height:22px;color:var(--orange-hi)}
+  .install .x{margin-left:auto;background:none;border:0;color:var(--muted);font-size:20px;
+    line-height:1;padding:0 2px;cursor:pointer}
+
+  /* Свёрнутая подсказка: после автоскрытия остаётся тихой строчкой,
+     чтобы инструкция не пропадала совсем. */
+  .install-link{display:none;width:100%;margin-bottom:14px;padding:11px;border:0;
+    border-radius:14px;background:none;color:var(--muted);font:inherit;font-size:13px;
+    cursor:pointer;text-align:center}
+  .install-link.on{display:block}
+  .install-link:hover{color:var(--orange-hi)}
+  .install-link:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+
+  /* ——— переворот карточки ———
+     Обе стороны лежат друг на друге absolute, поэтому высоту контейнера
+     задаёт скрипт по активной стороне — иначе на короткой обратной
+     стороне осталась бы пустота во весь рост лицевой. */
+  /* overflow:clip обрезает неактивную сторону: она лежит absolute и иначе
+     растягивала бы область прокрутки — на короткой обратной стороне
+     страница листалась бы в пустоту во весь рост лицевой. Именно clip,
+     а не hidden: hidden завёл бы контейнер прокрутки. Запас в 40px
+     оставлен свечению оранжевых кнопок, чтобы его не срезало. */
+  .flip{perspective:1800px;overflow:clip;overflow-clip-margin:40px}
+  .flip-inner{position:relative;transform-style:preserve-3d;
+    transition:transform .75s cubic-bezier(.22,.68,.24,1),
+               height .75s cubic-bezier(.22,.68,.24,1)}
+  .flip.flipped .flip-inner{transform:rotateY(180deg)}
+  .face{position:absolute;top:0;left:0;width:100%;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .face--back{transform:rotateY(180deg)}
+
+  /* ——— обратная сторона: реквизиты ——— */
+  .back-title{margin:0 0 4px;text-align:center;font-size:22px;letter-spacing:-.01em}
+  .back-org{margin:0 0 22px;text-align:center;font-size:15px;font-weight:600;
+    color:var(--orange-hi);text-wrap:balance}
+  .details{margin:0;padding:0}
+  .details > div{padding:13px 0;border-bottom:1px solid var(--stroke)}
+  .details > div:first-child{padding-top:0}
+  .details > div:last-child{padding-bottom:0;border-bottom:0}
+  .details dt{margin:0 0 3px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted)}
+  /* Счета и ИНН читаются цифра к цифре, поэтому моноширинные цифры. */
+  .details dd{margin:0;font-size:15px;color:var(--ink);overflow-wrap:anywhere;
+    font-variant-numeric:tabular-nums}
+  .details a{color:var(--orange-hi);text-decoration:none;border-bottom:1px solid rgba(245,145,63,.35)}
+  .details a:focus-visible{outline:2px solid var(--orange-hi);outline-offset:2px}
+
+  /* ——— модалка с QR ——— */
+  dialog{border:0;padding:0;background:transparent;max-width:92vw}
+  dialog::backdrop{background:rgba(2,9,52,.86);backdrop-filter:blur(4px)}
+  .qr{background:#fff;border-radius:20px;padding:20px;text-align:center;color:var(--navy-deep)}
+  .qr img{width:min(260px,70vw);height:auto;display:block;margin:0 auto 12px}
+  .qr p{margin:0 0 14px;font-size:14px;color:#4A5165}
+  .qr button{border:0;border-radius:12px;padding:12px 22px;font:inherit;font-weight:600;
+    background:var(--navy);color:#fff;cursor:pointer}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="flip" id="flip">
+<div class="flip-inner" id="flipInner">
+
+<!-- ——————————— лицевая сторона ——————————— -->
+<div class="face face--front" id="faceFront">
+
+  <div class="brand">
+    <img src="img/logo.png" alt="">
+    <span id="brandName">RestAI</span>
+  </div>
+
+  <button class="avatar" id="photoBtn" type="button" aria-label="Открыть фотографию целиком">
+    <span class="avatar-inner" id="photo"></span>
+  </button>
+
+  <h1 id="name">Имя Фамилия</h1>
+  <p class="role" id="role">Должность</p>
+  <p class="company" id="companyLine">Компания</p>
+
+  <!-- Подсказка «поставь на экран». Показывается только тем, кто ещё не установил. -->
+  <div class="install" id="install">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    <div style="flex:1">
+      <b>Добавьте визитку на экран телефона</b>
+      <div id="installHint" style="margin-top:4px"></div>
+      <button class="btn btn--primary" id="installBtn" style="display:none;margin:10px 0 0">Установить</button>
+    </div>
+    <button class="x" id="installClose" aria-label="Скрыть">&times;</button>
+  </div>
+  <button class="install-link" id="installLink">Как добавить на экран телефона</button>
+
+  <section class="panel">
+    <h2>О компании</h2>
+    <p id="about">Краткое описание компании.</p>
+  </section>
+
+  <nav id="links" aria-label="Контакты"></nav>
+
+  <button class="btn btn--primary" id="saveContact">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    Сохранить контакт
+  </button>
+
+  <div class="row">
+    <button class="btn" id="shareBtn">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M12 16V3m0 0L8 7m4-4 4 4"/></svg>
+      Поделиться
+    </button>
+    <button class="btn" id="qrBtn">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14h1M14 20h3M20 17v4" stroke-linecap="round"/></svg>
+      QR-код
+    </button>
+  </div>
+
+  <button class="btn" id="detailsBtn">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    <span>Реквизиты<span class="sub">Обратная сторона визитки</span></span>
+  </button>
+
+  <footer id="footer"></footer>
+</div>
+
+<!-- ——————————— обратная сторона ——————————— -->
+<div class="face face--back" id="faceBack" inert>
+
+  <div class="brand">
+    <img src="img/logo.png" alt="">
+    <span id="brandNameBack">RestAI</span>
+  </div>
+
+  <h2 class="back-title">Реквизиты</h2>
+  <p class="back-org" id="detailsOrg"></p>
+
+  <section class="panel">
+    <dl class="details" id="details"></dl>
+  </section>
+
+  <button class="btn btn--primary" id="copyDetails">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+    Скопировать реквизиты
+  </button>
+
+  <button class="btn" id="flipBack">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+    На лицевую сторону
+  </button>
+
+  <footer id="footerBack"></footer>
+</div>
+
+</div>
+</div>
+</div>
+
+<dialog id="photoDlg">
+  <button class="x" id="photoClose" aria-label="Закрыть">&times;</button>
+  <img id="photoFull" src="" alt="">
+</dialog>
+
+<dialog id="qrDlg">
+  <div class="qr">
+    <img src="img/qr.png" alt="QR-код визитки">
+    <p>Наведите камеру телефона</p>
+    <button onclick="qrDlg.close()">Закрыть</button>
+  </div>
+</dialog>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ▼▼▼ ЕДИНСТВЕННОЕ МЕСТО, КОТОРОЕ НУЖНО ОТРЕДАКТИРОВАТЬ ▼▼▼
+   Пустую строку '' оставьте пустой — соответствующая кнопка не появится.
+   ════════════════════════════════════════════════════════════════════ */
+const CARD = {
+  firstName: 'Алексей',
+  lastName:  'Зуев',
+  role:      'Ко-фаундер',
+  company:   'RestAI',                                  // бренд: шапка и подвал
+  companyLine: 'ООО «Интеллектуальные системы»',        // строка под должностью
+  about:     'Интеллектуальное управление рестораном. Соединяем в один ' +
+             'интеллектуальный контур посетителя, официанта и кухню. ' +
+             'Повышаем средний чек, снижаем расходы, усиливаем контроль.',
+
+  phone:      '+79164043357',            // для набора — только цифры и плюс
+  phoneLabel: '+7 (916) 404-33-57',      // как показать на экране
+  email:      'zznnaa@mail.ru',
+  telegram:   'Stilettt',                // без @
+  whatsapp:   '',                        // цифры без плюса; не указан — кнопки не будет
+  website:    'https://restai.pro',
+  address:    '',                        // город / офис, необязательно
+
+  // ——— фотография ———
+  photo: 'img/foto.jpg',     // один файл и на кружок, и на полный размер
+  // Насколько приблизить кадр в кружке: 100% — снимок вписан целиком,
+  // больше — крупнее. Нужно, чтобы в кружке было лицо, а не весь кадр.
+  photoZoom: 190,
+  // Какая точка снимка окажется в кружке. 50% 50% — середина, меньше —
+  // выше и левее. Подбирается на глаз за пару правок.
+  photoFocus: '47% 44%',
+
+  // ——— реквизиты, обратная сторона ———
+  // Заполните значения. Пустые строки не показываются, а если не заполнено
+  // ни одной — кнопка «Реквизиты» на лицевой стороне вообще не появится.
+  // Порядок строк здесь = порядок на экране, лишние можно удалить.
+  details: [
+    { label: 'Полное наименование', value: 'Общество с ограниченной ответственностью «Интеллектуальные системы»' },
+    { label: 'ИНН',  value: '9719082866' },
+    { label: 'КПП',  value: '771901001' },
+    { label: 'ОГРН', value: '1257700438907' },
+    { label: 'Юридический адрес', value: '105203, г. Москва, вн.тер.г. муниципальный округ Восточное Измайлово, ул. 14-я Парковая, д. 3А, помещ. 8/1' },
+    { label: 'Генеральный директор', value: 'Фоменко Вадим Ильич' },
+    // href делает значение ссылкой: телефон набирается, почта открывает письмо
+    { label: 'Телефон компании', value: '+7 (915) 496-88-18', href: 'tel:+79154968818' },
+    { label: 'Почта компании',   value: 'info@insis.pro',     href: 'mailto:info@insis.pro' },
+    { label: 'Банк', value: 'Московский филиал АО КБ «Модульбанк»' },
+    { label: 'Расчётный счёт',         value: '40702810770010447384' },
+    { label: 'Корреспондентский счёт', value: '30101810645250000092' },
+    { label: 'БИК', value: '044525092' },
+  ],
+}
+/* ════════════════════════════════════════════════════════════════════
+   ▲▲▲ Дальше менять ничего не нужно ▲▲▲
+   ════════════════════════════════════════════════════════════════════ */
+
+const $ = (id) => document.getElementById(id)
+const fullName = `${CARD.firstName} ${CARD.lastName}`.trim()
+
+$('name').textContent = fullName
+$('role').textContent = CARD.role
+$('companyLine').textContent = CARD.companyLine
+$('about').textContent = CARD.about
+$('brandName').textContent = CARD.company
+$('photo').style.backgroundImage = `url("${CARD.photo}")`
+$('photo').style.backgroundSize = `auto ${CARD.photoZoom || 100}%`
+$('photo').style.backgroundPosition = CARD.photoFocus || '50% 50%'
+$('photoFull').src = CARD.photo
+$('footer').textContent = `© ${new Date().getFullYear()} ${CARD.company}`
+$('footerBack').textContent = $('footer').textContent
+$('brandNameBack').textContent = CARD.company
+$('detailsOrg').textContent = CARD.companyLine
+document.title = `${fullName} — ${CARD.company}`
+
+/* ——— кнопки-контакты: рисуем только заполненные ——— */
+const ICONS = {
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
+  mail:  '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/>',
+  tg:    '<path d="M21.5 4.3 2.9 11.4c-.9.3-.9 1.6.1 1.8l4.7 1.2 1.8 5.4c.3.8 1.3 1 1.9.3l2.5-2.6 4.8 3.5c.7.5 1.7.1 1.9-.8l3-13.8c.2-1-.7-1.8-1.6-1.4Z"/><path d="m8 14.4 9.3-6.8-6.8 8"/>',
+  wa:    '<path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.5-4.4a8.4 8.4 0 1 1 15.5-4.5Z"/><path d="M8.6 8.5c.5-.1.8 0 1 .5l.7 1.5c.1.3 0 .5-.2.7l-.5.5c-.2.2-.2.4 0 .7a7 7 0 0 0 2.9 2.4c.3.1.5.1.7-.1l.5-.6c.2-.2.4-.3.7-.2l1.5.7c.4.2.6.5.5 1-.2 1-1.1 1.6-2.2 1.5a9 9 0 0 1-6.3-6.1c-.2-1 .3-2 1.2-2.4"/>',
+  web:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/>',
+  pin:   '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+}
+const link = (icon, href, title, sub, ext) => href
+  ? `<a class="btn" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>
+       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">${ICONS[icon]}</svg>
+       <span>${title}<span class="sub">${sub}</span></span></a>`
+  : ''
+
+$('links').innerHTML = [
+  link('phone', CARD.phone && `tel:${CARD.phone}`, 'Позвонить', CARD.phoneLabel || CARD.phone),
+  link('wa', CARD.whatsapp && `https://wa.me/${CARD.whatsapp}`, 'WhatsApp', 'Написать в мессенджере', true),
+  link('tg', CARD.telegram && `https://t.me/${CARD.telegram}`, 'Telegram', '@' + CARD.telegram, true),
+  link('mail', CARD.email && `mailto:${CARD.email}`, 'Написать письмо', CARD.email),
+  link('web', CARD.website, 'Сайт компании', CARD.website.replace(/^https?:\/\//, ''), true),
+  link('pin', CARD.address && `https://yandex.ru/maps/?text=${encodeURIComponent(CARD.address)}`, 'Адрес', CARD.address, true),
+].join('')
+
+/* ——— реквизиты и переворот карточки ——— */
+const esc = (v) => String(v).replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+const details = (CARD.details || []).filter((d) => d.value && d.value.trim())
+if (details.length) {
+  $('details').innerHTML = details
+    .map((d) => {
+      const v = d.href
+        ? `<a href="${esc(d.href)}">${esc(d.value)}</a>`
+        : esc(d.value)
+      return `<div><dt>${esc(d.label)}</dt><dd>${v}</dd></div>`
+    })
+    .join('')
+} else {
+  // Ничего не заполнено — обратную сторону не показываем вовсе,
+  // пустая карточка хуже отсутствующей кнопки.
+  $('detailsBtn').style.display = 'none'
+}
+
+{
+  const flip = $('flip'), inner = $('flipInner')
+  const front = $('faceFront'), back = $('faceBack')
+
+  // Стороны лежат друг на друге absolute, поэтому высоту держим вручную.
+  const syncHeight = () => {
+    const active = flip.classList.contains('flipped') ? back : front
+    inner.style.height = active.offsetHeight + 'px'
+  }
+  const setFlipped = (on) => {
+    flip.classList.toggle('flipped', on)
+    // Скрытая сторона не должна ловить фокус табом и читаться скринридером —
+    // backface-visibility прячет её только визуально.
+    front.inert = on
+    back.inert = !on
+    syncHeight()
+    scrollTo({ top: 0, behavior: 'smooth' })
+    ;(on ? $('flipBack') : $('detailsBtn')).focus({ preventScroll: true })
+  }
+
+  $('detailsBtn').onclick = () => setFlipped(true)
+  $('flipBack').onclick = () => setFlipped(false)
+
+  // Высота меняется не только при перевороте: появляется и сворачивается
+  // подсказка об установке, догружаются шрифты.
+  syncHeight()
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(syncHeight)
+    ro.observe(front); ro.observe(back)
+  }
+  addEventListener('load', syncHeight)
+
+  $('copyDetails').onclick = async () => {
+    const text = [CARD.companyLine, ...details.map((d) => `${d.label}: ${d.value}`)].join('\n')
+    const label = $('copyDetails').lastChild
+    try {
+      await navigator.clipboard.writeText(text)
+      label.textContent = ' Скопировано'
+      setTimeout(() => { label.textContent = ' Скопировать реквизиты' }, 2500)
+    } catch (e) {
+      label.textContent = ' Не удалось скопировать'
+      setTimeout(() => { label.textContent = ' Скопировать реквизиты' }, 2500)
+    }
+  }
+}
+
+/* ——— vCard: собираем на лету, работает и офлайн ——— */
+function vcard() {
+  const l = ['BEGIN:VCARD', 'VERSION:3.0',
+    `N:${CARD.lastName};${CARD.firstName};;;`,
+    `FN:${fullName}`,
+    `ORG:${CARD.companyLine || CARD.company}`,
+    `TITLE:${CARD.role}`]
+  if (CARD.phone)    l.push(`TEL;TYPE=CELL:${CARD.phone}`)
+  if (CARD.email)    l.push(`EMAIL;TYPE=INTERNET:${CARD.email}`)
+  if (CARD.website)  l.push(`URL:${CARD.website}`)
+  if (CARD.address)  l.push(`ADR;TYPE=WORK:;;${CARD.address};;;;`)
+  if (CARD.telegram) l.push(`X-SOCIALPROFILE;TYPE=telegram:https://t.me/${CARD.telegram}`)
+  l.push(`NOTE:${CARD.about.replace(/[\r\n]+/g, ' ')}`, 'END:VCARD')
+  return l.join('\r\n')
+}
+$('saveContact').onclick = () => {
+  const url = URL.createObjectURL(new Blob([vcard()], { type: 'text/vcard;charset=utf-8' }))
+  const a = Object.assign(document.createElement('a'), {
+    href: url, download: `${CARD.lastName}_${CARD.company}.vcf`,
+  })
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+/* ——— поделиться ——— */
+$('shareBtn').onclick = async () => {
+  const data = { title: fullName, text: `${fullName} — ${CARD.role}, ${CARD.company}`, url: location.href }
+  try {
+    if (navigator.share) return await navigator.share(data)
+    await navigator.clipboard.writeText(location.href)
+    $('shareBtn').lastChild.textContent = ' Ссылка скопирована'
+  } catch (e) { /* пользователь закрыл шторку — это не ошибка */ }
+}
+$('qrBtn').onclick = () => $('qrDlg').showModal()
+
+/* ——— снимок целиком по клику на аватарку ——— */
+{
+  const dlg = $('photoDlg')
+  $('photoFull').alt = fullName
+  // На совсем старых браузерах <dialog> может не поддерживаться — тогда
+  // аватарка просто не кликается, вместо сломанной кнопки.
+  if (typeof dlg.showModal === 'function') {
+    $('photoBtn').onclick = () => dlg.showModal()
+    dlg.onclick = () => dlg.close()   // клик в любом месте закрывает; Esc работает сам
+  } else {
+    $('photoBtn').style.cursor = 'default'
+  }
+}
+
+/* QR ещё не сгенерирован (см. tools/make-qr.py) — тогда просто прячем кнопку. */
+{
+  const probe = new Image()
+  probe.onerror = () => { $('qrBtn').style.display = 'none' }
+  probe.src = 'img/qr.png'
+}
+
+/* ——— установка на домашний экран ———
+   Android/Chrome: ловим beforeinstallprompt и показываем свою кнопку.
+   iOS/Safari: системного промпта нет вообще — показываем инструкцию.
+   Важный нюанс iOS: из вкладки Safari невозможно узнать, что иконка уже
+   стоит на экране — такого API нет. Поэтому подсказка там сама гаснет
+   через несколько секунд и сворачивается в тихую строчку, чтобы не
+   мозолить глаза тому, кто уже всё установил, но и не пропасть совсем. */
+const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const IOS_HINT_MS = 12000
+let deferred = null
+let fadeTimer = null
+
+function showInstall(autoHide) {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('fading')
+  $('install').classList.add('on')
+  $('installLink').classList.remove('on')
+  if (autoHide) fadeTimer = setTimeout(() => $('install').classList.add('fading'), IOS_HINT_MS)
+}
+function collapseInstall() {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.add('on')
+}
+// Прячем только после того, как плавное угасание доиграло.
+$('install').addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'opacity' && $('install').classList.contains('fading')) collapseInstall()
+})
+
+if (!installed && !localStorage.getItem('card:install-hidden:zuev')) {
+  if (isIOS) {
+    $('installHint').innerHTML = 'Нажмите <b>«Поделиться»</b> внизу экрана → <b>«На экран «Домой»»</b>.'
+    showInstall(true)
+  }
+  addEventListener('beforeinstallprompt', (e) => {
+    // Android: тут живая кнопка, её гасить по таймеру нельзя.
+    e.preventDefault(); deferred = e
+    $('installHint').textContent = 'Иконка появится рядом с остальными приложениями.'
+    $('installBtn').style.display = 'flex'
+    showInstall(false)
+  })
+}
+$('installLink').onclick = () => showInstall(false)
+$('installBtn').onclick = async () => {
+  if (!deferred) return
+  deferred.prompt(); await deferred.userChoice
+  deferred = null; collapseInstall()
+}
+$('installClose').onclick = () => {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.remove('on')
+  try { localStorage.setItem('card:install-hidden:zuev', '1') } catch (e) {}
+}
+addEventListener('appinstalled', () => {
+  clearTimeout(fadeTimer)
+  $('install').classList.remove('on', 'fading')
+  $('installLink').classList.remove('on')
+})
+
+/* ——— service worker: без него Android не предложит установку ——— */
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}))
+}
+</script>
+</body>
+</html>
