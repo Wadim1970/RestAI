@@ -1,0 +1,75 @@
+# Публикация статики на GitHub Pages.
+#
+# Pages умеет отдавать только корень репозитория или /docs, поэтому папка
+# site/ собирается в артефакт здесь. Заодно в артефакт кладутся визитки и
+# презентация — у визиток напечатаны QR-коды, их адреса менять нельзя:
+#
+#   /                 → site/          (главная страница restai.pro)
+#   /card/            → card/          (визитка, QR напечатан)
+#   /card-zuev/       → card-zuev/     (визитка, QR напечатан)
+#   /presentation/    → presentation/  (презентация для ресторатора)
+#
+# Всё остальное (src/, api/, supabase/, .env и прочее) в публикацию больше
+# не попадает — раньше Pages отдавал корень репозитория целиком.
+
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'card/**'
+      - 'card-zuev/**'
+      - 'presentation/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Параллельные публикации не нужны, но и обрывать начатую не стоит.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Собрать артефакт
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Собрать _site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp -R site/. _site/
+          rm -f _site/README.md
+          for dir in card card-zuev presentation; do
+            cp -R "$dir" _site/
+          done
+          # Отключает Jekyll: иначе он съедает файлы и папки, начинающиеся
+          # с подчёркивания и точки.
+          touch _site/.nojekyll
+          echo "--- что публикуется ---"
+          find _site -maxdepth 2 -not -path '*/img/*' | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Опубликовать
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RestAI — цифровые решения для рестораторов</title>
+<meta name="description" content="RestAI — умная экосистема управления залом, объединяющая гостя, официанта и кухню в единый контур. Интеграция с iiko, r_keeper и Poster за 15 минут.">
+<meta name="theme-color" content="#030D4D">
+<link rel="canonical" href="https://restai.pro/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RestAI">
+<meta property="og:title" content="RestAI — цифровые решения для рестораторов">
+<meta property="og:description" content="Умная экосистема управления залом: гость, официант и кухня в едином контуре.">
+<meta property="og:url" content="https://restai.pro/">
+<meta property="og:image" content="https://restai.pro/images/logo.png">
+<meta name="twitter:card" content="summary">
+
+<link rel="icon" href="images/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Agbalumo&family=Gabarito:wght@500&family=Jost:wght@400;500;700&family=Manrope:wght@400;600;800&display=swap">
+<link rel="preload" as="image" href="images/chef.webp" type="image/webp" fetchpriority="high">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#main">К основному содержанию</a>
+
+<div class="page">
+  <span class="watermark" aria-hidden="true">DIGITAL</span>
+
+  <header class="nav">
+    <div class="nav__pill">
+      <a class="nav__logo" href="#" aria-label="RestAI — на главную">
+        <picture>
+          <source srcset="images/logo.webp" type="image/webp">
+          <img src="images/logo.png" alt="" width="48" height="48" decoding="async">
+        </picture>
+      </a>
+
+      <button class="burger" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav__menu" id="nav-menu" aria-label="Основная навигация">
+        <ul class="nav__list">
+          <li><span class="nav__item" aria-disabled="true">Кто мы</span></li>
+          <li><span class="nav__item" aria-disabled="true">Почему мы</span></li>
+          <li><span class="nav__item" aria-disabled="true">Прайс</span></li>
+          <li><a class="nav__item nav__item--link" href="mailto:ceo@restai.pro">Контакты</a></li>
+        </ul>
+        <span class="nav__login" aria-disabled="true">ВХОД</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="hero" id="main">
+    <div class="hero__text">
+      <p class="eyebrow">smart assistant</p>
+
+      <p class="wordmark">
+        <span class="wordmark__a">R</span><span class="wordmark__b">est</span><span class="wordmark__a">AI</span>
+      </p>
+
+      <h1 class="title">цифровые решения<br>для рестораторов</h1>
+
+      <p class="lede">RestAI — умная экосистема управления залом, объединяющая гостя,
+        официанта и кухню в единый контур. Наша нейросеть координирует их
+        взаимодействие в реальном времени, превращая ресторан в единый
+        управляемый организм, который работает на эффективность, сервис и прибыль.</p>
+
+      <div class="cta">
+        <p class="strip"><span>Интеграция с iiko, r_keeper и Poster за 15 минут.</span></p>
+
+        <a class="demo" href="mailto:ceo@restai.pro?subject=RestAI%20%E2%80%94%20%D0%B4%D0%B5%D0%BC%D0%BE">ДЕМО</a>
+
+        <p class="sticker">Скоро здесь будет полноценный сайт, <br class="sticker__br">а пока можете написать
+          нам: <a href="mailto:ceo@restai.pro">ceo@restai.pro</a></p>
+      </div>
+    </div>
+
+    <div class="hero__art">
+      <picture>
+        <source srcset="images/chef.webp" type="image/webp">
+        <img src="images/chef.png" alt="Шеф-повар RestAI указывает на описание сервиса"
+             width="730" height="878" fetchpriority="high" decoding="async">
+      </picture>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  var burger = document.querySelector('.burger');
+  var pill = document.querySelector('.nav__pill');
+  if (!burger || !pill) return;
+
+  function setOpen(open) {
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    pill.classList.toggle('is-open', open);
+  }
+
+  burger.addEventListener('click', function () {
+    setOpen(burger.getAttribute('aria-expanded') !== 'true');
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && burger.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      burger.focus();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (pill.classList.contains('is-open') && !pill.contains(e.target)) setOpen(false);
+  });
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 900) setOpen(false);
+  });
+})();
+</script>
+
+</body>
+</html>
