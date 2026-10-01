@@ -85,48 +85,30 @@ PNG. У `<img>` проставлены `width`/`height`, чтобы вёрстк
 ## Публикация на restai.pro
 
 GitHub Pages умеет отдавать только корень репозитория или `/docs`, папку
-`site/` напрямую он не увидит. Поэтому публиковать нужно через GitHub
-Actions — тогда папка может называться как угодно.
+`site/` напрямую он не увидит. Поэтому публикация идёт через GitHub Actions —
+`.github/workflows/pages.yml`. Он собирает артефакт так:
 
-1. Settings → Pages → Source: **GitHub Actions**.
-2. Добавить `.github/workflows/pages.yml`:
+| Адрес | Откуда |
+|---|---|
+| `/` | `site/` |
+| `/card/` | `card/` — визитка, QR напечатан |
+| `/card-zuev/` | `card-zuev/` — визитка, QR напечатан |
+| `/presentation/` | `presentation/` |
 
-```yaml
-name: Deploy site
-on:
-  push:
-    branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
-  workflow_dispatch:
+Визитки и презентация включены в артефакт намеренно: раньше Pages отдавал
+корень репозитория целиком, и эти адреса работали сами собой. Теперь
+публикуется только то, что перечислено выше — `src/`, `api/`, `supabase/`,
+`.env` и прочее наружу больше не выкладывается.
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+Workflow запускается при пуше в `main`, когда менялась одна из этих папок,
+и вручную — Actions → Deploy site → Run workflow.
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
+### Что нужно включить руками (через API это не делается)
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
-
-3. Settings → Pages → Custom domain: `restai.pro`, затем включить
-   **Enforce HTTPS** (кнопка появится после проверки домена).
-4. DNS у регистратора домена:
+1. **Settings → Pages → Source: GitHub Actions.** Сейчас стоит
+   «Deploy from a branch», и пока источник не переключён, workflow будет
+   падать на шаге deploy.
+2. **DNS у регистратора домена — до того, как указывать домен в GitHub:**
 
    | Тип | Имя | Значение |
    |---|---|---|
@@ -140,6 +122,14 @@ jobs:
    | AAAA | `@` | `2606:50c0:8003::153` |
    | CNAME | `www` | `wadim1970.github.io` |
 
-Workflow намеренно не добавлен в репозиторий: сейчас Pages собирается с
-другой ветки и отдаёт презентацию, его включение это переключит. Добавим,
-когда решите публиковать.
+3. **Settings → Pages → Custom domain: `restai.pro`**, дождаться галочки
+   DNS check, затем включить **Enforce HTTPS**.
+
+### Важно про напечатанные QR-коды
+
+Как только домен `restai.pro` будет привязан, адреса вида
+`wadim1970.github.io/RestAI/card/` начнут **редиректить** на
+`restai.pro/card/`. Напечатанные QR продолжат работать, но только пока DNS
+указывает на GitHub. Поэтому порядок строго такой: сначала записи DNS,
+потом поле Custom domain. Если указать домен раньше DNS — визитки
+отвалятся до тех пор, пока записи не разойдутся.
