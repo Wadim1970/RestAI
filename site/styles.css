@@ -90,7 +90,7 @@ a { color: inherit; }
   padding:
     calc(clamp(18px, 3.4vw, 64px) + env(safe-area-inset-top))
     calc(var(--gutter) + env(safe-area-inset-right))
-    calc(clamp(24px, 3vw, 40px) + env(safe-area-inset-bottom))
+    0
     calc(var(--gutter) + env(safe-area-inset-left));
   background:
     radial-gradient(120% 90% at 85% 10%, rgba(74, 125, 255, 0.18), transparent 60%),
@@ -338,13 +338,21 @@ a { color: inherit; }
 
 /* ---------------------------------------------------------------- шеф-повар */
 
-.hero__art { display: flex; justify-content: flex-end; }
+.hero__art {
+  display: flex;
+  justify-content: flex-end;
+  /* Страница ровно во всю высоту экрана, а колонка с шефом тянется до
+     самого низа — иначе картинка «висит в воздухе» над нижней кромкой. */
+  align-self: end;
+}
 
 .hero__art img {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: calc(100dvh - 200px);
+  display: block;
+  /* 146px — это отступ страницы сверху + меню + отступ героя. */
+  max-height: calc(100dvh - 146px);
   filter: drop-shadow(0 24px 48px rgba(3, 13, 77, 0.45));
 }
 
@@ -357,7 +365,7 @@ a { color: inherit; }
 /* ======================================================= планшеты (<1200) */
 
 @media (max-width: 1199px) {
-  .hero__art img { max-height: calc(100dvh - 190px); }
+  .hero__art img { max-height: calc(100dvh - 130px); }
 }
 
 /* ====================================================== мобильные (<=900) */
@@ -444,6 +452,7 @@ a { color: inherit; }
 
   .hero__art {
     justify-content: center;
+    align-self: auto;
     margin-top: clamp(28px, 8vw, 52px);
   }
   .hero__art img {
@@ -471,5 +480,5 @@ a { color: inherit; }
 
 /* Очень низкие окна (ландшафт на телефоне) — не растягиваем шефа. */
 @media (min-width: 901px) and (max-height: 700px) {
-  .hero__art img { max-height: calc(100dvh - 150px); }
+  .hero__art img { max-height: calc(100dvh - 120px); }
 }
