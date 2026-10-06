@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RestAI для Pinzeria by Bontempi</title>
+<meta name="description" content="Где Pinzeria by Bontempi зарабатывает больше с ИИ-меню: корнеры на гастромаркетах и доставка.">
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    color-scheme: dark;
+
+    --bg:        #0A1724;
+    --bg-2:      #0F2334;
+    --panel:     #132A3D;
+    --line:      rgba(233, 241, 248, 0.12);
+    --line-soft: rgba(233, 241, 248, 0.07);
+    --text:      #E9F1F8;
+    --text-2:    #B7C8D8;
+    --muted:     #8296A9;
+
+    --guest:      #FFA426;
+    --guest-ink:  #FFC978;
+    --guest-soft: rgba(255, 164, 38, 0.13);
+    --waiter:     #34CE4B;
+    --waiter-ink: #6FE07F;
+    --waiter-soft: rgba(52, 206, 75, 0.12);
+    --alert:      #FF5C5C;
+    --alert-soft: rgba(255, 92, 92, 0.13);
+
+    /* Экраны телефонов — постоянные, не зависят от темы страницы */
+    --screen:        #0C1C2B;
+    --screen-2:      #16293A;
+    --screen-3:      #1E3548;
+    --screen-line:   rgba(233, 241, 248, 0.10);
+    --screen-text:   #E8EFF6;
+    --screen-muted:  #8AA1B6;
+
+    --radius: 14px;
+    --shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+
+    --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+    --body:    "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg:        #EDF1F5;
+      --bg-2:      #FFFFFF;
+      --panel:     #FFFFFF;
+      --line:      rgba(16, 42, 69, 0.14);
+      --line-soft: rgba(16, 42, 69, 0.08);
+      --text:      #0C2137;
+      --text-2:    #37516B;
+      --muted:     #5D7590;
+      --guest:      #B4640A;
+      --guest-ink:  #8A4C06;
+      --guest-soft: rgba(255, 149, 0, 0.14);
+      --waiter:     #14892B;
+      --waiter-ink: #0E6C21;
+      --waiter-soft: rgba(21, 180, 0, 0.13);
+      --alert:      #C6262B;
+      --alert-soft: rgba(198, 38, 43, 0.10);
+      --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg:        #EDF1F5;
+    --bg-2:      #FFFFFF;
+    --panel:     #FFFFFF;
+    --line:      rgba(16, 42, 69, 0.14);
+    --line-soft: rgba(16, 42, 69, 0.08);
+    --text:      #0C2137;
+    --text-2:    #37516B;
+    --muted:     #5D7590;
+    --guest:      #B4640A;
+    --guest-ink:  #8A4C06;
+    --guest-soft: rgba(255, 149, 0, 0.14);
+    --waiter:     #14892B;
+    --waiter-ink: #0E6C21;
+    --waiter-soft: rgba(21, 180, 0, 0.13);
+    --alert:      #C6262B;
+    --alert-soft: rgba(198, 38, 43, 0.10);
+    --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  img { max-width: 100%; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ---------- Шапка ---------- */
+
+  .hero { padding-block: 48px 36px; }
+  .hero__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .hero__logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+  }
+  .hero__logo span { color: var(--guest); }
+  .hero__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+  }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(27px, 5.6vw, 46px);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    max-width: 20ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--guest); }
+  .hero__lede {
+    margin-top: 20px;
+    max-width: 60ch;
+    font-size: clamp(16px, 2.2vw, 18.5px);
+    color: var(--text-2);
+  }
+
+  /* ---------- Секции ---------- */
+
+  section { padding-block: 40px; border-top: 1px solid var(--line-soft); }
+  .sec-head { margin-bottom: 24px; }
+  .sec-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(21px, 3.4vw, 30px);
+    letter-spacing: -0.02em;
+    margin-top: 10px;
+  }
+  .sec-head p {
+    margin: 12px 0 0;
+    max-width: 62ch;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 26px;
+    align-items: start;
+  }
+  .two--flip { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+
+  .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .bullets li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 15.5px;
+    color: var(--text-2);
+  }
+  .bullets li::before {
+    content: "\2192";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--guest);
+  }
+  .bullets li b { color: var(--text); font-weight: 600; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .card {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px 20px;
+  }
+  .card__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    margin-bottom: 7px;
+  }
+  .card p { margin: 0; font-size: 14.5px; color: var(--text-2); }
+
+  .effect {
+    margin-top: 26px;
+    border: 1px solid color-mix(in srgb, var(--waiter) 34%, transparent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: var(--waiter-soft);
+    padding: 18px 20px 19px;
+  }
+  .effect__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+    margin-bottom: 11px;
+  }
+  .effect ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .effect li {
+    position: relative;
+    padding-left: 19px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .effect li::before {
+    content: "";
+    position: absolute;
+    left: 1px; top: 9px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--waiter);
+  }
+  .effect li b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Прикидка ---------- */
+
+  .calc { overflow-x: auto; margin-top: 20px; }
+  .calc table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .calc th, .calc td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .calc th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .calc td { color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .calc td:first-child { color: var(--text); font-weight: 600; }
+  .calc td b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--waiter-ink);
+  }
+  .calc tr:last-child td { border-bottom: 0; }
+  .note {
+    margin: 14px 0 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  /* ---------- Мини-экран телефона ---------- */
+
+  .scr {
+    background: var(--screen);
+    border: 1px solid var(--screen-line);
+    border-radius: 18px;
+    padding: 12px;
+    color: var(--screen-text);
+    box-shadow: var(--shadow);
+    font-size: 13px;
+  }
+  .scr__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--screen-muted);
+    padding: 2px 4px 10px;
+    border-bottom: 1px solid var(--screen-line);
+    margin-bottom: 12px;
+  }
+  .scr__bar b { color: var(--screen-text); font-weight: 500; }
+  .scr__stack { display: flex; flex-direction: column; gap: 9px; }
+
+  .scr h4 {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .scr p { margin: 0; font-size: 12.5px; color: var(--screen-muted); line-height: 1.45; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+    white-space: nowrap;
+  }
+  .chip--on {
+    background: var(--guest-soft);
+    border-color: var(--guest);
+    color: var(--guest-ink);
+  }
+  .chip--go {
+    background: var(--waiter-soft);
+    border-color: var(--waiter);
+    color: var(--waiter-ink);
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--screen-2);
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+  }
+  .line span:first-child { min-width: 0; }
+  .line small { display: block; color: var(--screen-muted); font-size: 11px; }
+  .line b {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .line--ready { border-color: color-mix(in srgb, var(--waiter) 55%, transparent); }
+
+  .bubble {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 92%;
+  }
+  .bubble--guest {
+    background: var(--screen-3);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+  }
+  .bubble--ai {
+    background: var(--guest-soft);
+    border: 1px solid color-mix(in srgb, var(--guest) 45%, transparent);
+    border-bottom-left-radius: 4px;
+    color: var(--guest-ink);
+  }
+
+  .cta {
+    display: block;
+    text-align: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--guest);
+    color: #12100B;
+  }
+  .cta--waiter { background: var(--waiter); color: #04260A; }
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+  .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .alert {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--alert-soft);
+    border: 1px solid color-mix(in srgb, var(--alert) 55%, transparent);
+  }
+  .alert strong { color: var(--alert); font-size: 13.5px; }
+  .alert p { color: var(--screen-text); margin-top: 3px; }
+
+  .bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+    color: var(--alert);
+    font-size: 16px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--alert) 40%, transparent); }
+    50%      { box-shadow: 0 0 0 7px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bell { animation: none; }
+    * { scroll-behavior: auto !important; }
+  }
+
+  .seats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seat {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+  }
+  .seat--me { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .seat--paid { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .tables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .tbl {
+    aspect-ratio: 1;
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--screen-muted);
+    max-width: 100%;
+  }
+  .tbl--busy { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .tbl--call { border-color: var(--alert); color: var(--alert); background: var(--alert-soft); }
+  .tbl--pay  { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .coach {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--waiter-soft);
+    border: 1px solid color-mix(in srgb, var(--waiter) 45%, transparent);
+  }
+  .coach__tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+  }
+  .coach__say { margin-top: 5px; font-size: 12.5px; color: var(--screen-text); }
+  .coach__say q { font-weight: 600; }
+  .coach__why {
+    margin-top: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--screen-3);
+    color: var(--screen-muted);
+  }
+
+  /* Экран телефона всегда тёмный, поэтому акцент в нём задаётся отдельно:
+     тематический --guest в светлой теме затемняется под светлый фон
+     и на тёмной подложке читается плохо. */
+  :root {
+    --screen-accent:      #FFA426;
+    --screen-accent-ink:  #FFD19B;
+    --screen-accent-soft: rgba(255, 164, 38, 0.13);
+  }
+  .bubble--ai {
+    background: var(--screen-accent-soft);
+    border-color: color-mix(in srgb, var(--screen-accent) 45%, transparent);
+    color: var(--screen-accent-ink);
+  }
+  .bubble--ai b { color: var(--screen-accent); font-weight: 600; }
+  .cta { background: var(--screen-accent); color: #231200; }
+  /* повторяем после переопределения .cta, иначе призрачная кнопка тоже зальётся */
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+
+  .scr + .scr { margin-top: 14px; }
+  .scr__cap {
+    margin: 10px 0 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ---------- Финал ---------- */
+
+  .final {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 26px 24px;
+    margin-block: 10px 40px;
+  }
+  .final h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(20px, 3.2vw, 27px);
+    letter-spacing: -0.02em;
+  }
+  .final p { color: var(--text-2); max-width: 58ch; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 15.5px;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn--main { background: var(--guest); color: #231200; }
+  .btn--main:hover { filter: brightness(1.06); }
+  .btn--ghost { border-color: var(--line); color: var(--text); }
+  .btn--ghost:hover { border-color: var(--guest); color: var(--guest); }
+
+  footer {
+    padding-block: 26px 46px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer a { color: var(--guest); }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--guest);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 760px) {
+    .two, .two--flip { grid-template-columns: minmax(0, 1fr); }
+    .two--flip > :first-child { order: 2; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero__mark">
+      <div class="hero__logo">Rest<span>AI</span></div>
+      <div class="hero__tag">для Pinzeria by Bontempi</div>
+    </div>
+
+    <h1>Там, где официанта нет, продаёт <em>меню</em></h1>
+
+    <p class="hero__lede">
+      Две ваши московские точки — корнеры на Усачёвском и Центральном
+      рынках. Плюс доставка. В этих трёх каналах между гостем и вашей кухней нет
+      человека, который бы посоветовал, объяснил и предложил ещё. Там работает только
+      меню — а меню молчит. Это и есть место, где ИИ-помощник окупается быстрее всего.
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Канал первый</p>
+      <h2>Корнеры на рынках: продавца нет вообще</h2>
+      <p>
+        Гость подходит к стойке, смотрит на витрину и называет одну позицию. Никто не
+        спросит, что он любит, не предложит к пинце бокал и не расскажет, чем римское
+        тесто отличается от неаполитанского. Средний чек на корнере складывается
+        из того, что гость решил сам за тридцать секунд.
+      </p>
+    </div>
+
+    <div class="two">
+      <div>
+        <ul class="bullets">
+          <li><b>QR на столе или NFC-метка.</b> Гость подносит телефон — и попадает в ваше меню с ИИ-помощником. Ставить ничего не нужно, приложение открывается в браузере.</li>
+          <li><b>Помощник знает всю пинцу наизусть.</b> Состав, КБЖУ, аллергены, история рецепта Валентино — то, что на корнере рассказать некому.</li>
+          <li><b>Подбирает сочетания.</b> Что взять к выбранной пинце, какое вино, какой десерт. Это и есть та допродажа, которой на рынке не делает никто.</li>
+          <li><b>Работает как сомелье и как диетолог.</b> Безглютеновый вариант, лёгкий ужин, вино к конкретной позиции — ответ приходит сразу, а не «спросите у повара».</li>
+          <li><b>Рекомендует с учётом вашей выгоды.</b> Наверх поднимаются позиции с высокой маржой и те, что надо продать сегодня.</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="scr">
+          <div class="scr__bar"><span>Усачёвский рынок</span><span>стол 4</span></div>
+          <div class="scr__stack">
+            <div class="bubble bubble--guest">Что взять, если не люблю острое?</div>
+            <div class="bubble bubble--ai">
+              Тогда «Четыре сыра» на римском тесте — оно легче неаполитанского, 24 часа
+              расстойки. К ней хорошо идёт <b>Пино Гриджо</b>, бокал 450&nbsp;₽.
+              Добавить?
+            </div>
+            <div class="cta-row">
+              <button class="cta">Добавить бокал</button>
+              <button class="cta cta--ghost">Без вина</button>
+            </div>
+          </div>
+        </div>
+        <p class="scr__cap">корнер · гость заказывает сам</p>
+      </div>
+    </div>
+
+    <div class="effect">
+      <span class="effect__k">Что это даёт на корнере</span>
+      <ul>
+        <li><b>Чек растёт без найма людей.</b> Допродажу делает меню, а не официант, которого на корнере нет и не будет.</li>
+        <li><b>Очередь у стойки короче.</b> Гость уже выбрал, пока сидел за столом, — кассиру остаётся принять оплату.</li>
+        <li><b>Внедрение самое дешёвое из всех ваших точек.</b> Не нужно переучивать зал: учить некого, работает само.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Канал второй</p>
+      <h2>Доставка: тот же разговор, только дома</h2>
+      <p>
+        В доставке у вас ровно та же ситуация, что на корнере, только острее: гость один
+        на один с карточками товаров. Обычная корзина умеет показать «с этим часто берут».
+        Помощник умеет спросить, на сколько человек заказ, и собрать из этого стол.
+      </p>
+    </div>
+
+    <div class="two two--flip">
+      <div>
+        <div class="scr">
+          <div class="scr__bar"><span>Доставка</span><span>корзина · 1 840 ₽</span></div>
+          <div class="scr__stack">
+            <div class="line"><span>Пинца «Четыре сыра»<small>30 см</small></span><b>990 ₽</b></div>
+            <div class="line"><span>Брускетта с томатами<small>2 шт</small></span><b>850 ₽</b></div>
+            <div class="bubble bubble--ai">
+              Заказ на двоих — возьмите к пинце <b>тирамису</b>, он у нас на маскарпоне
+              и едет холодным, 2 порции 790&nbsp;₽. Или <b>оливки Таджаске</b>, 350&nbsp;₽,
+              если хочется полегче.
+            </div>
+            <div class="cta-row">
+              <button class="cta">Тирамису</button>
+              <button class="cta cta--ghost">Оливки</button>
+            </div>
+          </div>
+        </div>
+        <p class="scr__cap">доставка · допродажа в корзине</p>
+      </div>
+
+      <div>
+        <ul class="bullets">
+          <li><b>Рекомендация под конкретного гостя, а не под всех.</b> Помощник помнит, что человек заказывал раньше, и не предлагает ему то, от чего он уже отказывался.</li>
+          <li><b>Десерт и напиток предлагаются в нужный момент</b> — когда корзина уже собрана, а не на первом экране, где их пролистывают.</li>
+          <li><b>Состав и аллергены — сразу.</b> В доставке это частая причина, по которой заказ не доводят до конца: спросить некого.</li>
+          <li><b>Встраивается в ваш сайт</b>, а не требует отдельного приложения. Гость не замечает, что говорит с ИИ, — он говорит с рестораном.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="effect">
+      <span class="effect__k">Что это даёт в доставке</span>
+      <ul>
+        <li><b>Чек растёт там, где у вас сейчас нет ни одного продавца.</b> Каждый процент допродажи в доставке — чистый прирост, вы за него никому не платите.</li>
+        <li><b>Меньше брошенных корзин.</b> Вопрос «а что внутри?» получает ответ, а не закрытую вкладку.</li>
+        <li><b>Гость становится узнаваемым.</b> Второй заказ собирается быстрее первого, потому что помощник уже знает его вкусы.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Почему это работает</p>
+      <h2>ИИ-меню — это не QR-картинка, а продавец</h2>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card__k">Советует</span>
+        <h3>Как опытный официант</h3>
+        <p>
+          Применяет рабочие техники продаж — выбор без выбора, социальное
+          доказательство, ограниченность предложения — и всегда объясняет, почему
+          предлагает именно это.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__k">Учится</span>
+        <h3>На ваших же гостях</h3>
+        <p>
+          Видит, какие приёмы срабатывают на конкретном человеке, и дальше использует
+          именно их чаще. Чем дольше работает, тем точнее попадает.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__k">Помнит</span>
+        <h3>Каждого, кто заходил</h3>
+        <p>
+          Частота визитов, любимые позиции, средний чек. Эта база остаётся у ресторана —
+          она не уходит вместе с уволившимся сотрудником.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__k">Считает</span>
+        <h3>Вашу маржу, а не цену</h3>
+        <p>
+          Предлагает не самое дорогое, а самое выгодное вам — с учётом себестоимости
+          и того, что нужно реализовать сегодня.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__k">Не забывает</span>
+        <h3>Предложить вовремя</h3>
+        <p>
+          Десерт после горячего, второй бокал к концу первого. Там, где человек
+          забывает или стесняется, помощник просто делает свою работу.
+        </p>
+      </div>
+      <div class="card">
+        <span class="card__k">Говорит</span>
+        <h3>Голосом или текстом</h3>
+        <p>
+          На рынке шумно — гость печатает. Дома удобнее сказать вслух. Работают оба
+          способа, переключение мгновенное.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Порядок цифр</p>
+      <h2>Посчитайте на своих числах</h2>
+      <p>
+        Мы не знаем ваш поток и не будем обещать проценты, которых не видели. Поэтому
+        вот простая прикидка от среднего чека корнера — подставьте своё количество
+        чеков и свою прибавку.
+      </p>
+    </div>
+
+    <div class="calc">
+      <table>
+        <thead>
+          <tr>
+            <th>Прибавка к чеку</th>
+            <th>Что это такое</th>
+            <th>100 чеков в день</th>
+            <th>За месяц</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>+50 ₽</td><td>порция оливок к пинце</td><td>5 000 ₽</td><td><b>150 000 ₽</b></td></tr>
+          <tr><td>+100 ₽</td><td>кофе после еды</td><td>10 000 ₽</td><td><b>300 000 ₽</b></td></tr>
+          <tr><td>+200 ₽</td><td>половина десерта на двоих</td><td>20 000 ₽</td><td><b>600 000 ₽</b></td></tr>
+          <tr><td>+450 ₽</td><td>бокал вина</td><td>45 000 ₽</td><td><b>1 350 000 ₽</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      Это арифметика, а не обещание: сколько именно добавит помощник на вашем потоке,
+      честно покажет только пилот. Но при среднем чеке корнера в 1 500–2 000 ₽ прибавка
+      в 100 ₽ — это один дополнительный кофе, а не пересмотр меню.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Как начать</p>
+      <h2>Один корнер, без переделки остального</h2>
+      <p>
+        Не нужно менять кассу, переучивать зал или останавливать работу. Мы берём одну
+        точку, загружаем ваше меню, ставим QR или NFC-метку на столы — и через несколько
+        недель сравниваем чек с соседней точкой, где ничего не меняли.
+      </p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card__k">Шаг 1</span>
+        <h3>Меню и бренд</h3>
+        <p>Загружаем позиции с себестоимостью, ставим ваш логотип, цвета и шрифты. Гость видит Pinzeria, а не «платформу».</p>
+      </div>
+      <div class="card">
+        <span class="card__k">Шаг 2</span>
+        <h3>Метки на столах</h3>
+        <p>QR-код или NFC — на подставке, фигурке, чём угодно. Гость подносит телефон, ничего не сканируя.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">Шаг 3</span>
+        <h3>Сравнение</h3>
+        <p>Один корнер с помощником, второй без. Разницу в среднем чеке видно по вашей же кассе.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="final">
+    <h2>Это только один модуль из пяти</h2>
+    <p>
+      Клиентский модуль — тот, что описан выше, — часть системы из пяти модулей:
+      помощник гостя, подсказки официанту в зале, учёт заготовок и сроков на кухне,
+      биржа официантов и умные закупки. В полной презентации по каждому расписано,
+      где он работает, из чего состоит и что даёт ресторану, а главное — показаны
+      все экраны: вечер за одним столом, шаг за шагом, глазами гостя и официанта
+      одновременно.
+    </p>
+    <div class="btns">
+      <a class="btn btn--main" href="/presentation/">Открыть полную презентацию</a>
+      <a class="btn btn--ghost" href="mailto:ceo@restai.pro?subject=RestAI%20%E2%80%94%20Pinzeria%20by%20Bontempi">Написать нам</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      <strong>RestAI</strong> — умная экосистема управления залом: гость, официант
+      и кухня в едином контуре. Интеграция с iiko, r_keeper и Poster.
+      <a href="mailto:ceo@restai.pro">ceo@restai.pro</a> · <a href="/">restai.pro</a>
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>

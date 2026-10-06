@@ -51,10 +51,13 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cp -R site/. _site/
-          rm -f _site/README.md
           for dir in card card-zuev presentation; do
             cp -R "$dir" _site/
           done
+          # README — заметки для разработки, а не содержимое сайта. В site/p/
+          # он вдобавок перечисляет адресные страницы под конкретные рестораны,
+          # и публиковать его нельзя.
+          find _site -name 'README.md' -delete
           # Отключает Jekyll: иначе он съедает файлы и папки, начинающиеся
           # с подчёркивания и точки.
           touch _site/.nojekyll
