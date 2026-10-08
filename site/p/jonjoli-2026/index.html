@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RestAI для сети «Джонджоли» — помощник за грузинским столом</title>
+<meta name="description" content="ИИ-помощник, который объясняет грузинское меню и продаёт вино: предложение RestAI для сети ресторанов «Джонджоли».">
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    color-scheme: dark;
+
+    --bg:        #0A1724;
+    --bg-2:      #0F2334;
+    --panel:     #132A3D;
+    --line:      rgba(233, 241, 248, 0.12);
+    --line-soft: rgba(233, 241, 248, 0.07);
+    --text:      #E9F1F8;
+    --text-2:    #B7C8D8;
+    --muted:     #8296A9;
+
+    --guest:      #FFA426;
+    --guest-ink:  #FFC978;
+    --guest-soft: rgba(255, 164, 38, 0.13);
+    --waiter:     #34CE4B;
+    --waiter-ink: #6FE07F;
+    --waiter-soft: rgba(52, 206, 75, 0.12);
+    --alert:      #FF5C5C;
+    --alert-soft: rgba(255, 92, 92, 0.13);
+
+    /* Экраны телефонов — постоянные, не зависят от темы страницы */
+    --screen:        #0C1C2B;
+    --screen-2:      #16293A;
+    --screen-3:      #1E3548;
+    --screen-line:   rgba(233, 241, 248, 0.10);
+    --screen-text:   #E8EFF6;
+    --screen-muted:  #8AA1B6;
+
+    --radius: 14px;
+    --shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+
+    --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+    --body:    "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg:        #EDF1F5;
+      --bg-2:      #FFFFFF;
+      --panel:     #FFFFFF;
+      --line:      rgba(16, 42, 69, 0.14);
+      --line-soft: rgba(16, 42, 69, 0.08);
+      --text:      #0C2137;
+      --text-2:    #37516B;
+      --muted:     #5D7590;
+      --guest:      #B4640A;
+      --guest-ink:  #8A4C06;
+      --guest-soft: rgba(255, 149, 0, 0.14);
+      --waiter:     #14892B;
+      --waiter-ink: #0E6C21;
+      --waiter-soft: rgba(21, 180, 0, 0.13);
+      --alert:      #C6262B;
+      --alert-soft: rgba(198, 38, 43, 0.10);
+      --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg:        #EDF1F5;
+    --bg-2:      #FFFFFF;
+    --panel:     #FFFFFF;
+    --line:      rgba(16, 42, 69, 0.14);
+    --line-soft: rgba(16, 42, 69, 0.08);
+    --text:      #0C2137;
+    --text-2:    #37516B;
+    --muted:     #5D7590;
+    --guest:      #B4640A;
+    --guest-ink:  #8A4C06;
+    --guest-soft: rgba(255, 149, 0, 0.14);
+    --waiter:     #14892B;
+    --waiter-ink: #0E6C21;
+    --waiter-soft: rgba(21, 180, 0, 0.13);
+    --alert:      #C6262B;
+    --alert-soft: rgba(198, 38, 43, 0.10);
+    --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  img { max-width: 100%; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ---------- Шапка ---------- */
+
+  .hero { padding-block: 48px 36px; }
+  .hero__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .hero__logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+  }
+  .hero__logo span { color: var(--guest); }
+  .hero__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+  }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(27px, 5.6vw, 46px);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    max-width: 20ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--guest); }
+  .hero__lede {
+    margin-top: 20px;
+    max-width: 60ch;
+    font-size: clamp(16px, 2.2vw, 18.5px);
+    color: var(--text-2);
+  }
+
+  /* ---------- Секции ---------- */
+
+  section { padding-block: 40px; border-top: 1px solid var(--line-soft); }
+  .sec-head { margin-bottom: 24px; }
+  .sec-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(21px, 3.4vw, 30px);
+    letter-spacing: -0.02em;
+    margin-top: 10px;
+  }
+  .sec-head p {
+    margin: 12px 0 0;
+    max-width: 62ch;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 26px;
+    align-items: start;
+  }
+  .two--flip { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+
+  .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .bullets li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 15.5px;
+    color: var(--text-2);
+  }
+  .bullets li::before {
+    content: "\2192";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--guest);
+  }
+  .bullets li b { color: var(--text); font-weight: 600; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  /* Четыре карточки ровным квадратом, а не 3 + 1 сиротой */
+  .cards--2 { grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
+
+  .card {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px 20px;
+  }
+  .card__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    margin-bottom: 7px;
+  }
+  .card p { margin: 0; font-size: 14.5px; color: var(--text-2); }
+
+  .flow {
+    display: grid;
+    /* 240px, чтобы пять шагов легли 3 + 2, а не 4 + 1 с сиротой */
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    counter-reset: flowstep;
+    margin-top: 24px;
+  }
+  .flow__step {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px;
+  }
+  .flow__step::before {
+    counter-increment: flowstep;
+    content: counter(flowstep);
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: var(--guest-soft);
+    color: var(--guest-ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-bottom: 11px;
+  }
+  .flow__step h3 {
+    font-family: var(--body);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .flow__step p { margin: 0; font-size: 14px; color: var(--text-2); }
+  .flow__step--close::before { background: var(--waiter-soft); color: var(--waiter-ink); }
+
+  .effect {
+    margin-top: 26px;
+    border: 1px solid color-mix(in srgb, var(--waiter) 34%, transparent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: var(--waiter-soft);
+    padding: 18px 20px 19px;
+  }
+  .effect__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+    margin-bottom: 11px;
+  }
+  .effect ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .effect li {
+    position: relative;
+    padding-left: 19px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .effect li::before {
+    content: "";
+    position: absolute;
+    left: 1px; top: 9px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--waiter);
+  }
+  .effect li b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Прикидка ---------- */
+
+  .calc { overflow-x: auto; margin-top: 20px; }
+  .calc table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .calc th, .calc td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .calc th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .calc td { color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .calc td:first-child { color: var(--text); font-weight: 600; }
+  .calc td b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--waiter-ink);
+  }
+  .calc tr:last-child td { border-bottom: 0; }
+  .note {
+    margin: 14px 0 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  /* ---------- Мини-экран телефона ---------- */
+
+  .scr {
+    background: var(--screen);
+    border: 1px solid var(--screen-line);
+    border-radius: 18px;
+    padding: 12px;
+    color: var(--screen-text);
+    box-shadow: var(--shadow);
+    font-size: 13px;
+  }
+  .scr__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--screen-muted);
+    padding: 2px 4px 10px;
+    border-bottom: 1px solid var(--screen-line);
+    margin-bottom: 12px;
+  }
+  .scr__bar b { color: var(--screen-text); font-weight: 500; }
+  .scr__stack { display: flex; flex-direction: column; gap: 9px; }
+
+  .scr h4 {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .scr p { margin: 0; font-size: 12.5px; color: var(--screen-muted); line-height: 1.45; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+    white-space: nowrap;
+  }
+  .chip--on {
+    background: var(--guest-soft);
+    border-color: var(--guest);
+    color: var(--guest-ink);
+  }
+  .chip--go {
+    background: var(--waiter-soft);
+    border-color: var(--waiter);
+    color: var(--waiter-ink);
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--screen-2);
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+  }
+  .line span:first-child { min-width: 0; }
+  .line small { display: block; color: var(--screen-muted); font-size: 11px; }
+  .line b {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .line--ready { border-color: color-mix(in srgb, var(--waiter) 55%, transparent); }
+
+  .bubble {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 92%;
+  }
+  .bubble--guest {
+    background: var(--screen-3);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+  }
+  .bubble--ai {
+    background: var(--guest-soft);
+    border: 1px solid color-mix(in srgb, var(--guest) 45%, transparent);
+    border-bottom-left-radius: 4px;
+    color: var(--guest-ink);
+  }
+
+  .cta {
+    display: block;
+    text-align: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--guest);
+    color: #12100B;
+  }
+  .cta--waiter { background: var(--waiter); color: #04260A; }
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+  .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .alert {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--alert-soft);
+    border: 1px solid color-mix(in srgb, var(--alert) 55%, transparent);
+  }
+  .alert strong { color: var(--alert); font-size: 13.5px; }
+  .alert p { color: var(--screen-text); margin-top: 3px; }
+
+  .bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+    color: var(--alert);
+    font-size: 16px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--alert) 40%, transparent); }
+    50%      { box-shadow: 0 0 0 7px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bell { animation: none; }
+    * { scroll-behavior: auto !important; }
+  }
+
+  .seats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seat {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+  }
+  .seat--me { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .seat--paid { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .tables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .tbl {
+    aspect-ratio: 1;
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--screen-muted);
+    max-width: 100%;
+  }
+  .tbl--busy { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .tbl--call { border-color: var(--alert); color: var(--alert); background: var(--alert-soft); }
+  .tbl--pay  { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .coach {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--waiter-soft);
+    border: 1px solid color-mix(in srgb, var(--waiter) 45%, transparent);
+  }
+  .coach__tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+  }
+  .coach__say { margin-top: 5px; font-size: 12.5px; color: var(--screen-text); }
+  .coach__say q { font-weight: 600; }
+  .coach__why {
+    margin-top: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--screen-3);
+    color: var(--screen-muted);
+  }
+
+  /* Экран телефона всегда тёмный, поэтому акцент в нём задаётся отдельно:
+     тематический --guest в светлой теме затемняется под светлый фон
+     и на тёмной подложке читается плохо. */
+  :root {
+    --screen-accent:      #FFA426;
+    --screen-accent-ink:  #FFD19B;
+    --screen-accent-soft: rgba(255, 164, 38, 0.13);
+  }
+  .bubble--ai {
+    background: var(--screen-accent-soft);
+    border-color: color-mix(in srgb, var(--screen-accent) 45%, transparent);
+    color: var(--screen-accent-ink);
+  }
+  .bubble--ai b { color: var(--screen-accent); font-weight: 600; }
+  .cta { background: var(--screen-accent); color: #231200; }
+  /* повторяем после переопределения .cta, иначе призрачная кнопка тоже зальётся */
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+
+  .scr + .scr { margin-top: 14px; }
+  .scr__cap {
+    margin: 10px 0 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ---------- Финал ---------- */
+
+  .final {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 26px 24px;
+    margin-block: 10px 40px;
+  }
+  .final h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(20px, 3.2vw, 27px);
+    letter-spacing: -0.02em;
+  }
+  .final p { color: var(--text-2); max-width: 58ch; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 15.5px;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn--main { background: var(--guest); color: #231200; }
+  .btn--main:hover { filter: brightness(1.06); }
+  .btn--ghost { border-color: var(--line); color: var(--text); }
+  .btn--ghost:hover { border-color: var(--guest); color: var(--guest); }
+
+  footer {
+    padding-block: 26px 46px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer a { color: var(--guest); }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--guest);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 760px) {
+    .two, .two--flip { grid-template-columns: minmax(0, 1fr); }
+    .two--flip > :first-child { order: 2; }
+  }
+
+  /* ---------- Сравнение с обычным QR-меню ---------- */
+
+  .compare {
+    display: grid;
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .compare__row {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.7fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 4px 22px;
+    background: var(--bg);
+    padding: 17px 20px;
+  }
+  .compare__row--head {
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare__row--head span:last-child { color: var(--guest); }
+  .compare__what { font-weight: 600; font-size: 14.5px; }
+  .compare__old { color: var(--muted); font-size: 14.5px; }
+  .compare__new { color: var(--text); font-size: 14.5px; }
+  .compare__new b { color: var(--guest-ink); font-weight: 600; }
+
+
+  /* Третья колонка — наша, её видно сразу */
+  .compare__row--head span:last-child { color: var(--guest); }
+  .compare__row > div:last-child { color: var(--text); }
+
+  /* Четыре шага — квадратом 2x2, иначе четвёртый повисает один */
+  .flow--4 { grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+
+  /* ---------- Цитата ---------- */
+
+  .quote {
+    margin: 26px 0 0;
+    border-left: 3px solid var(--guest);
+    padding: 4px 0 4px 22px;
+  }
+  .quote p {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(18px, 2.6vw, 24px);
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .quote cite {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .quote cite a { color: var(--muted); }
+
+  /* ---------- Крупные числа ---------- */
+
+  .figs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 24px;
+  }
+  .fig { background: var(--bg-2); padding: 20px 22px; }
+  .fig b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(26px, 4.2vw, 36px);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--guest);
+  }
+  .fig span {
+    display: block;
+    margin-top: 9px;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+
+  @media (max-width: 760px) {
+    .compare__row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .compare__row--head { display: none; }
+    .compare__old::before {
+      content: "Планшет на столе: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .compare__new::before {
+      content: "RestAI: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--guest);
+    }
+  }
+
+
+  /* Шапка сравнения: вторая колонка — про них, третья — про нас */
+  .compare__row--head span:last-child { color: var(--guest); }
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero__mark">
+      <div class="hero__logo">Rest<span>AI</span></div>
+      <div class="hero__tag">предложение для сети «Джонджоли»</div>
+    </div>
+
+    <h1>Половину вечера официант <em>объясняет меню</em>, а не продаёт</h1>
+
+    <p class="hero__lede">
+      В грузинском ресторане это неизбежно: «а что такое пхали?», «чем кубдари
+      отличается от хачапури?», «чакапули — это острое?». Гость зовёт официанта,
+      чтобы спросить, — и тот отвечает вместо того, чтобы предложить вино к столу.
+      Мы ставим рядом с гостем помощника, который объясняет меню голосом или
+      текстом и в том же разговоре продаёт. Гостю ничего не нужно устанавливать:
+      он наводит камеру на наклейку у себя на столе.
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Почему мы пишем именно вам</p>
+      <h2>Мы посчитали по вашим же цифрам</h2>
+      <p>
+        Всё, что ниже, взято из вашей франшизной оферты и открытых источников —
+        прежде чем писать, мы разобрались, как устроена сеть.
+      </p>
+    </div>
+
+    <div class="figs">
+      <div class="fig">
+        <b>17</b>
+        <span>ресторанов в Москве, из них 14 — открытые франшизы</span>
+      </div>
+      <div class="fig">
+        <b>5 600</b>
+        <span>чеков в месяц в среднем на ресторан</span>
+      </div>
+      <div class="fig">
+        <b>1 700 ₽</b>
+        <span>средний чек — и 2 600 ₽ средний чек на стол</span>
+      </div>
+      <div class="fig">
+        <b>5%</b>
+        <span>роялти с товарооборота франчайзи</span>
+      </div>
+    </div>
+
+    <p class="note">
+      Из этих четырёх чисел складывается ровно тот разговор, который мы хотим
+      с вами вести. Разберём по порядку, начав с самого говорящего — разрыва
+      между чеком и чеком на стол.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Что видно из ваших цифр</p>
+      <h2>Грузинский стол — самый сложный для официанта и самый щедрый для вас</h2>
+      <p>
+        Средний чек 1 700 ₽, а на стол — 2 600 ₽. Значит счёт в среднем делится
+        примерно в полтора раза: у вас сидят компаниями, берут общие блюда и платят
+        по частям. Это ваша экономика и ваша сила — застолье приносит больше, чем
+        ужин на двоих. Но именно большой стол официант и обслуживает хуже всего.
+      </p>
+    </div>
+
+    <div class="two">
+      <div>
+        <ul class="bullets">
+          <li><b>На большом столе официанта не дозваться.</b> Шесть человек, половина меню незнакома, кто-то досел позже. Все вопросы идут к одному человеку, и он физически не успевает.</li>
+          <li><b>Вино продаётся хуже всего там, где должно лучше всего.</b> Вторую бутылку надо предложить в нужный момент — а официант в этот момент несёт горячее на соседний стол.</li>
+          <li><b>Деление счёта съедает конец вечера.</b> Полтора чека на стол — это постоянный пересчёт «кто за что», терминал по кругу и очередь на кассе в час пик.</li>
+          <li><b>Меню требует гида.</b> Пхали, кубдари, чакапули, оджахури — гость или спрашивает, или берёт знакомое. Второе дешевле для него и для вас.</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="scr">
+          <div class="scr__bar"><span>Джонджоли</span><span>стол 12 · 6 гостей</span></div>
+          <div class="scr__stack">
+            <div class="bubble bubble--guest">А что такое пхали?</div>
+            <div class="bubble bubble--ai">
+              Холодная закуска: овощи со специями и грецким орехом. Берут
+              ассорти из трёх — шпинат, свёкла, баклажан, 690&nbsp;₽.
+              На шестерых хорошо идёт с <b>Киндзмараули</b>, бутылка 2 900&nbsp;₽.
+            </div>
+            <div class="cta-row">
+              <button class="cta">Ассорти и вино</button>
+              <button class="cta cta--ghost">Только пхали</button>
+            </div>
+          </div>
+        </div>
+        <p class="scr__cap">объясняет — и в том же ответе продаёт</p>
+
+        <div class="scr">
+          <div class="scr__bar"><span>Счёт</span><span>стол 12</span></div>
+          <div class="scr__stack">
+            <p>За кого платите</p>
+            <div class="seats">
+              <div class="seat seat--me">1</div>
+              <div class="seat seat--me">2</div>
+              <div class="seat">3</div>
+              <div class="seat seat--paid">4</div>
+              <div class="seat seat--paid">5</div>
+              <div class="seat">6</div>
+            </div>
+            <div class="line"><span>Места 1 и 2<small>общие блюда поделены поровну</small></span><b>5 180 ₽</b></div>
+            <span class="cta">Оплатить по СБП</span>
+          </div>
+        </div>
+        <p class="scr__cap">общее делится само, официант не считает в уме</p>
+        <p class="note" style="margin-top:12px">Экраны собраны на демонстрационных данных: блюда и цены подставятся из вашего меню.</p>
+      </div>
+    </div>
+
+    <div class="effect">
+      <span class="effect__k">Где здесь деньги</span>
+      <ul>
+        <li><b>Вино перестаёт зависеть от того, успел ли официант подойти.</b> В грузинском ресторане это главная маржинальная позиция, и предлагать её нужно вовремя, а не когда освободились руки.</li>
+        <li><b>Незнакомое блюдо перестаёт быть риском для гостя.</b> Он берёт его, потому что ему объяснили, — а это обычно позиция дороже знакомой.</li>
+        <li><b>Конец вечера ускоряется.</b> Счёт делится в телефонах, стол освобождается раньше, в пятницу это прямо влияет на оборот посадки.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Вы уже пробовали это решить</p>
+      <h2>Приложение — верная мысль, но слишком высокий порог</h2>
+      <p>
+        У вас есть приложение «Джонджоли» с доставкой, бронированием и программой
+        CH1EF Club: кешбэк 5% новым гостям, 10% постоянным, оплата бонусами до 20%
+        чека. Направление выбрано правильно — гость должен общаться с рестораном
+        через свой телефон. Мешает одно: прежде чем что-то получить, он должен
+        скачать приложение и авторизоваться.
+      </p>
+      <p>
+        Гость за столом этого не делает. Оценка приложения в App&nbsp;Store — 3,6
+        при 55 оценках, и дело тут не в качестве кода: любой продукт, который
+        требует установки в момент, когда человек пришёл ужинать, теряет
+        большинство гостей на первом же шаге.
+      </p>
+    </div>
+
+    <div class="compare">
+      <div class="compare__row compare__row--head">
+        <span>Что именно</span>
+        <span>Приложение с установкой</span>
+        <span>RestAI по QR на столе</span>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Что нужно от гостя</div>
+        <div class="compare__old">Скачать, зарегистрироваться, авторизоваться, дождаться загрузки меню.</div>
+        <div class="compare__new"><b>Навести камеру.</b> Открывается в браузере за секунду, ставить нечего.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Когда он это сделает</div>
+        <div class="compare__old">Заранее и дома — то есть, как правило, никогда.</div>
+        <div class="compare__new"><b>Прямо за столом</b>, в ту минуту, когда сел и открыл меню.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Если не установил</div>
+        <div class="compare__old">Ни скидки, ни бонусов, ни узнавания. Для сети он анонимный гость.</div>
+        <div class="compare__new">Такого случая нет: <b>помощник работает с первого визита</b>, без условий.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Кто объясняет меню</div>
+        <div class="compare__old">Официант, когда подойдёт. В приложении — только список позиций.</div>
+        <div class="compare__new"><b>Помощник, сразу.</b> Состав, острота, на сколько человек, что к чему идёт.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Допродажа</div>
+        <div class="compare__old">Баннер акции на главном экране. Его пролистывают.</div>
+        <div class="compare__new">Разговор про конкретный заказ: <b>вино к этому столу</b>, с учётом вашей маржи.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Узнавание гостя</div>
+        <div class="compare__old">По карте, которую нужно активировать и не забыть предъявить.</div>
+        <div class="compare__new"><b>Само.</b> Помощник помнит, что человек брал в прошлый раз и чего не ест.</div>
+      </div>
+
+      <div class="compare__row">
+        <div class="compare__what">Что остаётся сети</div>
+        <div class="compare__old">Статистика по тем, кто дошёл до установки.</div>
+        <div class="compare__new"><b>Профиль каждого гостя</b> всех семнадцати ресторанов: частота, любимые блюда, чек.</div>
+      </div>
+    </div>
+
+    <p class="note">
+      Помощник не заменяет ваше приложение и не конкурирует с CH1EF Club. Он
+      снимает барьер входа: гость начинает общаться с рестораном сразу, а в
+      программу лояльности попадает потом — уже как знакомый, а не как человек,
+      которого просят что-то установить за столом.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Главное для управляющей компании</p>
+      <h2>Роялти 5% делает рост чека вашим доходом напрямую</h2>
+      <p>
+        Четырнадцать из семнадцати ресторанов — франшиза, и вы получаете процент
+        с их товарооборота. Это меняет арифметику: прибавка к среднему чеку по сети
+        возвращается вам не косвенно, через лояльность партнёров, а прямым
+        денежным потоком.
+      </p>
+    </div>
+
+    <div class="calc">
+      <table>
+        <thead>
+          <tr>
+            <th>Прибавка к чеку</th>
+            <th>Это к вашим 1 700 ₽</th>
+            <th>Оборот сети за год</th>
+            <th>Ваше роялти, 5%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>+50 ₽</td><td>+3%</td><td>57,1 млн ₽</td><td><b>2,9 млн ₽</b></td></tr>
+          <tr><td>+100 ₽</td><td>+6%</td><td>114,2 млн ₽</td><td><b>5,7 млн ₽</b></td></tr>
+          <tr><td>+200 ₽</td><td>+12%</td><td>228,5 млн ₽</td><td><b>11,4 млн ₽</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      Считано от ваших же данных: 17 ресторанов × 5 600 чеков в месяц = 95 200 чеков
+      по сети. Это арифметика, а не прогноз — сколько добавит помощник именно
+      у вас, честно покажет только пилот. Но +100 ₽ при среднем чеке 1 700 ₽ —
+      это шесть процентов: одна холодная закуска на стол из шести человек,
+      а не пересмотр меню.
+    </p>
+
+    <div class="effect">
+      <span class="effect__k">И ещё одно, что считается только в сети</span>
+      <ul>
+        <li><b>Партнёру это не стоит капзатрат.</b> При входном билете в 20 млн ₽ и паушальном взносе в 5 млн ₽ любое решение с оборудованием франчайзи встречает в штыки. Здесь железа нет — наклейка с QR.</li>
+        <li><b>Стандарт задаётся из центра.</b> Меню, политика продаж, тон помощника — одинаковые во всех семнадцати ресторанах. Поменяли вечером, со следующего гостя действует везде.</li>
+        <li><b>База гостей остаётся у сети, а не у точки.</b> Гость, который был на Пятницкой, узнан на Маросейке. Для франшизы это актив управляющей компании.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Как начать</p>
+      <h2>Один ресторан, четыре недели, ваша же касса рассудит</h2>
+    </div>
+
+    <div class="flow flow--4">
+      <div class="flow__step">
+        <h3>Берём один ресторан</h3>
+        <p>Лучше с большой посадкой и плотными пятницами — там эффект виден быстрее. Соседний, похожий, оставляем как есть для сравнения.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Загружаем меню и бренд</h3>
+        <p>Позиции с себестоимостью, винная карта, ваш логотип и цвета. Гость видит «Джонджоли», а не «платформу».</p>
+      </div>
+      <div class="flow__step">
+        <h3>Печатаем наклейки</h3>
+        <p>QR на столы или NFC-метки. Монтажа нет, работу ресторана останавливать не нужно.</p>
+      </div>
+      <div class="flow__step flow__step--close">
+        <h3>Сравниваем по кассе</h3>
+        <p>Через четыре недели смотрите разницу в среднем чеке и в доле вина между двумя ресторанами. По своим данным, а не по нашей презентации.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="final">
+    <h2>Это только один модуль из пяти</h2>
+    <p>
+      Всё описанное выше — клиентский модуль. Кроме него в системе есть подсказки
+      официанту прямо в смене и разбор разговоров с гостем, учёт заготовок и сроков
+      годности на кухне с автоматическим журналом брокеража, биржа официантов
+      и умные закупки. В полной презентации по каждому расписано, где он работает
+      и что даёт, и показаны все экраны — вечер за одним столом глазами гостя
+      и официанта одновременно.
+    </p>
+    <div class="btns">
+      <a class="btn btn--main" href="/presentation/">Открыть полную презентацию</a>
+      <a class="btn btn--ghost" href="mailto:ceo@restai.pro?subject=RestAI%20%E2%80%94%20%C2%AB%D0%94%D0%B6%D0%BE%D0%BD%D0%B4%D0%B6%D0%BE%D0%BB%D0%B8%C2%BB">Написать нам</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      <strong>RestAI</strong> — умная экосистема управления залом: гость, официант
+      и кухня в едином контуре. Интеграция с iiko, r_keeper и Poster.
+      <a href="mailto:ceo@restai.pro">ceo@restai.pro</a> · <a href="/">restai.pro</a>
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>
