@@ -8,6 +8,7 @@
 |---|---|---|
 | `bontempi-2026/` | Pinzeria by Bontempi | `restai.pro/p/bontempi-2026/` |
 | `zdraste-2026/` | Сеть кофеен «Здрасте» | `restai.pro/p/zdraste-2026/` |
+| `jonjoli-2026/` | Сеть ресторанов «Джонджоли» (CH1EF) | `restai.pro/p/jonjoli-2026/` |
 
 ## Правила
 
