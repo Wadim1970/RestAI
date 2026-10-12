@@ -28,7 +28,9 @@ if [ ! -d "$SRC/.git" ]; then
 fi
 
 step "Сборка сайта"
-bash "$SRC/deploy/site-sync.sh" --pull
+# Скрипт из основной копии: в $SRC он появится только после первого --pull
+# (копия могла остаться от раннего клона, где deploy/site-sync.sh ещё не было).
+SITE_SRC="$SRC" bash "$HERE/site-sync.sh" --pull
 
 step "Автообновление (cron, каждые 5 минут)"
 line="*/5 * * * * bash $SRC/deploy/site-sync.sh --pull >> $ROOT/site-sync.log 2>&1"
