@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RestAI — политика представления продукта для ресторанов</title>
+<meta name="description" content="Внутренний документ RestAI: порядок аргументов, язык, расчёт экономики и границы обещаний при представлении продукта ресторанам.">
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    color-scheme: dark;
+
+    --bg:        #0A1724;
+    --bg-2:      #0F2334;
+    --panel:     #132A3D;
+    --line:      rgba(233, 241, 248, 0.12);
+    --line-soft: rgba(233, 241, 248, 0.07);
+    --text:      #E9F1F8;
+    --text-2:    #B7C8D8;
+    --muted:     #8296A9;
+
+    --guest:      #FFA426;
+    --guest-ink:  #FFC978;
+    --guest-soft: rgba(255, 164, 38, 0.13);
+    --waiter:     #34CE4B;
+    --waiter-ink: #6FE07F;
+    --waiter-soft: rgba(52, 206, 75, 0.12);
+    --alert:      #FF5C5C;
+    --alert-soft: rgba(255, 92, 92, 0.13);
+
+    /* Экраны телефонов — постоянные, не зависят от темы страницы */
+    --screen:        #0C1C2B;
+    --screen-2:      #16293A;
+    --screen-3:      #1E3548;
+    --screen-line:   rgba(233, 241, 248, 0.10);
+    --screen-text:   #E8EFF6;
+    --screen-muted:  #8AA1B6;
+
+    --radius: 14px;
+    --shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+
+    --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+    --body:    "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg:        #EDF1F5;
+      --bg-2:      #FFFFFF;
+      --panel:     #FFFFFF;
+      --line:      rgba(16, 42, 69, 0.14);
+      --line-soft: rgba(16, 42, 69, 0.08);
+      --text:      #0C2137;
+      --text-2:    #37516B;
+      --muted:     #5D7590;
+      --guest:      #B4640A;
+      --guest-ink:  #8A4C06;
+      --guest-soft: rgba(255, 149, 0, 0.14);
+      --waiter:     #14892B;
+      --waiter-ink: #0E6C21;
+      --waiter-soft: rgba(21, 180, 0, 0.13);
+      --alert:      #C6262B;
+      --alert-soft: rgba(198, 38, 43, 0.10);
+      --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg:        #EDF1F5;
+    --bg-2:      #FFFFFF;
+    --panel:     #FFFFFF;
+    --line:      rgba(16, 42, 69, 0.14);
+    --line-soft: rgba(16, 42, 69, 0.08);
+    --text:      #0C2137;
+    --text-2:    #37516B;
+    --muted:     #5D7590;
+    --guest:      #B4640A;
+    --guest-ink:  #8A4C06;
+    --guest-soft: rgba(255, 149, 0, 0.14);
+    --waiter:     #14892B;
+    --waiter-ink: #0E6C21;
+    --waiter-soft: rgba(21, 180, 0, 0.13);
+    --alert:      #C6262B;
+    --alert-soft: rgba(198, 38, 43, 0.10);
+    --shadow: 0 16px 36px -26px rgba(12, 33, 55, 0.45);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  img { max-width: 100%; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ---------- Шапка ---------- */
+
+  .hero { padding-block: 48px 36px; }
+  .hero__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .hero__logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+  }
+  .hero__logo span { color: var(--guest); }
+  .hero__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+  }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(27px, 5.6vw, 46px);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    max-width: 20ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--guest); }
+  .hero__lede {
+    margin-top: 20px;
+    max-width: 60ch;
+    font-size: clamp(16px, 2.2vw, 18.5px);
+    color: var(--text-2);
+  }
+
+  /* ---------- Секции ---------- */
+
+  section { padding-block: 40px; border-top: 1px solid var(--line-soft); }
+  .sec-head { margin-bottom: 24px; }
+  .sec-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(21px, 3.4vw, 30px);
+    letter-spacing: -0.02em;
+    margin-top: 10px;
+  }
+  .sec-head p {
+    margin: 12px 0 0;
+    max-width: 62ch;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 26px;
+    align-items: start;
+  }
+  .two--flip { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+
+  .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .bullets li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 15.5px;
+    color: var(--text-2);
+  }
+  .bullets li::before {
+    content: "\2192";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--guest);
+  }
+  .bullets li b { color: var(--text); font-weight: 600; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  /* Четыре карточки ровным квадратом, а не 3 + 1 сиротой */
+  .cards--2 { grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
+
+  .card {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px 20px;
+  }
+  .card__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    margin-bottom: 7px;
+  }
+  .card p { margin: 0; font-size: 14.5px; color: var(--text-2); }
+
+  .flow {
+    display: grid;
+    /* 240px, чтобы пять шагов легли 3 + 2, а не 4 + 1 с сиротой */
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    counter-reset: flowstep;
+    margin-top: 24px;
+  }
+  .flow__step {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 18px;
+  }
+  .flow__step::before {
+    counter-increment: flowstep;
+    content: counter(flowstep);
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: var(--guest-soft);
+    color: var(--guest-ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-bottom: 11px;
+  }
+  .flow__step h3 {
+    font-family: var(--body);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .flow__step p { margin: 0; font-size: 14px; color: var(--text-2); }
+  .flow__step--close::before { background: var(--waiter-soft); color: var(--waiter-ink); }
+
+  .effect {
+    margin-top: 26px;
+    border: 1px solid color-mix(in srgb, var(--waiter) 34%, transparent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: var(--waiter-soft);
+    padding: 18px 20px 19px;
+  }
+  .effect__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+    margin-bottom: 11px;
+  }
+  .effect ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .effect li {
+    position: relative;
+    padding-left: 19px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .effect li::before {
+    content: "";
+    position: absolute;
+    left: 1px; top: 9px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--waiter);
+  }
+  .effect li b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Прикидка ---------- */
+
+  .calc { overflow-x: auto; margin-top: 20px; }
+  .calc table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .calc th, .calc td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .calc th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .calc td { color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .calc td:first-child { color: var(--text); font-weight: 600; }
+  .calc td b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--waiter-ink);
+  }
+  .calc tr:last-child td { border-bottom: 0; }
+  .note {
+    margin: 14px 0 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  /* ---------- Мини-экран телефона ---------- */
+
+  .scr {
+    background: var(--screen);
+    border: 1px solid var(--screen-line);
+    border-radius: 18px;
+    padding: 12px;
+    color: var(--screen-text);
+    box-shadow: var(--shadow);
+    font-size: 13px;
+  }
+  .scr__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--screen-muted);
+    padding: 2px 4px 10px;
+    border-bottom: 1px solid var(--screen-line);
+    margin-bottom: 12px;
+  }
+  .scr__bar b { color: var(--screen-text); font-weight: 500; }
+  .scr__stack { display: flex; flex-direction: column; gap: 9px; }
+
+  .scr h4 {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .scr p { margin: 0; font-size: 12.5px; color: var(--screen-muted); line-height: 1.45; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+    white-space: nowrap;
+  }
+  .chip--on {
+    background: var(--guest-soft);
+    border-color: var(--guest);
+    color: var(--guest-ink);
+  }
+  .chip--go {
+    background: var(--waiter-soft);
+    border-color: var(--waiter);
+    color: var(--waiter-ink);
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--screen-2);
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+  }
+  .line span:first-child { min-width: 0; }
+  .line small { display: block; color: var(--screen-muted); font-size: 11px; }
+  .line b {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .line--ready { border-color: color-mix(in srgb, var(--waiter) 55%, transparent); }
+
+  .bubble {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-width: 92%;
+  }
+  .bubble--guest {
+    background: var(--screen-3);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+  }
+  .bubble--ai {
+    background: var(--guest-soft);
+    border: 1px solid color-mix(in srgb, var(--guest) 45%, transparent);
+    border-bottom-left-radius: 4px;
+    color: var(--guest-ink);
+  }
+
+  .cta {
+    display: block;
+    text-align: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--guest);
+    color: #12100B;
+  }
+  .cta--waiter { background: var(--waiter); color: #04260A; }
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+  .cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .alert {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--alert-soft);
+    border: 1px solid color-mix(in srgb, var(--alert) 55%, transparent);
+  }
+  .alert strong { color: var(--alert); font-size: 13.5px; }
+  .alert p { color: var(--screen-text); margin-top: 3px; }
+
+  .bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert);
+    color: var(--alert);
+    font-size: 16px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--alert) 40%, transparent); }
+    50%      { box-shadow: 0 0 0 7px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bell { animation: none; }
+    * { scroll-behavior: auto !important; }
+  }
+
+  .seats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seat {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    color: var(--screen-muted);
+  }
+  .seat--me { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .seat--paid { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .tables { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .tbl {
+    aspect-ratio: 1;
+    border-radius: 9px;
+    border: 1px solid var(--screen-line);
+    background: var(--screen-2);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--screen-muted);
+    max-width: 100%;
+  }
+  .tbl--busy { border-color: var(--guest); color: var(--guest-ink); background: var(--guest-soft); }
+  .tbl--call { border-color: var(--alert); color: var(--alert); background: var(--alert-soft); }
+  .tbl--pay  { border-color: var(--waiter); color: var(--waiter-ink); background: var(--waiter-soft); }
+
+  .coach {
+    padding: 11px 12px;
+    border-radius: 12px;
+    background: var(--waiter-soft);
+    border: 1px solid color-mix(in srgb, var(--waiter) 45%, transparent);
+  }
+  .coach__tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--waiter-ink);
+  }
+  .coach__say { margin-top: 5px; font-size: 12.5px; color: var(--screen-text); }
+  .coach__say q { font-weight: 600; }
+  .coach__why {
+    margin-top: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--screen-3);
+    color: var(--screen-muted);
+  }
+
+  /* Экран телефона всегда тёмный, поэтому акцент в нём задаётся отдельно:
+     тематический --guest в светлой теме затемняется под светлый фон
+     и на тёмной подложке читается плохо. */
+  :root {
+    --screen-accent:      #FFA426;
+    --screen-accent-ink:  #FFD19B;
+    --screen-accent-soft: rgba(255, 164, 38, 0.13);
+  }
+  .bubble--ai {
+    background: var(--screen-accent-soft);
+    border-color: color-mix(in srgb, var(--screen-accent) 45%, transparent);
+    color: var(--screen-accent-ink);
+  }
+  .bubble--ai b { color: var(--screen-accent); font-weight: 600; }
+  .cta { background: var(--screen-accent); color: #231200; }
+  /* повторяем после переопределения .cta, иначе призрачная кнопка тоже зальётся */
+  .cta--ghost {
+    background: transparent;
+    border: 1px solid var(--screen-line);
+    color: var(--screen-text);
+    font-weight: 500;
+  }
+
+  .scr + .scr { margin-top: 14px; }
+  .scr__cap {
+    margin: 10px 0 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ---------- Финал ---------- */
+
+  .final {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 26px 24px;
+    margin-block: 10px 40px;
+  }
+  .final h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(20px, 3.2vw, 27px);
+    letter-spacing: -0.02em;
+  }
+  .final p { color: var(--text-2); max-width: 58ch; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 15.5px;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn--main { background: var(--guest); color: #231200; }
+  .btn--main:hover { filter: brightness(1.06); }
+  .btn--ghost { border-color: var(--line); color: var(--text); }
+  .btn--ghost:hover { border-color: var(--guest); color: var(--guest); }
+
+  footer {
+    padding-block: 26px 46px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer a { color: var(--guest); }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--guest);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 760px) {
+    .two, .two--flip { grid-template-columns: minmax(0, 1fr); }
+    .two--flip > :first-child { order: 2; }
+  }
+
+  /* ---------- Сравнение с обычным QR-меню ---------- */
+
+  .compare {
+    display: grid;
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .compare__row {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.7fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 4px 22px;
+    background: var(--bg);
+    padding: 17px 20px;
+  }
+  .compare__row--head {
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .compare__row--head span:last-child { color: var(--guest); }
+  .compare__what { font-weight: 600; font-size: 14.5px; }
+  .compare__old { color: var(--muted); font-size: 14.5px; }
+  .compare__new { color: var(--text); font-size: 14.5px; }
+  .compare__new b { color: var(--guest-ink); font-weight: 600; }
+
+
+  /* Третья колонка — наша, её видно сразу */
+  .compare__row--head span:last-child { color: var(--guest); }
+  .compare__row > div:last-child { color: var(--text); }
+
+  /* Четыре шага — квадратом 2x2, иначе четвёртый повисает один */
+  .flow--4 { grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+
+  /* ---------- Цитата ---------- */
+
+  .quote {
+    margin: 26px 0 0;
+    border-left: 3px solid var(--guest);
+    padding: 4px 0 4px 22px;
+  }
+  .quote p {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(18px, 2.6vw, 24px);
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .quote cite {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .quote cite a { color: var(--muted); }
+
+  /* ---------- Крупные числа ---------- */
+
+  .figs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 24px;
+  }
+  .fig { background: var(--bg-2); padding: 20px 22px; }
+  .fig b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(26px, 4.2vw, 36px);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--guest);
+  }
+  .fig span {
+    display: block;
+    margin-top: 9px;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+
+  @media (max-width: 760px) {
+    .compare__row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .compare__row--head { display: none; }
+    .compare__old::before {
+      content: "Планшет на столе: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .compare__new::before {
+      content: "RestAI: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--guest);
+    }
+  }
+
+
+  /* Шапка сравнения: вторая колонка — про них, третья — про нас */
+  .compare__row--head span:last-child { color: var(--guest); }
+
+
+  /* ======================================================================
+     Добавлено для внутренней политики: компоненты, которых не было
+     на коммерческих страницах.
+     ====================================================================== */
+
+  /* Пометка «не для ресторана» — документ внутренний */
+  .internal {
+    margin-top: 24px;
+    border: 1px solid color-mix(in srgb, var(--alert) 42%, transparent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: var(--alert-soft);
+    padding: 14px 18px;
+    font-size: 14.5px;
+    color: var(--text-2);
+  }
+  .internal b { color: var(--text); font-weight: 600; }
+
+  /* Канонический абзац — его произносят дословно */
+  .canon {
+    margin-top: 22px;
+    border: 1px solid color-mix(in srgb, var(--guest) 40%, transparent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: var(--guest-soft);
+    padding: 22px 24px 23px;
+  }
+  .canon__k {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--guest-ink);
+    margin-bottom: 13px;
+  }
+  .canon p {
+    margin: 0 0 14px;
+    font-size: clamp(15.5px, 2.2vw, 17px);
+    line-height: 1.6;
+    color: var(--text);
+    max-width: 64ch;
+  }
+  .canon p:last-child { margin-bottom: 0; }
+  .canon b { font-weight: 600; }
+
+  /* Формула, по которой считаем деньги при владельце */
+  .formula {
+    margin-top: 22px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 22px 20px;
+    text-align: center;
+  }
+  .formula b {
+    display: block;
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: clamp(12.5px, 2.5vw, 16px);
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .formula span {
+    display: block;
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: var(--muted);
+    max-width: 56ch;
+    margin-inline: auto;
+  }
+
+  /* Говорим / не говорим — словарь и правила про самообучение */
+  .pairs {
+    display: grid;
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 22px;
+  }
+  .pairs__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 22px;
+    background: var(--bg);
+    padding: 15px 20px;
+  }
+  .pairs__row--head {
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .pairs__row--head span:first-child { color: var(--waiter-ink); }
+  .pairs__row--head span:last-child  { color: var(--alert); }
+  .pairs__yes { font-size: 14.5px; color: var(--text); font-weight: 500; }
+  .pairs__no  { font-size: 14.5px; color: var(--muted); }
+
+  /* Возражения */
+  .qa { display: grid; gap: 12px; margin-top: 22px; }
+  .qa__item {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    padding: 16px 19px;
+  }
+  .qa__q { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+  .qa__q::before { content: "\201C"; color: var(--alert); }
+  .qa__q::after  { content: "\201D"; color: var(--alert); }
+  .qa__a { margin: 8px 0 0; font-size: 14.5px; color: var(--text-2); }
+  .qa__a b { color: var(--text); font-weight: 600; }
+
+  /* Чего не обещаем — тот же список, но с крестами вместо стрелок */
+  .bullets--no li::before { content: "\00D7"; color: var(--alert); font-size: 15px; }
+
+  /* В таблице зон «нет цифры» должно бросаться в глаза */
+  .calc td i {
+    font-style: normal;
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--alert);
+  }
+  .calc tr.blind td { background: var(--alert-soft); }
+  .calc tr.blind td:first-child { color: var(--text); }
+
+  @media (max-width: 760px) {
+    .pairs__row { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+    .pairs__row--head { display: none; }
+    .pairs__yes::before {
+      content: "Говорим: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--waiter-ink);
+    }
+    .pairs__no::before {
+      content: "Не говорим: ";
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--alert);
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero__mark">
+      <div class="hero__logo">Rest<span>AI</span></div>
+      <div class="hero__tag">внутренний документ · ред. 1.0 · октябрь 2026</div>
+    </div>
+
+    <h1>Политика представления продукта <em>для ресторанов</em></h1>
+
+    <p class="hero__lede">
+      Один документ, из которого собирается любая встреча, любое письмо и любая
+      презентация RestAI. Он задаёт не оформление, а порядок аргументов: с чего
+      начинаем, какими словами говорим о продукте, как считаем деньги при
+      владельце и чего не обещаем никогда. Если материал собран не по этому
+      порядку — это не материал RestAI.
+    </p>
+
+    <div class="internal">
+      <b>Это документ для нас, а не для ресторана.</b> Ресторану уходят
+      презентация и адресная страница, собранные по этим правилам. Сам документ
+      не пересылаем: в нём есть раздел «как мы не говорим», и он читается как
+      разбор приёмов.
+    </div>
+  </header>
+
+  <!-- ================= 1. КАНОНИЧЕСКИЙ АБЗАЦ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">01 · с чего начинается всё</p>
+      <h2>Канонический абзац</h2>
+      <p>
+        Этим текстом открывается презентация, письмо и разговор. Его не
+        пересказывают своими словами и не сокращают: порядок фраз в нём
+        выстроен так, чтобы владелец не услышал в начале упрёк в свой адрес.
+      </p>
+    </div>
+
+    <div class="canon">
+      <span class="canon__k">произносится дословно</span>
+      <p>
+        В ресторане контролируется почти всё: закупка, себестоимость, кухня,
+        время отдачи, качество, возвраты. Не контролируется одно — минута,
+        в которую официант стоит у стола. Именно в эту минуту решается, уйдёт
+        гость со средним чеком или на 15% выше. И она не поддаётся управлению
+        не потому, что ей не занимаются, а потому, что её <b>нечем
+        измерить</b>: у неё нет ни отчёта, ни цифры, ни записи. Ни у вас,
+        ни у ваших конкурентов.
+      </p>
+      <p>
+        RestAI делает эту минуту измеримой — и <b>перестаёт от неё зависеть</b>.
+        Предложение доходит до гостя через его собственный телефон, в нужный
+        момент, одинаково в любую смену. Система знает конкретного гостя
+        и конкретного официанта, видит, какие приёмы у кого работают, и держит
+        баланс: она не превращается в навязчивый сервис. Гость её почти
+        не замечает. Чек это замечает.
+      </p>
+      <p>
+        Официанту система помогает, а не надзирает: <b>его чаевые растут вместе
+        с чеком</b>.
+      </p>
+    </div>
+
+    <ul class="bullets" style="margin-top:24px">
+      <li><b>Третий абзац обязателен.</b> Он снимает возражение про персонал
+        до того, как его задали. Без него разговор уходит в HR и не возвращается.</li>
+      <li><b>Рамка — слепая зона, а не недоработка.</b> «Это невозможно было
+        измерить ни у кого в отрасли» владелец слышит как факт о рынке.
+        «Вы это упустили» — как оценку себя, и дальше слушает защищаясь.</li>
+      <li><b>Цифра 15% в первом абзаце — это потолок разговора, а не обещание.</b>
+        Она описывает, что решается в эту минуту, а не что мы гарантируем.
+        Обещания живут только в разделе 07, после расчёта по цифрам сети.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 2. КАРТА СЛЕПОЙ ЗОНЫ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">02 · главный аргумент</p>
+      <h2>Четыре зоны, оцифрованы три</h2>
+      <p>
+        Эту таблицу рисуют от руки — на салфетке, в блокноте, на флипчарте.
+        Нарисованная при человеке, она работает сильнее слайда: он видит,
+        как заполняется третий столбец, и сам доходит до последней строки.
+      </p>
+    </div>
+
+    <div class="calc">
+      <table>
+        <thead>
+          <tr><th>Зона</th><th>Чем измеряется сегодня</th><th>Есть цифра</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Закупка и себестоимость</td><td>iiko / r_keeper, фудкост, инвентаризация</td><td><b>да</b></td></tr>
+          <tr><td>Кухня и отдача</td><td>KDS, время отдачи, стоп-листы</td><td><b>да</b></td></tr>
+          <tr><td>Касса и выручка</td><td>отчёты по сменам, средний чек, динамика</td><td><b>да</b></td></tr>
+          <tr class="blind"><td>Официант&nbsp;↔&nbsp;гость</td><td>ничем</td><td><i>нет</i></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="quote">
+      <p>«Назовите долю чеков, в которых официант предложил десерт. Любую цифру».</p>
+      <cite>Вопрос, который задаём вслух и после которого молчим</cite>
+    </div>
+
+    <p class="note">
+      Цифру не назовёт никто. Это и есть вся презентация в одном вопросе —
+      дальше мы не доказываем, что проблема есть, мы показываем инструмент.
+      Если человек всё же называет цифру («у нас по стандартам сервиса 100%»),
+      следующий вопрос: «а чем это посчитано?». Ответ будет «стандартами»
+      или «тайным гостем» — то есть не посчитано.
+    </p>
+  </section>
+
+  <!-- ================= 3. ЧТО СТАНОВИТСЯ ВИДНО ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">03 · содержание продукта</p>
+      <h2>Шесть метрик, которых у ресторана сейчас нет</h2>
+      <p>
+        Называем ровно эти шесть и не добавляем седьмую. Все они считаются
+        из наших же данных, без опросов, тайных гостей и видеонаблюдения —
+        поэтому каждую можно обещать, не оговариваясь.
+      </p>
+    </div>
+
+    <div class="cards cards--2">
+      <div class="card">
+        <span class="card__k">метрика 01</span>
+        <h3>Доля чеков с принятой допродажей</h3>
+        <p>По точке, по дню недели, по смене и по конкретному официанту.
+          Базовая цифра, от которой считается всё остальное.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">метрика 02</span>
+        <h3>Что предлагается, а что — никогда</h3>
+        <p>Позиции меню, которые за месяц не были предложены ни одного раза.
+          Как правило, это самые маржинальные строки: соусы, добавки, бокал.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">метрика 03</span>
+        <h3>Конверсия предложения в заказ</h3>
+        <p>По позиции и по официанту. Показывает не «кто плохой», а какой
+          приём работает и кого стоит разобрать на планёрке как пример.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">метрика 04</span>
+        <h3>Разрыв между лучшей и худшей сменой — в рублях</h3>
+        <p>Самая неудобная и самая убедительная цифра. Она же показывает
+          потолок: подтянуть всех до лучшей смены — это уже деньги.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">метрика 05</span>
+        <h3>Возвращаемость гостя и что он берёт во второй раз</h3>
+        <p>Узнаваемый гость без программы лояльности, карт и анкет —
+          по истории заказов с его собственного устройства.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">метрика 06</span>
+        <h3>Позиции, которые открывали, но не заказали ни разу</h3>
+        <p>Бесплатное исследование меню. Отдельный аргумент для маркетолога:
+          такой выборки у него сейчас нет ни за какие деньги.</p>
+      </div>
+    </div>
+
+    <p class="note">
+      Метрика 06 — то, чем мы заходим к маркетологу и шефу, когда владелец
+      занят. Она ничего не требует внедрять и ничего не обещает по выручке,
+      поэтому с неё легче всего начать разговор внутри сети.
+    </p>
+  </section>
+
+  <!-- ================= 4. МЕХАНИЗМ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">04 · почему это работает</p>
+      <h2>Допродажа перестаёт зависеть от официанта</h2>
+      <p>
+        Это самая важная мысль всей политики, и в концепции её легко потерять.
+        Мы не делаем из официанта робота и не стоим у него над плечом.
+        Мы выносим предложение в канал, которого смена не касается, —
+        в телефон гостя. Официантский модуль добавляется сверху,
+        для человеческой части вечера.
+      </p>
+    </div>
+
+    <div class="two">
+      <div>
+        <ul class="bullets">
+          <li><b>Канал гостя работает всегда.</b> В ночную смену, в день, когда
+            вышел стажёр, и в вечер, когда в зале аншлаг и официанту физически
+            некогда подойти, — предложение всё равно показано.</li>
+          <li><b>Гостю не нужно ничего устанавливать.</b> Камера на наклейку или
+            NFC-метку на столе, пейджере или подставке — и меню открылось.
+            Приложение есть, но оно не условие работы.</li>
+          <li><b>Предложение привязано к заказу, а не к гостю вообще.</b> Система
+            видит, что уже в заказе, что на стопе и сколько кухня отдаёт прямо
+            сейчас, — поэтому не предлагает то, чего нет или что приедет позже
+            горячего.</li>
+          <li><b>Официанту приходит одна подсказка на стол</b> — с причиной
+            и с цифрой конверсии, чтобы он понимал, почему именно это.
+            Подсказка, которую он проигнорировал, не повторяется и не уходит
+            «наверх» как нарушение.</li>
+          <li><b>Оплата — в том же телефоне.</b> Разделить счёт, оплатить свою
+            часть, добавить чай — без ожидания терминала. Это снимает последнее
+            место, где гость обычно упирается и уходит быстрее, чем взял бы ещё
+            один напиток.</li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="scr">
+          <div class="scr__bar"><span>19:42</span><b>Стол 14 · заказ принят</b></div>
+          <div class="scr__stack">
+            <div class="line"><span>Хачапури по-аджарски<small>подача через 12 минут</small></span><b>690&nbsp;₽</b></div>
+            <div class="line"><span>Чахохбили<small>подача через 12 минут</small></span><b>740&nbsp;₽</b></div>
+            <div class="bubble bubble--ai">К чахохбили хорошо идёт <b>Саперави</b> — бокал 320&nbsp;₽. Добавить?</div>
+            <div class="cta-row">
+              <a class="cta">Добавить бокал</a>
+              <a class="cta cta--ghost">Не сейчас</a>
+            </div>
+            <p>Больше предложений в этот визит не будет: лимит — два, одно уже показано.</p>
+          </div>
+        </div>
+        <p class="scr__cap">телефон гостя</p>
+
+        <div class="scr">
+          <div class="scr__bar"><span>Смена · Георгий</span><b>стол 14</b></div>
+          <div class="scr__stack">
+            <div class="coach">
+              <div class="coach__tag">подсказка · одна на стол</div>
+              <p class="coach__say">Гость взял бокал Саперави. В прошлые два визита он брал <q>чурчхелу к чаю</q> — предложи при расчёте.</p>
+              <div class="coach__why">
+                <span class="badge">3-й визит</span>
+                <span class="badge">конверсия 61%</span>
+                <span class="badge">+180 ₽</span>
+              </div>
+            </div>
+            <p>Если гость уже попросил счёт — подсказок больше нет.</p>
+          </div>
+        </div>
+        <p class="scr__cap">телефон официанта</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. ДЕЛИКАТНОСТЬ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">05 · главное обещание</p>
+      <h2>Деликатность — это спецификация, а не слово</h2>
+      <p>
+        «Ненавязчиво» — обещание, которое ничего не стоит: так говорят все.
+        Доверие вызывают ограничения. Поэтому мы не говорим, что система
+        деликатна, — мы перечисляем, чего она не делает. Этот список
+        показывается на встрече целиком, с экрана или с листа.
+      </p>
+    </div>
+
+    <div class="effect">
+      <span class="effect__k">правила, зашитые в систему</span>
+      <ul>
+        <li><b>Не больше двух предложений за визит.</b> Счётчик — на визит,
+          а не на позицию: пять напоминаний про один десерт невозможны.</li>
+        <li><b>Ни одного предложения в первые минуты после посадки.</b>
+          Сначала гость разбирается с основным заказом.</li>
+        <li><b>После заказа десерта или просьбы счёта предложений нет.</b>
+          Вечер закончен — система замолкает.</li>
+        <li><b>Позиция, от которой гость отказался, больше не предлагается</b> —
+          ни в этот визит, ни в следующий.</li>
+        <li><b>Не предлагаем то, чего нет на стопе</b> и что кухня сейчас отдаёт
+          дольше нормы. Предложение, которое нельзя выполнить, — это минус
+          к сервису, а не плюс к чеку.</li>
+        <li><b>Предложение уместно по порядку подачи.</b> К пасте — бокал,
+          не второе горячее; к кофе — десерт, не суп.</li>
+        <li><b>Ребёнку за столом система не предлагает ничего.</b> Всё, что
+          касается детского заказа, идёт взрослому устройству.</li>
+        <li><b>Отказ — это такая же данные, как согласие.</b> Доля отказов
+          видна в отчёте, и если она растёт — правило меняется, а не давление
+          усиливается.</li>
+      </ul>
+    </div>
+
+    <p class="note">
+      Последний пункт — ответ на вопрос «а кто решает, что это не навязчиво».
+      Решает цифра: доля отказов от предложения. Мы её показываем ресторану
+      наравне с выручкой, а не прячем.
+    </p>
+  </section>
+
+  <!-- ================= 6. САМООБУЧЕНИЕ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">06 · как говорим про ИИ</p>
+      <h2>Самообучение — без мистики</h2>
+      <p>
+        Опытный ресторатор за последние три года слышал про ИИ столько, что
+        любое громкое слово работает против нас. Говорим механику, а не магию:
+        система накапливает историю заказов и реакций и подстраивает, что
+        предлагать, когда и кому. Через месяц на точке она предлагает иначе,
+        чем в первый день, — и это проверяемо по отчёту.
+      </p>
+    </div>
+
+    <div class="pairs">
+      <div class="pairs__row pairs__row--head"><span>Говорим</span><span>Не говорим</span></div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Система видит, какие позиции гость брал раньше, и предлагает то, что он уже выбирал сам</div>
+        <div class="pairs__no">ИИ понимает психологию гостя и его настроение</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Видно, какие приёмы у какого официанта дают конверсию, и этим можно учить смену</div>
+        <div class="pairs__no">Нейросеть предсказывает поведение персонала</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Через месяц работы предложения на точке становятся точнее — вот отчёт за первую и за четвёртую неделю</div>
+        <div class="pairs__no">Система становится умнее каждый день</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Модель учится на вашей точке и на вашем меню</div>
+        <div class="pairs__no">У нас обучено на миллионах заказов по всей стране</div>
+      </div>
+    </div>
+
+    <div class="cards cards--2" style="margin-top:24px">
+      <div class="card">
+        <span class="card__k">обязательная строка</span>
+        <h3>Данные и 152-ФЗ</h3>
+        <p>Оператор персональных данных — сеть, не мы. История заказов
+          обезличена, персональные данные гостя мы не продаём и не передаём
+          третьим лицам. Эту строку спрашивают во всех сетях больше
+          20 точек — произносим её сами, не дожидаясь вопроса.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">обязательная строка</span>
+        <h3>Касса остаётся вашей</h3>
+        <p>Мы не заменяем iiko, r_keeper или Poster — встаём рядом и отдаём
+          заказ в неё. Учёт, отчётность и фискализация не меняются.
+          Это снимает половину возражений айтишника сети.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7. ЭКОНОМИКА ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">07 · деньги</p>
+      <h2>Считаем формулой и только при владельце</h2>
+      <p>
+        Слово «миллионы» без расчёта — это то, чем нас запомнят как очередных
+        продавцов софта. Поэтому мы не называем сумму заранее: мы приносим
+        формулу и подставляем в неё его цифры. Чеки в день он назовёт сам,
+        по памяти, за пять секунд.
+      </p>
+    </div>
+
+    <div class="formula">
+      <b>Δ выручки за год = чеков в день × 365 × прирост среднего чека</b>
+      <span>
+        Прирост берётся как среднее по <strong>всем</strong> чекам, а не только
+        по тем, где предложение сработало. Это и есть защита от обвинения
+        в фантазиях: сценарий должен звучать скучно.
+      </span>
+    </div>
+
+    <div class="calc">
+      <table>
+        <thead>
+          <tr><th>Формат</th><th>Чеков в день</th><th>Прирост чека</th><th>За год, одна точка</th><th>Маржа ≈70%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Кофейня</td><td>220</td><td>+25 ₽</td><td><b>2,0 млн ₽</b></td><td>1,4 млн ₽</td></tr>
+          <tr><td>Ресторан</td><td>110</td><td>+90 ₽</td><td><b>3,6 млн ₽</b></td><td>2,5 млн ₽</td></tr>
+          <tr><td>Ресторан с компаниями</td><td>90</td><td>+150 ₽</td><td><b>4,9 млн ₽</b></td><td>3,4 млн ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      Эти приросты проговариваются вслух и намеренно скромно: +25 ₽ на кофейный
+      чек — это сироп в каждом десятом стакане; +90 ₽ на ресторанный — соус или
+      бокал примерно в каждом двенадцатом чеке. Маржа взята 70%, потому что
+      допродажа — это почти всегда напитки, десерты, соусы и добавки,
+      а не второе горячее.
+    </p>
+
+    <div class="sec-head" style="margin-top:34px">
+      <h2 style="font-size:clamp(18px,2.6vw,23px)">Главный слайд: рост чека на 5% — это рост прибыли на 20–25%</h2>
+      <p>
+        Арифметика, которую владелец проверяет в голове за полминуты, и дальше
+        она работает за нас. Пример: средний чек 1 500 ₽, рентабельность 15%,
+        то есть 225 ₽ прибыли с чека. Допродажа на 75 ₽ с маржой 70% — это
+        +52 ₽ прибыли, то есть <b>+23% к операционной прибыли</b> с того же
+        гостя, того же зала и того же персонала.
+      </p>
+    </div>
+
+    <div class="figs">
+      <div class="fig"><b>+5%</b><span>к среднему чеку — целевой ориентир пилота</span></div>
+      <div class="fig"><b>+23%</b><span>к операционной прибыли при рентабельности 15%</span></div>
+      <div class="fig"><b>0 ₽</b><span>капзатрат: ни планшетов, ни терминалов на столах</span></div>
+    </div>
+
+    <p class="note">
+      Чем ниже рентабельность сети, тем сильнее аргумент: при 10%
+      тот же прирост чека даёт уже около +35% к прибыли. Поэтому в кризисной
+      ситуации разговор идёт легче, а не тяжелее, — и именно на этом строится
+      первое письмо.
+    </p>
+
+    <div class="effect" style="margin-top:28px">
+      <span class="effect__k">для сетей по франшизе</span>
+      <ul>
+        <li><b>Роялти превращает рост чека в доход управляющей компании.</b>
+          При роялти 5% каждый рубль прироста выручки точки — это 5 копеек
+          управляющей компании, при нулевых затратах с её стороны.</li>
+        <li><b>Платит франчайзи, выигрывают оба.</b> Поэтому во франшизных
+          сетях мы говорим не с операционным блоком, а с тем, кто получает
+          роялти, — у него мотивация прямая и считается в одну строку.</li>
+        <li><b>Единое меню по сети — отдельная ценность.</b> Обновление
+          позиции, цены или стоп-листа доходит до всех точек сразу,
+          без рассылки PDF-ов по франчайзи.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 8. ЛЕСТНИЦА ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">08 · порядок встречи</p>
+      <h2>Лестница аргументов</h2>
+      <p>
+        Шаги не переставляются. Каждый следующий держится на предыдущем,
+        и если начать с продукта или с цены, конструкция рассыпается:
+        про деликатность слушают только после того, как согласились,
+        что проблема есть.
+      </p>
+    </div>
+
+    <div class="flow">
+      <div class="flow__step">
+        <h3>Вопрос про долю допродаж</h3>
+        <p>«Назовите долю чеков, где официант предложил десерт». Молчим
+          и ждём ответа. Цифры не будет.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Слепая зона</h3>
+        <p>Рисуем четыре зоны. Это не ваша недоработка — в отрасли просто
+          нет инструмента, который туда смотрит.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Механизм</h3>
+        <p>Предложение идёт через телефон гостя, значит работает в любую смену.
+          Показываем экраны, а не рассказываем о них.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Правила деликатности</h3>
+        <p>Восемь ограничений списком. Снимаем страх «испортим сервис»
+          до того, как он прозвучал.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Его цифры в формуле</h3>
+        <p>Он называет чеки в день, мы считаем при нём. Сумму произносит
+          он, а не мы, — и спорить с ней не станет.</p>
+      </div>
+      <div class="flow__step flow__step--close">
+        <h3>Пилот</h3>
+        <p>Две точки, четыре недели, контрольная группа, метрика названа
+          заранее. Переходим к датам, а не к «подумаем».</p>
+      </div>
+    </div>
+
+    <div class="cards cards--2" style="margin-top:26px">
+      <div class="card">
+        <span class="card__k">акцент</span>
+        <h3>Собственник</h3>
+        <p>Маржа и год по всей сети. Шаг 7, блок про прибыль. Не уходим
+          в интерфейсы.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">акцент</span>
+        <h3>Управляющий, операционный директор</h3>
+        <p>Ровность смен и разрыв между лучшей и худшей. Метрика 04 —
+          его боль, а не наша.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">акцент</span>
+        <h3>Маркетолог</h3>
+        <p>Метрика 06: позиции, которые смотрят и не берут. И возвращаемость
+          гостя без карт и анкет.</p>
+      </div>
+      <div class="card">
+        <span class="card__k">акцент</span>
+        <h3>Франчайзер</h3>
+        <p>Роялти как собственный доход от роста чека и единое меню
+          по всей сети одним обновлением.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 9. СЛОВАРЬ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">09 · язык</p>
+      <h2>Словарь</h2>
+      <p>
+        Левая колонка продаёт собственнику инструмент роста выручки. Правая —
+        продаёт операционному директору инструмент дисциплины, с бюджетом
+        «попробуем» и гарантированным возражением про персонал. Разница
+        в одном слове.
+      </p>
+    </div>
+
+    <div class="pairs">
+      <div class="pairs__row pairs__row--head"><span>Говорим</span><span>Не говорим</span></div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Управляемость, видимость, измеримость</div>
+        <div class="pairs__no">Контроль официанта, слежка, надзор</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Прирост среднего чека — вот формула</div>
+        <div class="pairs__no">Увеличим выручку в разы</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Рост маржи 20–25% при росте чека на 5%</div>
+        <div class="pairs__no">Миллионы упущенной прибыли</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Система предлагает</div>
+        <div class="pairs__no">Система заставляет, обязывает, навязывает</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Деликатно — и вот восемь правил</div>
+        <div class="pairs__no">Ненавязчиво (без расшифровки)</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Официант зарабатывает больше чаевых</div>
+        <div class="pairs__no">Официант будет работать по скрипту</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Встаём рядом с вашей кассой</div>
+        <div class="pairs__no">Заменим вашу систему автоматизации</div>
+      </div>
+      <div class="pairs__row">
+        <div class="pairs__yes">Экосистема из пяти модулей, внедряем по одному</div>
+        <div class="pairs__no">Платформа полного цикла, цифровая трансформация</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 10. ВОЗРАЖЕНИЯ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">10 · на встрече</p>
+      <h2>Возражения</h2>
+      <p>
+        Семь, которые звучат почти всегда. Ответ на каждое — одна-две фразы
+        и возврат в лестницу, а не спор.
+      </p>
+    </div>
+
+    <div class="qa">
+      <div class="qa__item">
+        <p class="qa__q">Официанты будут саботировать</p>
+        <p class="qa__a">Основной канал не требует официанта — предложение
+          приходит гостю в телефон. <b>Саботировать нечего.</b> Его модуль —
+          подсказка, от которой растут его же чаевые.</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">Гостей это оттолкнёт, у нас живой сервис</p>
+        <p class="qa__a">Восемь правил из раздела 05 — целиком, списком.
+          И рыночный аргумент: директор по развитию «Шоколадницы» публично
+          говорит, что средний чек со столового планшета
+          <b>не уступает традиционному обслуживанию</b>. Цифровой канал гостя
+          не отпугивает. Мы при этом не ставим на столы железо.</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">У нас сильный сервис, официанты и так предлагают</p>
+        <p class="qa__a">Отлично — тогда пилот просто покажет цифру, которой
+          у вас нет. <b>Если доля допродаж окажется высокой, вы первыми это
+          докажете</b> — и будете знать, кто именно в зале её держит.</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">Дорого</p>
+        <p class="qa__a">Считаем окупаемость по его же формуле из раздела 07,
+          <b>в неделях, а не в годах</b>. Если в неделях не получается —
+          формат сети нам не подходит, и это честнее сказать сразу.</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">У нас iiko / r_keeper, всё уже автоматизировано</p>
+        <p class="qa__a">Мы не заменяем кассу — встаём рядом и отдаём заказ
+          в неё. <b>Автоматизирован учёт, а не минута у стола.</b>
+          Возвращаемся к таблице из раздела 02.</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">Сначала покажите кейс в похожей сети</p>
+        <p class="qa__a">Называем честно: <b>кейс такой сети — это и есть
+          пилот</b>, и поэтому пилот стоит так, как стоит. Не выдаём чужие
+          цифры за свои и не рассказываем про «клиента, которого не можем
+          назвать».</p>
+      </div>
+      <div class="qa__item">
+        <p class="qa__q">Нам надо посоветоваться / вернёмся после сезона</p>
+        <p class="qa__a">Не давим. Оставляем одно: <b>две недели замера
+          без внедрения</b> — мы ставим меню на одну точку и просто показываем
+          baseline по шести метрикам. Это решение, которое принимают
+          на месте.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 11. ПИЛОТ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">11 · чем заканчивается встреча</p>
+      <h2>Пилот описан заранее — до того, как о нём спросили</h2>
+      <p>
+        Предложение, в котором не названа метрика успеха, читается как попытка
+        не отвечать за результат. Поэтому условия пилота мы приносим готовыми,
+        вместе с определением неудачи.
+      </p>
+    </div>
+
+    <div class="flow flow--4">
+      <div class="flow__step">
+        <h3>Две недели baseline</h3>
+        <p>Меню стоит, предложения выключены. Снимаем шесть метрик «как есть» —
+          иначе прирост не с чем сравнить.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Четыре недели работы</h3>
+        <p>Две точки с системой и две сопоставимые контрольные: похожая
+          проходимость, тот же формат, те же дни недели.</p>
+      </div>
+      <div class="flow__step">
+        <h3>Метрика названа до старта</h3>
+        <p>Средний чек по чекам, прошедшим через наше меню, против контрольной
+          группы за тот же период. Одна цифра, без вариантов трактовки.</p>
+      </div>
+      <div class="flow__step flow__step--close">
+        <h3>Критерий неудачи тоже наш</h3>
+        <p>Прирост ниже договорённого порога — пилот не удался, и мы говорим
+          это первыми. Доля отказов выше 70% — меняем правила,
+          а не усиливаем давление.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 12. ЧЕГО НЕ ОБЕЩАЕМ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">12 · границы</p>
+      <h2>Чего мы не обещаем</h2>
+      <p>
+        Этот блок стоит в каждом материале — и добавляет доверия больше,
+        чем любой слайд с возможностями. Ресторатор за год слышит десять
+        презентаций, в которых обещано всё; запоминается та, где честно
+        названы границы.
+      </p>
+    </div>
+
+    <ul class="bullets bullets--no">
+      <li>Не называем конкретный процент роста чека <b>до</b> пилота
+        на их собственных данных.</li>
+      <li>Не обещаем снижение текучки персонала — это не наша зона,
+        и проверить мы это не сможем.</li>
+      <li>Не обещаем, что гости перестанут звать официанта. Мы не убираем
+        официанта из зала и не ставим это целью.</li>
+      <li>Не обещаем работу без интернета в зале и не скрываем, что
+        нормальный Wi-Fi — условие.</li>
+      <li>Не выдаём чужие кейсы за свои и не ссылаемся на клиентов,
+        которых «не можем назвать».</li>
+      <li>Не обещаем съёмку видео для меню как часть внедрения:
+        состав и объём медиа — отдельная договорённость.</li>
+      <li>Не критикуем ресторан, которому пишем, — ни одной строкой.
+        Наблюдения о слабых местах — аргумент для живого разговора,
+        а не для документа, который читают до встречи.</li>
+      <li>Не утверждаем ничего о конкуренте без публичного источника
+        со ссылкой.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 13. АНАТОМИЯ МАТЕРИАЛОВ ================= -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">13 · как собирается материал</p>
+      <h2>Анатомия любой презентации и письма</h2>
+      <p>
+        Один порядок на все материалы. Меняется только акцент под роль
+        адресата и примеры под формат сети — структура не меняется никогда.
+      </p>
+    </div>
+
+    <ul class="bullets">
+      <li><b>1. Канонический абзац</b> — слепая зона, механизм, чаевые официанта.</li>
+      <li><b>2. Вопрос про долю допродаж</b> — и пауза.</li>
+      <li><b>3. Карта четырёх зон</b> — три оцифрованы, четвёртая нет.</li>
+      <li><b>4. Экраны телефона</b> — гость и официант в один и тот же вечер.
+        Обязательны: продукт убеждает, когда его видно, а не когда о нём
+        рассказывают.</li>
+      <li><b>5. Восемь правил деликатности</b> — списком, без сокращений.</li>
+      <li><b>6. Формула с их цифрами</b> — и блок про прибыль.</li>
+      <li><b>7. Пилот с названной метрикой</b> — и критерием неудачи.</li>
+      <li><b>8. Чего не обещаем</b> — в конце, перед контактами.</li>
+    </ul>
+
+    <div class="effect" style="margin-top:26px">
+      <span class="effect__k">правила оформления адресных страниц</span>
+      <ul>
+        <li><b>Адрес неочевидный.</b> Каждая страница лежит по своему пути
+          в <span style="font-family:var(--mono);font-size:13.5px">/p/</span>
+          и закрыта <span style="font-family:var(--mono);font-size:13.5px">noindex, nofollow</span>:
+          её можно дать ссылкой на встрече, но она не находится поиском
+          по названию ресторана.</li>
+        <li><b>В robots.txt такие адреса не перечисляются</b> — файл публичный,
+          и запрет в нём только подсказал бы, куда смотреть.</li>
+        <li><b>Дизайн меню разрабатывается под каждую сеть отдельно</b> —
+          под её бренд, цвета и подачу. Это говорится в каждом письме:
+          шаблон с нашим логотипом сеть не возьмёт.</li>
+        <li><b>Каждое утверждение о конкуренте — со ссылкой на публичный
+          источник</b>, дословной цитатой и датой.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="final">
+    <h2>Как этим пользоваться</h2>
+    <p>
+      Перед встречей читается раздел 08 — лестница. Перед письмом —
+      разделы 01 и 13. Перед ответом на возражение — раздел 10. Если
+      в материале нет канонического абзаца в начале и блока «чего не обещаем»
+      в конце, материал не готов.
+    </p>
+    <p>
+      Полная презентация продукта — пять модулей, где по каждому расписано,
+      где он работает и что даёт, со всеми экранами вечера за одним столом
+      глазами гостя и официанта одновременно.
+    </p>
+    <div class="btns">
+      <a class="btn btn--main" href="/presentation/">Открыть полную презентацию</a>
+      <a class="btn btn--ghost" href="RestAI-policy.pdf" data-print="hide">Скачать PDF</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      <strong>RestAI</strong> — умная экосистема управления залом: гость,
+      официант и кухня в едином контуре. Интеграция с iiko, r_keeper и Poster.
+      <a href="mailto:ceo@restai.pro">ceo@restai.pro</a> · <a href="/">restai.pro</a>
+    </p>
+    <p class="note">
+      Внутренний документ. Редакция 1.0, октябрь 2026. Правки — через
+      обновление этой страницы, чтобы у всех была одна версия.
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>
