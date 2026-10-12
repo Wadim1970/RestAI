@@ -24,7 +24,7 @@ CHECKS=(
   "waiter-api|https://api.restai.pro/health"
   "Гостевое приложение|https://guest.restai.pro/"
   "Приложение официанта|https://waiter.restai.pro/"
-  "База (Supabase REST)|https://supabase.insis.pro/rest/v1/"
+  "База (Supabase REST)|https://supabase.restai.pro/rest/v1/"
 )
 
 notify() {
