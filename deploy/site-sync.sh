@@ -27,7 +27,7 @@ main() {
 
   if [ "${1:-}" = "--pull" ]; then
     local before after
-    before="$(git -C "$SRC" rev-parse HEAD)"
+    before="$(git -C "$SRC" rev-parse -q --verify HEAD || true)"
     git -C "$SRC" fetch -q --depth 1 origin "$BRANCH"
     git -C "$SRC" reset -q --hard FETCH_HEAD
     after="$(git -C "$SRC" rev-parse HEAD)"

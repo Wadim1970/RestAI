@@ -22,6 +22,10 @@ command -v nginx >/dev/null || die "nginx не установлен — снач
 command -v rsync >/dev/null || sudo apt-get install -y -qq rsync >/dev/null
 
 step "Копия репозитория для сайта ($SRC)"
+# Недокачанная копия (прерванный clone: .git есть, коммитов нет) — качаем заново.
+if [ -d "$SRC" ] && ! git -C "$SRC" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+  rm -rf "$SRC"
+fi
 if [ ! -d "$SRC/.git" ]; then
   git clone -q --depth 1 -b main git@github-restai:Wadim1970/RestAI.git "$SRC" \
     || die "Не удалось склонировать RestAI через github-restai (deploy/README.md, шаг 1)."
