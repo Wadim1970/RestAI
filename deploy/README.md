@@ -11,6 +11,7 @@
 
 - `deploy/api-server.mjs` запускает функции из `api/` как есть (замена Vercel Functions).
 - nginx кэширует `/api/menu` и `/api/branding` на 60 с (замена Vercel Edge-кэша).
+- сайт restai.pro (главная, `/p/*`, `/in/*`, визитки `/card/`, `/card-zuev/`, `/presentation/`) — статика из того же репозитория, nginx, вместо GitHub Pages (см. ниже).
 - voice-relay остаётся на сервере в Казахстане: OpenAI не принимает запросы с российских IP.
 
 ## Первая установка
@@ -87,12 +88,39 @@ WAITER_DOMAIN=<домен официанта> EMAIL=<почта> bash /opt/resta
 
 Vercel держим включённым ещё пару дней как запасной вариант.
 
+## Сайт restai.pro (вместо GitHub Pages)
+
+Состав тот же, что публиковал `.github/workflows/pages.yml`: `site/` в корень, плюс `card/`, `card-zuev/`, `presentation/`. README и CNAME не публикуются. Адреса визиток не меняются — QR-коды на них напечатаны.
+
+```bash
+git -C /opt/restai/RestAI pull
+bash /opt/restai/RestAI/deploy/setup-site.sh
+```
+
+Скрипт делает отдельную лёгкую копию репозитория в `/opt/restai/site-src`, собирает сайт в `/opt/restai/site`, ставит nginx для `restai.pro` и `www.restai.pro` (www → без www) и cron: раз в 5 минут подтягивает `main` и пересобирает сайт, если что-то изменилось. Push в `main` доезжает до сайта сам, как раньше с Pages. Лог — `/opt/restai/site-sync.log`.
+
+Проверка до DNS: `curl -H "Host: restai.pro" http://<IP сервера>/presentation/`.
+
+DNS (Reg.ru), записи `restai.pro`:
+1. `@` — удалить четыре A-записи `185.199.108–111.153` и **четыре AAAA** `2606:50c0:8000–8003::153` (иначе телефоны с IPv6 продолжат ходить на GitHub), добавить A → IP сервера.
+2. `www` — удалить CNAME `wadim1970.github.io.`, добавить A → IP сервера.
+3. MX и TXT (Яндекс-почта) не трогать.
+
+Когда `getent hosts restai.pro www.restai.pro` покажет новый IP:
+
+```bash
+EMAIL=<почта> bash /opt/restai/RestAI/deploy/enable-https.sh site
+```
+
+После этого в GitHub: RestAI → Settings → Pages → удалить custom domain и отключить Pages.
+
 ## Обновление (замена «git push → Vercel задеплоил»)
 
 ```bash
 bash /opt/restai/RestAI/deploy/update.sh          # оба приложения
 bash /opt/restai/RestAI/deploy/update.sh guest    # только гостевое
 bash /opt/restai/RestAI/deploy/update.sh waiter   # только официанта
+bash /opt/restai/RestAI/deploy/update.sh site     # только сайт (обычно не нужно — cron)
 ```
 
 ## Диагностика
