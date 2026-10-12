@@ -939,6 +939,17 @@
     border-left: 3px solid var(--guest);
   }
 
+  /* На узком экране матрица листается вбок, и без подписи этого не видно. */
+  .scroll-hint {
+    display: none;
+    margin: 9px 0 0;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  @media (max-width: 760px) { .scroll-hint { display: block; } }
+
   @media (max-width: 760px) {
     .pairs__row { grid-template-columns: minmax(0, 1fr); gap: 7px; }
     .pairs__row--head { display: none; }
@@ -1303,6 +1314,7 @@
       </table>
     </div>
 
+    <p class="scroll-hint">таблица листается вбок →</p>
     <p class="mx-legend">
       <span class="mx-key"></span>
       лучшая техника в строке · доля чеков, где предложение приняли
