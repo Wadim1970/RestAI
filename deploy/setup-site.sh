@@ -38,8 +38,10 @@ SITE_SRC="$SRC" bash "$HERE/site-sync.sh" --pull
 
 step "Автообновление (cron, каждые 5 минут)"
 line="*/5 * * * * bash $SRC/deploy/site-sync.sh --pull >> $ROOT/site-sync.log 2>&1"
-( crontab -l 2>/dev/null | grep -v 'deploy/site-sync.sh' ; echo "$line" ) | crontab -
-crontab -l | grep site-sync
+# "|| true": у пользователя может не быть crontab вовсе, а grep без совпадений
+# возвращает 1 — под set -e это обрывало установку на пустом месте.
+{ crontab -l 2>/dev/null | grep -v 'deploy/site-sync.sh' || true; echo "$line"; } | crontab -
+crontab -l | grep site-sync || die "Не удалось записать задание в crontab."
 
 step "nginx"
 sed -e "s/__SITE_DOMAIN__/$SITE_DOMAIN/g" "$HERE/nginx-site.conf.template" \
