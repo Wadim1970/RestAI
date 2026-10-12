@@ -51,6 +51,8 @@ sudo nginx -t
 sudo systemctl reload nginx
 
 step "Проверка"
+# reload асинхронный: без паузы отвечают ещё старые воркеры, без конфига сайта.
+sleep 2
 for path in / /presentation/ /card/ /card-zuev/ /p/bontempi-2026/ /p/README.md; do
   code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $SITE_DOMAIN" "http://127.0.0.1$path")
   echo "  $path → HTTP $code"
