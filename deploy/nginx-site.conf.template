@@ -1,0 +1,35 @@
+# Сайт restai.pro (замена GitHub Pages). Генерируется deploy/setup-site.sh:
+# __SITE_DOMAIN__ подставляется. Статику собирает deploy/site-sync.sh.
+# HTTPS добавляет certbot (deploy/enable-https.sh site) после переключения DNS.
+
+# www → без www, как было на Pages.
+server {
+    listen 80;
+    server_name www.__SITE_DOMAIN__;
+    return 301 $scheme://__SITE_DOMAIN__$request_uri;
+}
+
+server {
+    listen 80;
+    server_name __SITE_DOMAIN__;
+
+    root /opt/restai/site;
+    index index.html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Страницы — без кэша, чтобы правки были видны сразу.
+    location ~ \.html$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Картинки, PDF, стили — у них нет хэша в имени, поэтому на сутки, а не на год.
+    location ~* \.(png|jpe?g|webp|gif|svg|ico|pdf|css|js|woff2?)$ {
+        add_header Cache-Control "public, max-age=86400";
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

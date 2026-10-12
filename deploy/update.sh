@@ -3,6 +3,9 @@
 #   bash /opt/restai/RestAI/deploy/update.sh            # оба приложения
 #   bash /opt/restai/RestAI/deploy/update.sh guest      # только гостевое
 #   bash /opt/restai/RestAI/deploy/update.sh waiter     # только официанта
+#   bash /opt/restai/RestAI/deploy/update.sh site       # только сайт restai.pro
+#
+# Сайт обновляется и сам: cron раз в 5 минут (deploy/setup-site.sh).
 set -euo pipefail
 ROOT=/opt/restai
 what="${1:-all}"
@@ -18,5 +21,8 @@ deploy() {  # $1=папка $2=ветка $3=pm2-процесс
 
 [ "$what" = all ] || [ "$what" = guest ]  && deploy "$ROOT/RestAI"     main          restai-guest-api
 [ "$what" = all ] || [ "$what" = waiter ] && deploy "$ROOT/Waiter-app" RestAI-weiter restai-waiter-api
+if [ "$what" = all ] || [ "$what" = site ]; then
+  [ -d "$ROOT/site-src/.git" ] && bash "$ROOT/site-src/deploy/site-sync.sh" --pull
+fi
 pm2 save >/dev/null
 echo "Готово."
