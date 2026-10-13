@@ -11,10 +11,13 @@ import PairingSheet from './PairingSheet/PairingSheet';
 import { supabase } from '../supabaseClient';
 import { getOrCreateDeviceId } from '../lib/deviceId';
 import { formatPrice, formatWeight } from '../lib/menuFormat';
-import { pickPairing, rememberShown, rememberAnswer, loadMemory, saveMemory } from '../lib/pairingRules';
+import { pickPairing, rememberShown, rememberAnswer, loadMemory, saveMemory, expandPairingsByName } from '../lib/pairingRules';
 
 // Сервер официанта (Waiter-app): там подбор пар под конкретного гостя.
 const PAIRINGS_API = (import.meta.env.VITE_PAIRINGS_API_URL || 'https://waiter.restai.pro').replace(/\/$/, '');
+// Режим проверки (ссылка с &pairs=test): подсказка на каждое первое добавление,
+// без лимитов «раз в минуту / 3 за визит» — для проверки и показа ресторану.
+const PAIRINGS_TEST_MODE = new URLSearchParams(window.location.search).get('pairs') === 'test';
 
 
 export default function MenuPage({
@@ -269,11 +272,15 @@ useEffect(() => {
         [groupedMenu]
     );
 
+    const allItems = useMemo(() => [...menuById.values()], [menuById]);
+    const genericPairings = useMemo(() => expandPairingsByName(pairings, allItems), [pairings, allItems]);
+    const personalPairingsByName = useMemo(() => expandPairingsByName(personalPairings, allItems), [personalPairings, allItems]);
+
     const logPairing = useCallback((o, outcome) => {
         supabase.rpc('log_menu_pairing_event', {
             p_restaurant_id: restaurantId,
             p_device_id: getOrCreateDeviceId(),
-            p_anchor_dish_id: o.anchorId,
+            p_anchor_dish_id: o.logAnchorId || o.anchorId,
             p_dish_id: o.dishId,
             p_outcome: outcome,
             p_personal: !!o.personal,
@@ -292,10 +299,11 @@ useEffect(() => {
             prevCount,
             cart: { ...cart, [dishId]: prevCount + delta },
             menuById,
-            generic: pairings,
-            personal: personalPairings,
+            generic: genericPairings,
+            personal: personalPairingsByName,
             memory,
             now: Date.now(),
+            ignoreLimits: PAIRINGS_TEST_MODE,
         });
         if (!next) return;
         pairingMemoryRef.current = rememberShown(memory, Date.now());
