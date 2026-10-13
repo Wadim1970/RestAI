@@ -75,6 +75,8 @@ SUPABASE_SERVICE_KEY=
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
+# Токен админки для пар блюд (deploy/README.md, «Пары блюд»): openssl rand -hex 24
+PAIRINGS_ADMIN_TOKEN=
 EOF
   missing=1
 fi

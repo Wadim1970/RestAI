@@ -43,5 +43,29 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
-  res.status(200).json({ items: data ?? [] })
+  res.status(200).json({ items: data ?? [], pairings: await loadPairings(restaurantId) })
+}
+
+// Пары блюд для подсказки «к этому блюду отлично подходит…»: { <блюдо>:
+// [{dishId, lead, why}] }, ручные пары менеджера первыми, не больше двух на
+// блюдо. Составляет их сервер официанта (Waiter-app, api/pairings). Нет
+// таблицы или пар — пустой объект: меню работает как раньше, без подсказок.
+async function loadPairings(restaurantId) {
+  const { data, error } = await supabase
+    .from('menu_pairings')
+    .select('dish_id, pair_dish_id, rank, lead, reason, source')
+    .eq('restaurant_id', restaurantId)
+    .eq('status', 'active')
+  if (error) {
+    if (error.code !== 'PGRST205' && error.code !== '42P01') console.error('menu_pairings query failed:', error)
+    return {}
+  }
+  const sorted = (data || []).sort((x, y) =>
+    (x.source === 'manual' ? 0 : 1) - (y.source === 'manual' ? 0 : 1) || x.rank - y.rank)
+  const out = {}
+  for (const p of sorted) {
+    const list = (out[p.dish_id] ||= [])
+    if (list.length < 2) list.push({ dishId: p.pair_dish_id, lead: p.lead, why: p.reason })
+  }
+  return out
 }
