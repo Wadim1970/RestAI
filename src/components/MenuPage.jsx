@@ -8,8 +8,18 @@ import MenuFooter from './MenuFooter/MenuFooter';
 import DishModal from './DishModal/DishModal';
 import CartModal from './CartModal/CartModal';
 
-// Компонент иконки "галочка" для выбранных блюд
-const Checkmark = () => <div className={styles.checkmarkIcon}></div>;
+// Вес/объём для строки под названием: «510 г», «750 мл». В данных он бывает
+// в specific_details ({weight_value, weight_unit} или строка «750 мл») и в
+// weight_g в виде «/ 510 г.».
+function formatWeight(dish) {
+    const d = dish.specific_details;
+    if (d && typeof d === 'object' && d.weight_value) return `${d.weight_value} ${d.weight_unit || 'г'}`;
+    if (typeof d === 'string' && d.trim()) return d.trim();
+    if (dish.weight_g) return String(dish.weight_g).replace(/^[\s/]+/, '').replace(/\.$/, '').trim();
+    return '';
+}
+
+const formatPrice = (rub) => `${Number(rub || 0).toLocaleString('ru-RU')} ₽`;
 
 export default function MenuPage({
     restaurantId,
@@ -204,6 +214,9 @@ useEffect(() => {
     const sections = Object.keys(groupedMenu || {});
     const visibleSections = sections.slice(0, visibleSectionsCount); // 🆕 Только видимые секции
     const isOrderActive = Object.keys(cart).length > 0 || confirmedOrders.length > 0;
+    // Счётчик и сумма на кнопке «Заказ» — только то, что ещё не отправлено.
+    const cartCount = cartItems.reduce((n, d) => n + d.count, 0);
+    const cartSum = cartItems.reduce((n, d) => n + d.count * (Number(d.cost_rub) || 0), 0);
 
     const handleOpenModal = (dish, z = undefined) => {
     trackDishView(dish.dish_name);
@@ -219,14 +232,12 @@ useEffect(() => {
     setIsModalOpen(true);
 };
 
-    const toggleDishSelection = (e, dishId) => {
+    // «+» / «−» на карточке: раньше была галочка «выбрано/не выбрано», теперь
+    // количество меняется прямо в меню, без захода в карточку блюда.
+    const changeCount = (e, dishId, delta) => {
         e.stopPropagation();
-        const currentCount = cart[dishId] || 0;
-        if (currentCount > 0) {
-            updateCart(-currentCount, dishId);
-        } else {
-            updateCart(1, dishId);
-        }
+        if (delta < 0 && !(cart[dishId] > 0)) return;
+        updateCart(delta, dishId);
     };
 
     if (loading) return <div className={styles.loader}>Загрузка...</div>;
@@ -252,34 +263,49 @@ useEffect(() => {
                         >
                             <h2>{sectionName}</h2>
                             <div className={styles.dishGrid}>
-                                {groupedMenu[sectionName]?.map(dish => (
+                                {groupedMenu[sectionName]?.map(dish => {
+                                    const count = cart[dish.id] || 0;
+                                    const weight = formatWeight(dish);
+                                    return (
                                     <div key={dish.id} className={styles.dishCard}>
-                                        <div 
+                                        <div
                                             className={styles.dishImageContainer}
                                             onClick={() => handleOpenModal(dish)}
                                         >
                                             {dish.image_url && (
-                                                <img 
-                                                    src={dish.image_url} 
-                                                    alt={dish.dish_name} 
-                                                    className={styles.dishImage} 
+                                                <img
+                                                    src={dish.image_url}
+                                                    alt={dish.dish_name}
+                                                    className={styles.dishImage}
                                                     loading="lazy"
                                                     decoding="async"
                                                 />
                                             )}
-                                            <div className={styles.priceTag}>
-                                                <p className={styles.dishPrice}>{dish.cost_rub} ₽</p>
-                                            </div>
-                                            <button 
-                                                className={`${styles.selectButton} ${cart[dish.id] ? styles.selected : ''}`}
-                                                onClick={(e) => toggleDishSelection(e, dish.id)}
-                                            >
-                                                {cart[dish.id] && <Checkmark />}
-                                            </button>
                                         </div>
-                                        <p className={styles.dishName}>{dish.dish_name}</p>
+                                        <p className={styles.dishName} onClick={() => handleOpenModal(dish)}>{dish.dish_name}</p>
+                                        <div className={styles.dishRow}>
+                                            <p className={styles.dishPrice}>
+                                                {formatPrice(dish.cost_rub)}
+                                                {weight && <span className={styles.dishWeight}>{weight}</span>}
+                                            </p>
+                                            {count > 0 ? (
+                                                <div className={styles.stepper}>
+                                                    <button type="button" aria-label={`Убрать ${dish.dish_name}`} onClick={(e) => changeCount(e, dish.id, -1)}>−</button>
+                                                    <span>{count}</span>
+                                                    <button type="button" aria-label={`Добавить ещё ${dish.dish_name}`} onClick={(e) => changeCount(e, dish.id, 1)}>+</button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className={styles.addButton}
+                                                    aria-label={`Добавить ${dish.dish_name}`}
+                                                    onClick={(e) => changeCount(e, dish.id, 1)}
+                                                >+</button>
+                                            )}
+                                        </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
                     ))}
@@ -294,7 +320,9 @@ useEffect(() => {
             </main>
 
             <MenuFooter 
-                orderActive={isOrderActive} 
+                orderActive={isOrderActive}
+                cartCount={cartCount}
+                cartSumLabel={cartCount > 0 ? formatPrice(cartSum) : null}
                 onChatClick={() => onOpenChat(null, activeSection)} 
                 onOrderClick={() => setIsCartOpen(true)}
                 onCallClick={onCallWaiter}

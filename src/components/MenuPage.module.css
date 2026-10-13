@@ -35,7 +35,7 @@
 /* --- Заголовки разделов --- */
 .menuSection h2 {
     font-family: var(--font-heading);
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 600;
     color: var(--color-primary);
     
@@ -45,8 +45,8 @@
     display: block;
     width: 100%;
 
-    margin-top: 42px; 
-    margin-bottom: 30px;
+    margin-top: 34px;
+    margin-bottom: 18px;
 }
 
 /* --- Сетка блюд (2 ряда) --- */
@@ -57,7 +57,7 @@
     padding: 0 !important; 
     margin: 0 !important;
     
-    gap: 30px 22px; 
+    gap: 26px 16px;
     
     width: 100%;
     box-sizing: border-box;
@@ -65,7 +65,8 @@
 
 /* --- Карточка блюда --- */
 .dishCard {
-    width: 100%; 
+    width: 100%;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -80,7 +81,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: transparent;
+    /* Подложка из цвета плашки цены ресторана: фото с белым фоном и
+       вырезанные на прозрачном выглядят одинаково аккуратно. */
+    background-color: var(--color-price-bg);
+    background-color: color-mix(in srgb, var(--color-price-bg) 45%, #fff);
+    border-radius: 18px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
@@ -98,69 +103,109 @@
     display: block;
 }
 
-/* --- Поле с ценой --- */
-.priceTag {
-    position: absolute;
-    left: 1px;
-    bottom: 3px;
-    width: 81px;
-    height: 31px;
-    background-color: var(--color-price-bg);
+/* --- Название блюда --- */
+.dishName {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--color-primary);
+    width: 100%;
+    margin: 10px 0 6px;
+    cursor: pointer;
+    /* Две строки: длинные названия не раздвигают сетку */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.5em;
+}
+
+/* --- Цена, вес и кнопка «+» --- */
+.dishRow {
+    width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: auto;
 }
 
 .dishPrice {
+    margin: 0;
     font-family: var(--font-heading);
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
 }
 
-/* --- Кнопка выбора блюда --- */
-.selectButton {
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    width: 37px;
-    height: 37px;
-    background-color: #fff;
-    border: 1px solid #48BF48; /* Фиксированный цвет, не зависит от брендинга */
-    
-    border-radius: 20px 20px 0 20px; 
+.dishWeight {
+    font-family: var(--font-body, sans-serif);
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.addButton {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 0;
+    background-color: var(--color-primary);
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-    z-index: 10;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease;
 }
 
-.selectButton.selected {
-    background-color: #48BF48; /* Фиксированный цвет, не зависит от брендинга */
-    border-color: #fff;
-}
+.addButton:active { transform: scale(0.9); }
 
-.checkmarkIcon {
-    width: 21px;
-    height: 15px;
-    
-    background-image: url('/icons/free-icon-checkmark-.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-/* --- Название блюда под изображением --- */
-.dishName {
+.stepper {
+    flex: none;
+    display: flex;
+    align-items: center;
+    height: 38px;
+    border-radius: 19px;
+    background-color: var(--color-primary);
+    color: #fff;
     font-family: var(--font-heading);
-    font-size: 16px;
-    font-weight: 400;
-    color: var(--color-primary);
-    text-align: center; 
-    width: 100%;
-    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.stepper button {
+    width: 32px;
+    height: 38px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.stepper span { min-width: 14px; text-align: center; }
+
+.addButton:focus-visible,
+.stepper button:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
 }
 
 /* --- Позиция скролла для якорей --- */
