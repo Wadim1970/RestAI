@@ -1,0 +1,168 @@
+/* Шторка «Шеф советует». Выше нижнего бара (1000), карточки блюда (99999)
+   и корзины (100000): подсказка может прийти и после «+» в карточке блюда. */
+.root {
+    position: fixed;
+    inset: 0;
+    z-index: 100500;
+    pointer-events: none;
+}
+
+.veil {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 22, 12, 0.38);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: auto;
+}
+
+.sheet {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 100%;
+    max-width: 440px;
+    box-sizing: border-box;
+    background: #fff;
+    color: #1C2418;
+    border-radius: 24px 24px 0 0;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translate(-50%, 105%);
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: auto;
+    box-shadow: 0 -12px 40px rgba(15, 22, 12, 0.18);
+}
+
+.veil.on { opacity: 1; }
+.sheet.on { transform: translate(-50%, 0); }
+
+.grab {
+    width: 38px;
+    height: 4px;
+    border-radius: 4px;
+    background: #D6D9D0;
+    margin: 0 auto 12px;
+}
+
+.who {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body, sans-serif);
+    font-size: 12px;
+    color: #5F6B58;
+    margin-bottom: 8px;
+}
+
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-primary);
+}
+
+.lead {
+    font-family: var(--font-heading);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-primary);
+    margin: 0 0 12px;
+    text-wrap: balance;
+}
+
+.offer {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    background: var(--color-price-bg);
+    background: color-mix(in srgb, var(--color-price-bg) 45%, #fff);
+    border-radius: 16px;
+    padding: 8px;
+    margin-bottom: 14px;
+}
+
+.photo {
+    width: 84px;
+    height: 84px;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    font-family: var(--font-body, sans-serif);
+}
+
+.text b {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    color: #1C2418;
+}
+
+.why {
+    font-size: 13px;
+    line-height: 1.35;
+    color: #4F5B48;
+}
+
+.price {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 10px;
+}
+
+.buttons button {
+    height: 50px;
+    border-radius: 16px;
+    border: 0;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ghost {
+    background: #F0EEE6;
+    color: #3C4636;
+}
+
+.main {
+    background: var(--color-primary);
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+.buttons button:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .veil, .sheet { transition: none; }
+}

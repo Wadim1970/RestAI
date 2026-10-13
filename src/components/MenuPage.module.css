@@ -248,3 +248,33 @@
     background-color: rgba(72, 191, 72, 0.1);
     border-radius: 20px;
 }
+
+/* --- «Салат с бурратой — в заказе» после подсказки шефа --- */
+.toast {
+    position: fixed;
+    left: 50%;
+    top: calc(env(safe-area-inset-top, 0px) + 18px);
+    transform: translateX(-50%);
+    z-index: 100600;
+    max-width: calc(100% - 40px);
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-body, sans-serif);
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(15, 22, 12, 0.25);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: toastIn 0.25s ease;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+}

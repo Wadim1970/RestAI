@@ -1,5 +1,5 @@
 // src/components/MenuPage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import styles from './MenuPage.module.css';
 
 // Импорт дочерних компонентов страницы
@@ -7,19 +7,15 @@ import MenuHeader from './MenuHeader/MenuHeader';
 import MenuFooter from './MenuFooter/MenuFooter'; 
 import DishModal from './DishModal/DishModal';
 import CartModal from './CartModal/CartModal';
+import PairingSheet from './PairingSheet/PairingSheet';
+import { supabase } from '../supabaseClient';
+import { getOrCreateDeviceId } from '../lib/deviceId';
+import { formatPrice, formatWeight } from '../lib/menuFormat';
+import { pickPairing, rememberShown, rememberAnswer, loadMemory, saveMemory } from '../lib/pairingRules';
 
-// Вес/объём для строки под названием: «510 г», «750 мл». В данных он бывает
-// в specific_details ({weight_value, weight_unit} или строка «750 мл») и в
-// weight_g в виде «/ 510 г.».
-function formatWeight(dish) {
-    const d = dish.specific_details;
-    if (d && typeof d === 'object' && d.weight_value) return `${d.weight_value} ${d.weight_unit || 'г'}`;
-    if (typeof d === 'string' && d.trim()) return d.trim();
-    if (dish.weight_g) return String(dish.weight_g).replace(/^[\s/]+/, '').replace(/\.$/, '').trim();
-    return '';
-}
+// Сервер официанта (Waiter-app): там подбор пар под конкретного гостя.
+const PAIRINGS_API = (import.meta.env.VITE_PAIRINGS_API_URL || 'https://waiter.restai.pro').replace(/\/$/, '');
 
-const formatPrice = (rub) => `${Number(rub || 0).toLocaleString('ru-RU')} ₽`;
 
 export default function MenuPage({
     restaurantId,
@@ -49,6 +45,16 @@ export default function MenuPage({
     // поверх, а не под неё.
     const [dishModalZ, setDishModalZ] = useState(undefined);
 
+    // Пары блюд: общие приходят с /api/menu, личные (с учётом «не ем» и вкусов
+    // гостя) — с сервера официанта в фоне. null — личных нет, берём общие.
+    const [pairings, setPairings] = useState({});
+    const [personalPairings, setPersonalPairings] = useState(null);
+    const [offer, setOffer] = useState(null);
+    const [toast, setToast] = useState('');
+    const pairingMemoryRef = useRef(null);
+    const offerTimerRef = useRef(null);
+    const toastTimerRef = useRef(null);
+
     const sectionRefs = useRef({});
     const isScrollingRef = useRef(false);
     const loadMoreTriggerRef = useRef(null); // 🆕 Ref для триггера подгрузки
@@ -75,6 +81,7 @@ useEffect(() => {
                 throw new Error((json.error || 'Ошибка загрузки меню') + (extra ? ` — ${extra}` : ''));
             }
             const menuItems = json.items;
+            setPairings(json.pairings && typeof json.pairings === 'object' ? json.pairings : {});
 
             const items = Array.isArray(menuItems) ? menuItems : [];
             const grouped = items.reduce((acc, item) => {
@@ -96,6 +103,31 @@ useEffect(() => {
     }
     fetchMenu();
 }, [restaurantId]);
+
+    // Личные пары — в фоне, пока гость листает меню. Не успели или сервер
+    // недоступен — остаются общие.
+    useEffect(() => {
+        if (!restaurantId) return undefined;
+        let cancelled = false;
+        pairingMemoryRef.current = loadMemory(restaurantId);
+        setPersonalPairings(null);
+        fetch(`${PAIRINGS_API}/api/guest/pairings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ restaurantId, deviceId: getOrCreateDeviceId() }),
+        })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((json) => {
+                if (!cancelled && json?.personal && json.pairings) setPersonalPairings(json.pairings);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [restaurantId]);
+
+    useEffect(() => () => {
+        clearTimeout(offerTimerRef.current);
+        clearTimeout(toastTimerRef.current);
+    }, []);
     // IntersectionObserver для активной секции
     useEffect(() => {
         if (loading || Object.keys(groupedMenu).length === 0) return;
@@ -232,12 +264,70 @@ useEffect(() => {
     setIsModalOpen(true);
 };
 
+    const menuById = useMemo(
+        () => new Map(Object.values(groupedMenu).flat().map((d) => [d.id, d])),
+        [groupedMenu]
+    );
+
+    const logPairing = useCallback((o, outcome) => {
+        supabase.rpc('log_menu_pairing_event', {
+            p_restaurant_id: restaurantId,
+            p_device_id: getOrCreateDeviceId(),
+            p_anchor_dish_id: o.anchorId,
+            p_dish_id: o.dishId,
+            p_outcome: outcome,
+            p_personal: !!o.personal,
+        }).then(() => {}, () => {});
+    }, [restaurantId]);
+
+    // Изменение корзины из меню и карточки блюда. При первом добавлении блюда
+    // (0 → 1) — подсказка шефа с парой, по правилам из lib/pairingRules.
+    const updateCartWithPairing = (delta, dishId) => {
+        const prevCount = cart[dishId] || 0;
+        updateCart(delta, dishId);
+        if (delta <= 0 || offer || !restaurantId) return;
+        const memory = pairingMemoryRef.current || loadMemory(restaurantId);
+        const next = pickPairing({
+            dishId,
+            prevCount,
+            cart: { ...cart, [dishId]: prevCount + delta },
+            menuById,
+            generic: pairings,
+            personal: personalPairings,
+            memory,
+            now: Date.now(),
+        });
+        if (!next) return;
+        pairingMemoryRef.current = rememberShown(memory, Date.now());
+        saveMemory(restaurantId, pairingMemoryRef.current);
+        // Короткая пауза: сначала гость видит, что блюдо добавилось.
+        clearTimeout(offerTimerRef.current);
+        offerTimerRef.current = setTimeout(() => setOffer(next), 250);
+    };
+
+    const answerOffer = (accepted) => {
+        if (!offer) return;
+        pairingMemoryRef.current = rememberAnswer(pairingMemoryRef.current, offer, accepted);
+        saveMemory(restaurantId, pairingMemoryRef.current);
+        logPairing(offer, accepted ? 'accepted' : 'rejected');
+        if (accepted) {
+            updateCart(1, offer.dishId);
+            const name = menuById.get(offer.dishId)?.dish_name;
+            if (name) {
+                setToast(`${name} — в заказе`);
+                clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = setTimeout(() => setToast(''), 2000);
+            }
+        }
+        setOffer(null);
+    };
+
     // «+» / «−» на карточке: раньше была галочка «выбрано/не выбрано», теперь
     // количество меняется прямо в меню, без захода в карточку блюда.
     const changeCount = (e, dishId, delta) => {
         e.stopPropagation();
         if (delta < 0 && !(cart[dishId] > 0)) return;
-        updateCart(delta, dishId);
+        updateCartWithPairing(delta, dishId);
     };
 
     if (loading) return <div className={styles.loader}>Загрузка...</div>;
@@ -334,10 +424,19 @@ useEffect(() => {
                 onClose={() => setIsModalOpen(false)}
                 dish={selectedDishForModal}
                 currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
-                updateCart={updateCart}
+                updateCart={updateCartWithPairing}
                 onOpenChat={onOpenChat}
                 overlayZIndex={dishModalZ}
             />
+
+            <PairingSheet
+                offer={offer}
+                dish={offer ? menuById.get(offer.dishId) : null}
+                onAccept={() => answerOffer(true)}
+                onDecline={() => answerOffer(false)}
+            />
+
+            {toast && <div className={styles.toast} role="status">{toast}</div>}
 
             <CartModal
                 isOpen={isCartOpen}
