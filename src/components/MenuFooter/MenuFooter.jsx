@@ -23,7 +23,7 @@ const Bell = ({ isRinging }) => (
     />
 );
 
-export default function MenuFooter({ orderActive = false, onChatClick, onOrderClick, onCallClick, isCallPending = false }) {
+export default function MenuFooter({ orderActive = false, cartCount = 0, cartSumLabel = null, onChatClick, onOrderClick, onCallClick, isCallPending = false }) {
 
     return (
         <footer className={styles.footerContainer}>
@@ -45,8 +45,10 @@ export default function MenuFooter({ orderActive = false, onChatClick, onOrderCl
                         disabled={!orderActive}
                     >
                         <Basket isActive={orderActive} />
+                        {cartCount > 0 && <span className={styles.cartBadge} aria-label={`В заказе ${cartCount}`}>{cartCount}</span>}
                     </button>
-                    <span className={styles.label}>Заказ</span>
+                    {/* С блюдами в корзине вместо «Заказ» — сумма, чтобы гость видел её, не открывая корзину */}
+                    <span className={`${styles.label} ${cartSumLabel ? styles.labelSum : ''}`}>{cartSumLabel || 'Заказ'}</span>
                 </div>
 
                 {/* 3. Кнопка Вызова официанта — колокольчик качается, пока вызов не принят */}
