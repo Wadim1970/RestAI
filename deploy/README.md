@@ -114,6 +114,35 @@ EMAIL=<почта> bash /opt/restai/RestAI/deploy/enable-https.sh site
 
 После этого в GitHub: RestAI → Settings → Pages → удалить custom domain и отключить Pages.
 
+## Пары блюд («к пицце отлично подходит салат…»)
+
+Пары к блюдам гостевого меню составляет нейросеть на сервере официанта (Waiter-app, `api/pairings`). Гость кладёт блюдо в заказ — приложение предлагает пару.
+
+Один раз:
+
+1. Миграция базы (на сервере Supabase):
+   ```bash
+   sudo docker exec -i supabase-db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 \
+     < supabase/migrations/20261013010000_menu_pairings.sql
+   ```
+2. Токен админки в `/opt/restai/Waiter-app/.env.production`:
+   ```bash
+   echo "PAIRINGS_ADMIN_TOKEN=$(openssl rand -hex 24)" >> /opt/restai/Waiter-app/.env.production
+   pm2 reload restai-waiter-api --update-env
+   ```
+   Этот же токен вводится в админке в разделе «Пары блюд».
+3. Первый расчёт и проверка:
+   ```bash
+   bash /opt/restai/RestAI/deploy/pairings-refresh.sh
+   pm2 logs restai-waiter-api --lines 20 --nostream | grep pairings
+   ```
+4. Ночной пересчёт (cron, 04:17): ресторан без изменений в меню пропускается.
+   ```bash
+   ( crontab -l 2>/dev/null; echo "17 4 * * * bash /opt/restai/RestAI/deploy/pairings-refresh.sh >> /opt/restai/pairings.log 2>&1" ) | crontab -
+   ```
+
+Один ресторан заново: `bash deploy/pairings-refresh.sh <id ресторана> force`.
+
 ## Обновление (замена «git push → Vercel задеплоил»)
 
 ```bash
