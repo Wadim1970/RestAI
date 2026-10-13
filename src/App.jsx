@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-d
 import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
+import { getOrCreateDeviceId } from './lib/deviceId';
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
 import CartModal from './components/CartModal/CartModal';
@@ -22,16 +23,6 @@ import { supabase } from './supabaseClient';
 // пережить сворачивание/выгрузку приложения (гость ушёл за номером телефона).
 const PENDING_REG_KEY = 'restai_pending_registration';
 
-// Общий источник device_id и для register_guest_visit, и для place_guest_order —
-// одно устройство должно всегда попадать в одно и то же место (seat) за столом.
-function getOrCreateDeviceId() {
-  let deviceId = localStorage.getItem('restai_device_id');
-  if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem('restai_device_id', deviceId);
-  }
-  return deviceId;
-}
 
  // Получаем ID ресторана из URL параметров или localStorage
  function AppContent() {
