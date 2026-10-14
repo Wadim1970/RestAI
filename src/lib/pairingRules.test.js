@@ -23,17 +23,21 @@ test('личные пары главнее общих, пустой список
   assert.equal(pickPairing({ ...base, personal: { pizza: [] } }), null);
 });
 
-test('лимиты: раз в минуту, 3 за визит, два отказа подряд', () => {
+test('лимиты: пауза 5 секунд, 3 за визит, два отказа подряд', () => {
   let m = rememberShown(emptyMemory(), base.now);
   assert.equal(pickPairing({ ...base, memory: m, now: base.now + 1000 }), null);
   assert.ok(pickPairing({ ...base, memory: m, now: base.now + COOLDOWN_MS + 1 }));
+  assert.equal(COOLDOWN_MS, 5000);
+  const answered = rememberAnswer(m, { anchorId: 'pizza', dishId: 'x' }, true, base.now + 30000);
+  assert.equal(pickPairing({ ...base, memory: answered, now: base.now + 32000 }), null, 'пауза и после ответа');
+  assert.ok(pickPairing({ ...base, memory: answered, now: base.now + 36000 }));
 
   assert.equal(pickPairing({ ...base, memory: { ...emptyMemory(), shown: 3 } }), null);
 
   const offer = pickPairing(base);
-  m = rememberAnswer(emptyMemory(), offer, false);
+  m = rememberAnswer(emptyMemory(), offer, false, base.now - 10000);
   assert.equal(pickPairing({ ...base, memory: m }).dishId, 'lemonade', 'отклонённая пара больше не предлагается');
-  m = rememberAnswer(m, { anchorId: 'pizza', dishId: 'lemonade' }, false);
+  m = rememberAnswer(m, { anchorId: 'pizza', dishId: 'lemonade' }, false, base.now - 10000);
   assert.equal(pickPairing({ ...base, dishId: 'pizza', memory: m }), null, 'два отказа подряд — стоп');
   assert.equal(rememberAnswer(m, offer, true).declineStreak, 0);
 });
