@@ -16,7 +16,7 @@ import { pickPairing, rememberShown, rememberAnswer, loadMemory, saveMemory, exp
 // Сервер официанта (Waiter-app): там подбор пар под конкретного гостя.
 const PAIRINGS_API = (import.meta.env.VITE_PAIRINGS_API_URL || 'https://waiter.restai.pro').replace(/\/$/, '');
 // Режим проверки (ссылка с &pairs=test): подсказка на каждое первое добавление,
-// без лимитов «раз в минуту / 3 за визит» — для проверки и показа ресторану.
+// без лимитов «пауза 5 секунд / 3 за визит» — для проверки и показа ресторану.
 const PAIRINGS_TEST_MODE = new URLSearchParams(window.location.search).get('pairs') === 'test';
 
 

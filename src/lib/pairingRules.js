@@ -3,7 +3,8 @@
 //
 // Правила (из обсуждения с рестораном):
 //   • подсказка только при ПЕРВОМ добавлении блюда (0 → 1), не на «ещё одну»;
-//   • не больше 3 за визит и не чаще раза в минуту;
+//   • не больше 3 за визит и не раньше чем через 5 секунд после прошлой
+//     подсказки (чтобы две шторки не выезжали одна за другой);
 //   • «Нет, спасибо» запоминается: эту пару больше не предлагаем, а после
 //     двух отказов подряд подсказки выключаются до конца визита;
 //   • не предлагаем то, что уже в заказе, и то, чего нет в меню;
@@ -11,7 +12,7 @@
 //     даже пустой список: значит, общие пары гостю не подходят.
 
 export const MAX_PER_VISIT = 3;
-export const COOLDOWN_MS = 60 * 1000;
+export const COOLDOWN_MS = 5 * 1000;
 export const DECLINES_TO_STOP = 2;
 
 export function emptyMemory() {
@@ -72,8 +73,9 @@ export function rememberShown(memory, now) {
   return { ...m, shown: m.shown + 1, lastAt: now };
 }
 
-export function rememberAnswer(memory, offer, accepted) {
-  const m = memory || emptyMemory();
+// Пауза отсчитывается и от ответа гостя: шторка могла висеть дольше 5 секунд.
+export function rememberAnswer(memory, offer, accepted, now = Date.now()) {
+  const m = { ...(memory || emptyMemory()), lastAt: now };
   if (accepted) return { ...m, declineStreak: 0 };
   return {
     ...m,
