@@ -70,19 +70,24 @@
 
 .photo.loaded { opacity: 1; }
 
-/* Напиток, вырезка без фона или маленькая картинка — по центру на поле её цвета. */
+/* Напиток — бутылка крупно, от верхних кнопок до названия, на поле цвета
+   самой картинки. Фото квадратные с прозрачными краями: cover обрезает
+   прозрачные бока, и бутылка занимает всю высоту области. */
 .heroField {
     background:
-        radial-gradient(120% 70% at 50% 32%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%),
+        radial-gradient(120% 70% at 50% 34%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%),
         var(--field);
     transition: background 0.4s ease;
 }
 
 .heroField .photo {
-    inset: 9% 12% 34%;
-    width: 76%;
-    height: 57%;
-    object-fit: contain;
+    inset: auto;
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    bottom: calc(var(--peek, 240px) - 36px);
+    left: 0;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
     filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.35));
 }
 
