@@ -1,5 +1,6 @@
 // src/components/MenuPage.jsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import styles from './MenuPage.module.css';
 
 // Импорт дочерних компонентов страницы
@@ -253,7 +254,44 @@ useEffect(() => {
     const cartCount = cartItems.reduce((n, d) => n + d.count, 0);
     const cartSum = cartItems.reduce((n, d) => n + d.count * (Number(d.cost_rub) || 0), 0);
 
-    const handleOpenModal = (dish, z = undefined) => {
+    // Переход «фото вырастает из карточки меню» — View Transitions (Safari 18+,
+    // Chrome). Где их нет или включено «уменьшить движение» — обычное открытие.
+    const canMorph = () => typeof document !== 'undefined' && !!document.startViewTransition
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const cardImageOf = (dishId) => {
+        const img = document.querySelector(`img[data-dish-id="${dishId}"]`);
+        if (!img) return null;
+        const r = img.getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight ? img : null;
+    };
+
+    const handleOpenModal = (dish, z = undefined, sourceImg = null) => {
+    if (sourceImg && z === undefined && canMorph()) {
+        sourceImg.style.viewTransitionName = 'dish-hero';
+        document.startViewTransition(() => {
+            sourceImg.style.viewTransitionName = '';
+            flushSync(() => openModal(dish, z));
+        });
+        return;
+    }
+    openModal(dish, z);
+};
+
+    const closeModal = () => {
+        const img = selectedDishForModal && dishModalZ === undefined ? cardImageOf(selectedDishForModal.id) : null;
+        if (img && canMorph()) {
+            const t = document.startViewTransition(() => {
+                img.style.viewTransitionName = 'dish-hero';
+                flushSync(() => setIsModalOpen(false));
+            });
+            t.finished.finally(() => { img.style.viewTransitionName = ''; });
+            return;
+        }
+        setIsModalOpen(false);
+    };
+
+    const openModal = (dish, z) => {
     trackDishView(dish.dish_name);
 
     // Все поля карточки (описание, состав, product_type, specific_details)
@@ -273,8 +311,22 @@ useEffect(() => {
     );
 
     const allItems = useMemo(() => [...menuById.values()], [menuById]);
+
+    // Листание в карточке — только внутри раздела; из корзины (dishModalZ) — без листания.
+    const modalSiblings = selectedDishForModal && dishModalZ === undefined
+        ? groupedMenu[selectedDishForModal.menu_section]
+        : undefined;
     const genericPairings = useMemo(() => expandPairingsByName(pairings, allItems), [pairings, allItems]);
     const personalPairingsByName = useMemo(() => expandPairingsByName(personalPairings, allItems), [personalPairings, allItems]);
+
+    // «Шеф советует к этому» в карточке блюда — та же пара, что в подсказке.
+    const modalPair = useMemo(() => {
+        if (!selectedDishForModal) return null;
+        const list = (personalPairingsByName ? personalPairingsByName[selectedDishForModal.id] : genericPairings[selectedDishForModal.id]) || [];
+        const p = list.find((x) => menuById.has(x.dishId) && x.dishId !== selectedDishForModal.id);
+        if (!p) return null;
+        return { dish: menuById.get(p.dishId), lead: p.lead, why: p.why, inCart: (cart[p.dishId] || 0) > 0 };
+    }, [selectedDishForModal, personalPairingsByName, genericPairings, menuById, cart]);
 
     const logPairing = useCallback((o, outcome) => {
         supabase.rpc('log_menu_pairing_event', {
@@ -368,10 +420,11 @@ useEffect(() => {
                                     <div key={dish.id} className={styles.dishCard}>
                                         <div
                                             className={styles.dishImageContainer}
-                                            onClick={() => handleOpenModal(dish)}
+                                            onClick={(e) => handleOpenModal(dish, undefined, e.currentTarget.querySelector('img'))}
                                         >
                                             {dish.image_url && (
                                                 <img
+                                                    data-dish-id={dish.id}
                                                     src={dish.image_url}
                                                     alt={dish.dish_name}
                                                     className={styles.dishImage}
@@ -380,7 +433,7 @@ useEffect(() => {
                                                 />
                                             )}
                                         </div>
-                                        <p className={styles.dishName} onClick={() => handleOpenModal(dish)}>{dish.dish_name}</p>
+                                        <p className={styles.dishName} onClick={(e) => handleOpenModal(dish, undefined, e.currentTarget.parentElement.querySelector('img'))}>{dish.dish_name}</p>
                                         <div className={styles.dishRow}>
                                             <p className={styles.dishPrice}>
                                                 {formatPrice(dish.cost_rub)}
@@ -430,11 +483,15 @@ useEffect(() => {
             <DishModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+                onRequestClose={closeModal}
                 dish={selectedDishForModal}
                 currentCount={selectedDishForModal ? (cart[selectedDishForModal.id] || 0) : 0}
                 updateCart={updateCartWithPairing}
                 onOpenChat={onOpenChat}
                 overlayZIndex={dishModalZ}
+                siblings={modalSiblings}
+                onDishChange={(d) => { trackDishView(d.dish_name); setSelectedDishForModal(d); }}
+                pair={modalPair}
             />
 
             <PairingSheet
