@@ -102,7 +102,7 @@ export default function DishModal({
   // картинка грузится заново — без сброса в эффектах.
   const [expandedId, setExpandedId] = useState(null);
   const [closing, setClosing] = useState(false);
-  const [img, setImg] = useState({ id: null, loaded: false, failed: false, natural: null });
+  const [img, setImg] = useState({ id: null, loaded: false, failed: false });
   const [slide, setSlide] = useState(0); // −1/1 — направление листания, для анимации
   const rootRef = useRef(null);
   const sheetRef = useRef(null);
@@ -118,17 +118,16 @@ export default function DishModal({
     const on = typeof v === 'function' ? v(cur === dishId) : v;
     return on ? dishId : null;
   });
-  const imgNow = img.id === dishId ? img : { loaded: false, failed: false, natural: null };
+  const imgNow = img.id === dishId ? img : { loaded: false, failed: false };
   const bigLoaded = imgNow.loaded;
   const bigFailed = imgNow.failed;
-  const natural = imgNow.natural;
   const isDrink = dish && (dish.product_type === 'drink' || dish.product_type === 'alcohol');
   const isAlcohol = dish?.product_type === 'alcohol';
   const big = dish?.image_url || dish?.image_url_thumbnail;
   const thumb = dish?.image_url_thumbnail || dish?.image_url;
-  // Маленькая картинка на весь экран рассыпается — показываем её на цветном поле.
-  const smallImage = natural && natural.w < 700;
-  const fieldMode = isDrink || smallImage || bigFailed;
+  // Еда — всегда на весь экран. Напиток — крупно на поле цвета самой
+  // картинки (бутылка без фона на чёрном выглядела бы потерянной).
+  const fieldMode = isDrink;
   const field = useImageColor(thumb, !!(isOpen && fieldMode));
 
   const index = useMemo(() => (siblings && dish ? siblings.findIndex((d) => d.id === dish.id) : -1), [siblings, dish]);
@@ -260,12 +259,9 @@ export default function DishModal({
               src={bigFailed ? thumb : big}
               alt={dish.dish_name}
               style={{ viewTransitionName: 'dish-hero' }}
-              onLoad={(e) => {
-                const natural = { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight };
-                setImg({ id: dishId, loaded: true, failed: bigFailed, natural });
-              }}
+              onLoad={() => setImg({ id: dishId, loaded: true, failed: bigFailed })}
               onError={(e) => {
-                if (!bigFailed && thumb && thumb !== big) setImg({ id: dishId, loaded: false, failed: true, natural: null });
+                if (!bigFailed && thumb && thumb !== big) setImg({ id: dishId, loaded: false, failed: true });
                 else e.currentTarget.style.visibility = 'hidden';
               }}
             />
