@@ -1,0 +1,9 @@
+{
+  "name": "restai-dish-images",
+  "private": true,
+  "type": "module",
+  "description": "Загрузка фото блюд в Supabase Storage (deploy/images/README.md)",
+  "dependencies": {
+    "sharp": "0.33.5"
+  }
+}
