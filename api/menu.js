@@ -15,17 +15,28 @@ export default async function handler(req, res) {
     return
   }
 
-  const { data, error } = await supabase
-    .from('menu_items')
-    // description/ingredients/product_type/specific_details нужны карточке
-    // блюда (DishModal). Отдаём их сразу вместе с меню, чтобы карточка НЕ
-    // ходила отдельным запросом напрямую в Supabase из браузера — такой
-    // прямой запрос падал по таймауту/CORS в сетях, где хост Supabase
-    // недоступен, хотя /api (этот same-origin роут) работает.
-    .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min, description, ingredients, product_type, specific_details')
-    .eq('restaurant_id', restaurantId)
-    .order('section_order', { ascending: true })
-    .order('dish_name', { ascending: true })
+  // description/ingredients/product_type/specific_details нужны карточке
+  // блюда (DishModal). Отдаём их сразу вместе с меню, чтобы карточка НЕ
+  // ходила отдельным запросом напрямую в Supabase из браузера — такой
+  // прямой запрос падал по таймауту/CORS в сетях, где хост Supabase
+  // недоступен, хотя /api (этот same-origin роут) работает.
+  const query = (hideHidden) => {
+    let q = supabase
+      .from('menu_items')
+      .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min, description, ingredients, product_type, specific_details')
+      .eq('restaurant_id', restaurantId)
+    // is_hidden — «скрыто от гостя» (Лавка, комбо и т.п.): официант их видит,
+    // гость — нет.
+    if (hideHidden) q = q.eq('is_hidden', false)
+    return q
+      .order('section_order', { ascending: true })
+      .order('dish_name', { ascending: true })
+  }
+
+  let { data, error } = await query(true)
+  // Миграция с is_hidden ещё не применена (нет колонки) — меню без скрытия,
+  // но работает.
+  if (error && error.code === '42703') ({ data, error } = await query(false))
 
   if (error) {
     // Раньше отдавали только общий текст и глотали настоящую причину —
