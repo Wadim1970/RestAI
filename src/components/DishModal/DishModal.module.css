@@ -1,362 +1,490 @@
-/* Основной фон-подложка, затемняющий всё за модальным окном */
+/* Карточка блюда на весь экран. Цвета приложения (--color-primary и др.)
+   приходят из брендинга ресторана; поверх фото всё белое на тёмном градиенте. */
+
 .overlay {
-    position: fixed; /* Фиксируем на экране */
-    top: 0; /* Прижимаем к верху */
-    left: 0; /* Прижимаем к левому краю */
-    width: 100%; /* Растягиваем на всю ширину */
-    height: 100%; /* Растягиваем на всю высоту */
-    background: rgba(0, 0, 0, 0.7); /* Черный цвет с прозрачностью 70% */
-    z-index: 99999; /* Выводим на самый передний план */
-    display: flex; /* Используем флексбокс для выравнивания содержимого */
-    flex-direction: column; /* Элементы внутри идут вертикально */
-    overflow-y: auto; /* Разрешаем прокрутку, если контент длинный */
-    -webkit-overflow-scrolling: touch; /* Плавный скролл для iOS устройств */
-    padding-top: 30px; /* Отступ 30px сверху, чтобы модалка не липла к краям */
-    overscroll-behavior-y: none; /* Запрещаем обновление страницы потянув вниз (Pull-to-refresh) */
-    touch-action: pan-y; /* Разрешаем только вертикальную прокрутку пальцем */
-    overscroll-behavior: contain;
-}
+    --field-default: #1B2118;
+    --glass: rgba(18, 22, 16, 0.42);
+    --sheet-glass: rgba(14, 18, 12, 0.84);
+    --kbju-kcal: #F2C14E;
+    --kbju-p: #7CC36F;
+    --kbju-f: #E07A5A;
+    --kbju-c: #8FB7E8;
+    --add: #48BF48;
 
-/* Псевдоэлемент для правильного прижатия контента к низу */
-.overlay::before {
-    content: ""; /* Пустой контент */
-    display: inline-block; /* Строчно-блочный тип */
-    height: 100%; /* Высота на весь родитель */
-    vertical-align: bottom; /* Выравнивание по нижней границе */
-}
-
-/* Белое окно самой модалки */
-.modal {
-    width: 100%; /* На всю ширину экрана */
-    background-color: #FBFBF9; /* Твой основной фоновый цвет слоновой кости */
-    border-radius: 4.54vw 4.54vw 0 0; /* Скругление верхних углов (20px при 440px ширины) */
-    position: relative; /* База для позиционирования элементов внутри */
-    margin-left: auto; /* Центрирование по горизонтали */
-    margin-right: auto; /* Центрирование по горизонтали */
-    margin-top: auto; /* Прижимает модалку к самому низу оверлея */
-    height: auto; /* Высота зависит от контента */
-    flex-shrink: 0; /* Запрещаем сжатие элемента внутри флекс-контейнера */
-    padding-bottom: 50px; /* Отступ снизу для текста */
-    box-shadow: 0 500px 0 0 #FBFBF9; /* Декоративная тень вниз, создающая бесконечный фон */
-    animation: slideUp 0.3s ease-out; /* Анимация выезда снизу вверх */
-    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); /* Плавный переход для закрытия */
-    font-family: var(--font-heading, sans-serif);
-}
-
-/* Определение анимации появления */
-@keyframes slideUp {
-    from { transform: translateY(100%); } /* Начало: полностью за нижним краем */
-    to { transform: translateY(0); } /* Конец: на своем месте */
-}
-
-/* Класс для анимации закрытия (уезда вниз) */
-.slideDown {
-    transform: translateY(100%) !important; /* Сдвиг вниз */
-    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* Плавность */
-}
-
-/* Класс для плавного исчезновения фона при закрытии */
-.fadeOut {
-    background: rgba(0, 0, 0, 0) !important; /* Делаем фон полностью прозрачным */
-    transition: background 0.3s ease !important; /* Плавность затемнения */
-}
-
-/* Контейнер для главного изображения блюда */
-.imageContainer {
-    position: relative; /* Для позиционирования крестика и ценника внутри */
-    width: 94.54vw !important; /* Отступ по бокам = 2.73vw, как и отступ сверху у самой картинки */
-    height: 94.54vw !important; /* Высота равна ширине для идеального квадрата */
-    margin: 2.73vw auto 0 auto !important; /* 12px сверху и центрирование */
-    border-radius: 2.27vw !important; /* Скругление углов 10px */
-    overflow: hidden !important; /* Скрываем края картинки, выходящие за скругления */
-    aspect-ratio: 1 / 1; /* Соотношение сторон 1 к 1 */
-    flex-shrink: 0; /* Защита от деформации */
-    background-color: transparent; /* Прозрачный фон под картинкой */
-}
-
-/* Сама картинка блюда */
-.mainImage {
-    width: 100% !important; /* Растягиваем на всю ширину контейнера */
-    height: 100% !important; /* Растягиваем на всю высоту контейнера */
-    max-width: 100%; /* Ограничение по ширине */
-    max-height: 100%; /* Ограничение по высоте */
-    display: block; /* Убираем нижний зазор строчного элемента */
-    object-fit: contain; /* Картинка полностью вписывается без обрезки */
-    pointer-events: none; /* Запрещаем клики по самой картинке (для свайпов) */
-}
-
-/* Серая полоска (индикатор) вверху картинки */
-.dragLine {
-    position: absolute; /* Абсолютное положение поверх картинки */
-    top: 6.4vw; /* 28px от верхнего края изображения */
-    left: 50%; /* Ставим в центр по горизонтали */
-    transform: translateX(-50%); /* Точная центровка по оси X */
-    width: 23.09vw; /* Ширина полоски (примерно 100px) */
-    height: 0.91vw; /* Высота полоски 4px */
-    background-color: #E5E0D4; /* Бежевый цвет полоски */
-    border-radius: 0.45vw; /* Закругление концов полоски 2px */
-    z-index: 11; /* Слой выше изображения */
-}
-
-/* Кнопка закрытия (крестик) на картинке */
-.closeBtn {
-    position: absolute; /* Абсолютное положение */
-    top: 2.73vw; /* 12px от верха картинки */
-    right: 2.73vw; /* 12px от правого края картинки */
-    width: 24px; /* Фиксированная ширина */
-    height: 24px; /* Фиксированная высота */
-    background: none; /* Без фона */
-    border: none; /* Без рамок */
-    padding: 0; /* Без внутренних отступов */
-    z-index: 12; /* Слой выше всех элементов на картинке */
-    display: flex; /* Для центровки иконки внутри */
-    align-items: center; /* Центровка по вертикали */
-    justify-content: center; /* Центровка по горизонтали */
-}
-
-/* Иконка крестика */
-.closeBtn img {
-    width: 100%; /* На всю ширину кнопки */
-    height: 100%; /* На всю высоту кнопки */
-    object-fit: contain; /* Сохраняем пропорции иконки */
-}
-.closeButtonIcon {
-    width: 16px !important;
-    height: 16px !important;
-    object-fit: contain !important;
-}
-/* Плашка с ценой на картинке */
-.priceTag {
-    position: absolute; /* Поверх изображения */
-    left: 1.36vw; /* 6px от левого края */
-    bottom: 1.36vw; /* 6px от нижнего края */
-    width: 31.82vw; /* Ширина плашки ~140px */
-    height: 12.73vw; /* Высота плашки ~56px */
-    background-color: #E5E0D4; /* Цвет плашки бежевый */
-    border-radius: 1.82vw; /* Скругление 8px */
-    display: flex; /* Контент внутри в колонку */
-    flex-direction: column;
-    align-items: center; /* Центровка текста */
-    justify-content: center; /* Центровка текста */
-}
-
-/* Текст цены */
-.priceText {
-    font-size: 5.45vw; /* Размер текста 24px */
-    font-weight: bold; /* Жирный шрифт */
-    color: #304D22; /* Темно-зеленый цвет */
-    margin-top: 1.13vw; /* Отступ 5px сверху */
-}
-
-/* Текст веса/объема */
-.weightText {
-    font-size: 3.64vw; /* Размер текста 16px */
-    font-weight: 400; /* Обычная толщина */
-    color: #304D22; /* Темно-зеленый цвет */
-}
-
-/* Контейнер для текстовой информации */
-.content {
-    text-align: center; /* Выравнивание всего текста по центру */
-    padding: 0 2.73vw; /* Тот же отступ, что и у картинки (94.54vw) — текст вровень с ней */
-
-}
-
-/* Заголовки секций (Описание, Состав и т.д.) */
-.sectionTitle {
-    font-size: 4.55vw; /* Размер 20px */
-    font-weight: bold; /* Жирный */
-    color: black; /* Черный цвет */
-    margin-top: 4.09vw; /* 18px отступ сверху */
-    margin-bottom: 1.82vw; /* 8px отступ снизу */
-}
-
-/* Основной текст описания и состава */
-.descriptionText, .ingredientsText {
-    font-size: 4.09vw; /* Размер 18px */
-    font-weight: 400; /* Обычный */
-    line-height: 1.4; /* Межстрочный интервал для читабельности */
-    color: black; /* Черный */
-    margin: 0; /* Убираем стандартные отступы */
-}
-
-/* Сетка для пищевой ценности (КБЖУ) */
-.nutritionalGrid {
-    display: flex; /* В одну строку */
-    justify-content: space-between; /* Распределяем равномерно */
-    padding: 0.91vw 10.23vw; /* 4px сверху/снизу, 45px по бокам */
-}
-
-/* Отдельный элемент КБЖУ (цифра + подпись) */
-.nutriItem {
-    display: flex; /* В колонку */
-    flex-direction: column;
-    align-items: center; /* Центрируем */
-}
-
-/* Значение (цифра) КБЖУ */
-.nutriValue {
-    font-size: 4.55vw; /* 20px */
-    font-weight: bold; /* Жирный */
-}
-
-/* Подпись (белки, жиры и т.д.) */
-.nutriLabel {
-    font-size: 3.64vw; /* 16px */
-    font-weight: 300; /* Тонкий шрифт */
-    margin-top: 0.91vw; /* 4px отступ от цифры */
-}
-
-/* Группа кнопок внизу модалки */
-.buttonActionGroup {
-    display: flex; /* В одну строку */
-    align-items: center; /* Выравнивание по центру по вертикали */
-    padding: 5.91vw 2.73vw 0 2.73vw; /* 26px сверху, 12px по бокам */
-    width: 100%; /* На всю ширину модалки */
-    box-sizing: border-box; /* Учитываем паддинги в ширине */
-}
-
-/* Кнопка вызова чата (зеленая с аватаром) */
-.chatButton {
-    position: relative; /* Для позиционирования аватара внутри */
-    width: 27.27vw; /* Ширина ~120px */
-    height: 13.64vw; /* Высота ~60px */
-    background-color: #304D22; /* Темно-зеленый фон */
-    border-radius: 5.91vw 7.73vw 7.73vw 3.41vw; /* Уникальное скругление */
-    border: none; /* Без рамок */
-    margin-right: 2.73vw; /* 12px отступ до кнопки заказа */
-    padding: 0; /* Без внутренних отступов */
-    flex-shrink: 0; /* Запрещаем сжатие */
-    cursor: pointer; /* Курсор при наведении */
-    display: block; /* Блочный элемент */
-}
-
-/* Аватар нейросети внутри кнопки */
-.chatAvatar {
-    width: 12.73vw; /* Размер ~56px */
-    height: 12.73vw; /* Размер ~56px */
-    border-radius: 6.82vw 8.41vw 8.41vw 3.41vw; /* Скругления аватара */
-    object-fit: cover; /* Заполнение области картинкой */
-    display: block; /* Убираем зазоры */
-    position: relative; /* Позиция */
-    left: 0.23vw; /* Сдвиг 1px для идеальной центровки */
-    top: 0; /* По вертикали */
-}
-
-/* Общие стили для кнопок "Добавить" и "Счетчик" */
-.addToCartBtn, .counterBtn {
-    margin-left: auto; /* Прижимаем к правому краю группы */
-    width: 50vw; /* Ширина 220px */
-    height: 13.64vw; /* Высота 60px */
-    border-radius: 6.82vw; /* Круглые края */
-    display: flex; /* Для центровки содержимого */
-    align-items: center; /* Центровка по вертикали */
-    justify-content: center; /* Центровка по горизонтали */
-    box-sizing: border-box; /* Учет рамки в размере */
-    transition: all 0.2s ease; /* Плавность эффектов */
-    flex-shrink: 0; /* Защита от сжатия */
-}
-
-/* Кнопка "Добавить в заказ" с правкой окантовки */
-.addToCartBtn {
-    background-color: #48BF48; /* Ярко-зеленый фон */
-    color: white; /* Белый текст */
-    border: 1px solid #304D22; /* Твоя правка: внутренняя окантовка 1px темно-зеленого цвета */
-    font-weight: bold; /* Жирный текст */
-    font-size: 3.64vw; /* Размер 16px */
-    padding: 0; /* Убираем отступы */
-}
-
-/* Кнопка-счетчик (когда товар уже добавлен) */
-.counterBtn {
-    background-color: white; /* Белый фон */
-    border: 0.23vw solid #304D22; /* Толстая темно-зеленая рамка 1px */
-    justify-content: space-between; /* Элементы по краям (+ и -) */
-    padding: 0 3.41vw; /* 15px отступы внутри для иконок */
-}
-
-/* Число порций в счетчике */
-.countNumber {
-    font-size: 4.09vw; /* 18px */
-    font-weight: bold; /* Жирный */
-    color: #304D22; /* Темно-зеленый */
-    min-width: 5.68vw; /* Мин. ширина, чтобы не прыгало при смене цифр */
-    text-align: center; /* По центру */
-}
-
-/* Иконки плюс и минус */
-.controlIcon {
-    width: 4.77vw; /* 21px */
-    height: 4.77vw; /* 21px */
-    object-fit: contain; /* Сохранение пропорций */
-}
-
-/* Прозрачные обертки для иконок управления */
-.minusBtn, .plusBtn {
-    background: none; /* Прозрачно */
-    border: none; /* Без границ */
-    padding: 0; /* Без отступов */
-    display: flex; /* Центровка иконки */
-    align-items: center;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
     justify-content: center;
-    cursor: pointer; /* Курсор */
+    animation: fadeIn 0.25s ease;
+    touch-action: none;
 }
 
-/* Стили для алкогольной продукции */
-.alcoholContent {
-    text-align: left !important; /* Выравнивание влево */
-    /* Отступы больше не обнуляем — наследуются от .content (те же 30px, что и у картинки) */
+.root {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    height: 100%;
+    overflow: hidden;
+    background: #0E120C;
+    color: #fff;
+    font-family: var(--font-body, sans-serif);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease;
+    animation: rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Контейнер алкогольного описания */
-.alcoholWrapper {
-    padding-top: 9.09vw; /* 40px отступ от изображения */
+/* ---------- фото ---------- */
+.hero {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 30%;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.45s ease, opacity 0.2s ease;
 }
 
-/* Название алкоголя */
-.alcoholTitle {
-    font-size: 5.45vw; /* 24px */
-    font-weight: 600; /* Полужирный */
-    line-height: 1.2; /* Интервал */
-    margin-bottom: 4.55vw; /* 20px до начала характеристик */
+.expanded .hero {
+    transform: scale(1.08) translateY(-12%) !important;
+    filter: brightness(0.8);
 }
 
-/* Блок с характеристиками (Страна, Виноград и т.д.) */
-.specsContainer {
-    margin-bottom: 4.55vw; /* 20px отступ снизу */
+.placeholder,
+.photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    -webkit-user-drag: none;
 }
 
-/* Строка характеристики */
-.specRow {
-    display: flex; /* В одну линию */
-    justify-content: space-between; /* Ключ слева, значение справа */
-    margin-bottom: 1.82vw; /* 8px между строками */
+.placeholder {
+    filter: blur(18px);
+    transform: scale(1.1);
 }
 
-/* Название характеристики (например, "Страна") */
-.specKey {
-    font-size: 3.64vw; /* 16px */
-    font-weight: 500; /* Средний вес */
+.photo {
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* Значение характеристики (например, "Франция") */
-.specValue {
-    font-size: 3.64vw; /* 16px */
-    font-weight: 400; /* Обычный */
-    text-align: right; /* По правому краю */
+.photo.loaded { opacity: 1; }
+
+/* Напиток, вырезка без фона или маленькая картинка — по центру на поле её цвета. */
+.heroField {
+    background:
+        radial-gradient(120% 70% at 50% 32%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%),
+        var(--field);
+    transition: background 0.4s ease;
 }
 
-/* Подзаголовки в алкоголе (Описание, Гастрономия) */
-.alcoholSectionLabel {
-    font-size: 3.64vw; /* 16px */
-    font-weight: 700; /* Жирный */
-    margin-top: 4.55vw; /* 20px сверху */
-    margin-bottom: 1.82vw; /* 8px снизу */
+.heroField .photo {
+    inset: 9% 12% 34%;
+    width: 76%;
+    height: 57%;
+    object-fit: contain;
+    filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.35));
 }
 
-/* Текстовые блоки алкоголя */
-.alcoholText {
-    font-size: 3.64vw; /* 16px */
-    font-weight: 300; /* Тонкий */
-    line-height: 1.4; /* Интервал */
+.scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 20%,
+        rgba(0, 0, 0, 0) 44%, rgba(6, 10, 4, 0.86) 76%, rgba(6, 10, 4, 0.96) 100%);
+}
+
+/* ---------- верх: номер блюда в разделе и закрыть ---------- */
+.top {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    left: 16px;
+    right: 16px;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    pointer-events: none;
+}
+
+.top > * { pointer-events: auto; }
+
+.dots,
+.counter {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 7px 11px;
+    border-radius: 99px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.dots { display: flex; gap: 5px; }
+.dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.42); transition: width 0.25s ease; }
+.dots i.dotOn { width: 16px; background: #fff; }
+
+.counter {
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.glassBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- шторка ---------- */
+.sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 82%;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(100% - var(--peek, 240px)));
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.expanded .sheet { transform: translateY(0); }
+
+.sheetIn {
+    flex: 1;
+    border-radius: 28px 28px 0 0;
+    padding: 10px 20px calc(env(safe-area-inset-bottom, 0px) + 104px);
+    overflow: hidden;
+    transition: background-color 0.45s ease;
+}
+
+.expanded .sheetIn {
+    background: var(--sheet-glass);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-width: none;
+}
+
+.sheetIn::-webkit-scrollbar { display: none; }
+
+.grab {
+    display: block;
+    width: 64px;
+    height: 20px;
+    margin: 0 auto 8px;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    position: relative;
+}
+
+.grab::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 8px;
+    height: 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.name {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    color: #fff;
+    text-wrap: balance;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.78);
+    font-variant-numeric: tabular-nums;
+}
+
+.meta b {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 21px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.more {
+    margin-top: 12px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    font: inherit;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.more::before { content: "↑"; }
+.expanded .more { visibility: hidden; }
+
+.details {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.35s ease 0.1s, transform 0.35s ease 0.1s;
+}
+
+.expanded .details { opacity: 1; transform: none; }
+
+.dh {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 20px 0 8px;
+}
+
+.dp {
+    font-size: 15px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+    font-size: 13px;
+    padding: 5px 11px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.kbju { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.k {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 10px 9px 9px;
+    min-width: 0;
+}
+
+.k b {
+    display: block;
+    font-family: var(--font-heading, sans-serif);
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+}
+
+.k span { font-size: 11px; color: rgba(255, 255, 255, 0.6); }
+
+.k i {
+    display: block;
+    height: 3px;
+    border-radius: 3px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.k i::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: var(--w);
+    background: var(--c);
+    border-radius: 3px;
+}
+
+.specs { margin: 0; display: grid; gap: 0; }
+
+.specs div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 14px;
+}
+
+.specs dt { color: rgba(255, 255, 255, 0.6); }
+.specs dd { margin: 0; text-align: right; }
+
+.pair {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pairImg {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+}
+
+.pairImg img { width: 100%; height: 100%; object-fit: cover; }
+
+.pairText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pairText b { font-size: 14px; font-weight: 600; }
+.pairText small { font-size: 12px; color: rgba(255, 255, 255, 0.65); line-height: 1.35; }
+
+.pairAdd,
+.pairDone {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+
+.pairAdd { border: 0; background: #fff; color: #1B2317; cursor: pointer; }
+.pairDone { background: var(--add); color: #fff; font-size: 16px; }
+
+/* ---------- низ: шеф-ИИ и «Добавить» ---------- */
+/* Когда шторка раскрыта, текст уходит под кнопки — мягко гасим его. */
+.root::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(env(safe-area-inset-bottom, 0px) + 110px);
+    z-index: 24;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(14, 18, 12, 0), rgba(14, 18, 12, 0.92) 55%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.expanded::after { opacity: 1; }
+
+.cta {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    z-index: 25;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+}
+
+.chatBtn {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+.chatBtn img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+
+.addBtn,
+.stepper {
+    width: 100%;
+    height: 56px;
+    border-radius: 20px;
+    font-family: var(--font-body, sans-serif);
+    font-variant-numeric: tabular-nums;
+}
+
+.addBtn {
+    border: 0;
+    background: var(--add);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 24px -10px rgba(72, 191, 72, 0.8);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.addBtn:active { transform: scale(0.98); }
+
+.stepper {
+    background: #fff;
+    color: #1B2317;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 7px;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.stepper button {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    border: 0;
+    background: #EEF0EA;
+    color: #1B2317;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.stepper span { text-align: center; }
+.stepper small { display: block; font-size: 11.5px; font-weight: 500; color: #5E6957; }
+
+.root button:focus-visible {
+    outline: 3px solid var(--add);
+    outline-offset: 2px;
+}
+
+/* ---------- анимации ---------- */
+.fadeOut { animation: fadeOut 0.28s ease forwards; }
+.slideDown { transform: translateY(100%) !important; opacity: 0.6; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes rise { from { transform: translateY(24px) scale(0.98); opacity: 0.4; } to { transform: none; opacity: 1; } }
+
+/* Переход «фото вырастает из карточки меню» (View Transitions, Safari 18+ и Chrome). */
+::view-transition-group(dish-hero) {
+    animation-duration: 0.38s;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay, .root, .hero, .sheet, .details, .photo { animation: none !important; transition: none !important; }
 }
