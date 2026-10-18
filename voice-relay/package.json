@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test --test-force-exit test/*.test.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -17,6 +18,7 @@
     "@supabase/supabase-js": "^2.87.1",
     "dotenv": "^16.4.5",
     "fastify": "^5.1.0",
+    "werift": "0.25.1",
     "ws": "^8.18.0"
   }
 }

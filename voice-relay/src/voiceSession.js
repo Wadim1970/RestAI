@@ -1,6 +1,21 @@
 import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn, getDishModifierGroups, resolveModifierSelections } from './context.js';
 import { openVoiceSession } from './voiceProvider.js';
 import { config } from './config.js';
+import { pcm16DurationMs, pcm16Rms, pcm16Silence } from './audioStats.js';
+import { openGptLiveWebrtcSession, guestIceServers } from './gptLiveWebrtc.js';
+
+// Замеры голоса (логи «задержка ответа», «ответ ИИ: поток звука»):
+// ответ ИИ закончился, если звука нет столько после того, как он доиграл бы;
+// микрофон гостя «звучит», если громкость куска выше порога (после AGC
+// браузера речь ~0.05–0.3, тишина в зале ~0.005–0.02).
+const REPLY_END_GAP_MS = 2000;
+const AI_AUDIBLE_TAIL_MS = 600;
+const GUEST_VOICE_RMS = 0.03;
+// То же для WebRTC по размеру пакета Opus (20 мс): речь ~60–150 байт,
+// тишина/шум после шумодава — единицы-десятки байт. Приблизительно.
+const OPUS_PACKET_MS = 20;
+const AI_VOICE_PACKET_BYTES = 20;
+const GUEST_VOICE_PACKET_BYTES = 40;
 
 // show_dish_card/hide_dish_card — единственные инструменты, которые
 // шлют что-то ГОСТЮ напрямую (guestSocket), в обход ответа модели: тут
@@ -260,9 +275,15 @@ export async function voiceRoutes(app) {
     // Прогрев голоса под видео-заставкой: сессия конфигурируется сразу, а
     // приветствие ждёт сигнала start_greeting (когда заставка закончилась).
     const deferGreeting = req.query.deferGreeting === '1';
+    // WebRTC (живой звук, мгновенное перебивание) — основной путь для GPT-Live;
+    // WebSocket — запасной, если у гостя WebRTC не поднялся (телефон тогда
+    // переподключается с transport=ws).
+    const transport = req.query.transport === 'webrtc' && config.voiceProvider === 'gptlive' && config.webrtcEnabled
+      ? 'webrtc'
+      : 'ws';
 
     activeSessions += 1;
-    app.log.info({ guestId, restaurantId, sessionId, activeSessions }, 'голосовая сессия гостя открыта');
+    app.log.info({ guestId, restaurantId, sessionId, activeSessions, transport }, 'голосовая сессия гостя открыта');
 
     // На случай, если гость и OpenAI-нога закроются почти одновременно —
     // слот освобождается ровно один раз, кто бы ни закрылся первым.
@@ -273,88 +294,171 @@ export async function voiceRoutes(app) {
       activeSessions = Math.max(0, activeSessions - 1);
     };
 
+    // Сообщения гостя, пришедшие, пока грузится контекст (WebRTC-offer
+    // приходит сразу), — копим и разбираем, когда сессия ИИ создана.
     let openaiSession = null;
-    // Когда гость договорил — для замера задержки ответа (см. onAudioDelta).
+    const pendingGuestMessages = [];
+    const toGuest = (msg) => {
+      if (guestSocket.readyState === guestSocket.OPEN) guestSocket.send(JSON.stringify(msg));
+    };
+
+    // Когда гость договорил — для замера задержки ответа (см. noteAiAudio).
     let turnEndAt = 0;
+    let lastTurnEndAt = 0;
+    // Когда микрофон гостя последний раз звучал громче порога — второй замер
+    // задержки, не зависящий от того, прислал ли провайдер «гость договорил».
+    let lastGuestVoiceAt = 0;
+    // Текущий ответ ИИ: сколько звука пришло и сколько телефон простоял бы
+    // без звука, если бы играл куски сразу (= провалы в потоке от OpenAI; в
+    // WebRTC сюда же попадают короткие паузы в речи).
+    let reply = null;
+    let replyTimer = null;
+    // До какого момента у гостя ещё звучит ИИ (с запасом на буфер и сеть).
+    const aiAudible = () => reply && Date.now() < reply.playhead + AI_AUDIBLE_TAIL_MS;
 
-    try {
-      const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
+    const finishReply = () => {
+      if (!reply) return;
+      app.log.info({
+        guestId, restaurantId, transport,
+        audioMs: Math.round(reply.audioMs),
+        wallMs: reply.lastAt - reply.startedAt,
+        stallMs: Math.round(reply.stallMs),
+        maxGapMs: reply.maxGapMs,
+        chunks: reply.chunks,
+        // Доля кусков микрофона громче порога, пока звучал ИИ: высокая —
+        // микрофон слышит ИИ из динамика (эхо) или гость говорит поверх.
+        micLoudPct: reply.micChunks ? Math.round((reply.micLoudChunks / reply.micChunks) * 100) : 0,
+        inputDuringReply: reply.inputDuring,
+      }, 'ответ ИИ: поток звука');
+      reply = null;
+    };
 
-      openaiSession = openVoiceSession({
-        instructions,
-        voice,
-        hasHistory,
-        deferGreeting,
-        tools: buildTools(restaurantId, tableNumber, guestSocket),
-        onAudioDelta: (base64Audio) => {
-          // Задержка ответа: от конца реплики гостя до первого звука ИИ.
-          if (turnEndAt) {
-            app.log.info({ guestId, restaurantId, ms: Date.now() - turnEndAt }, 'задержка ответа');
-            turnEndAt = 0;
-          }
-          if (guestSocket.readyState === guestSocket.OPEN) {
-            guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));
-          }
-        },
-        onEvent: (event) => {
-          // Для бокала на телефоне: «гость договорил» и ответ ИИ по кускам.
-          // GPT-Live присылает их нашими событиями (gptLiveProvider), Realtime
-          // (openai/grok) — сырыми событиями API.
-          const toGuest = (msg) => {
-            if (guestSocket.readyState === guestSocket.OPEN) guestSocket.send(JSON.stringify(msg));
-          };
-          if (event.type === 'user.turn_end' || event.type === 'input_audio_buffer.speech_stopped') {
-            turnEndAt = Date.now();
-            toGuest({ type: 'user_turn_end' });
-          } else if (
-            (event.type === 'response.transcript.delta' ||
-              event.type === 'response.output_audio_transcript.delta' ||
-              event.type === 'response.audio_transcript.delta') &&
-            (event.text || event.delta)
-          ) {
-            toGuest({ type: 'transcript_delta', text: event.text || event.delta });
-          } else if (
-            event.type === 'response.transcript.end' ||
-            event.type === 'response.output_audio_transcript.done' ||
-            event.type === 'response.audio_transcript.done'
-          ) {
-            toGuest({ type: 'transcript_end' });
-          }
+    // Пришёл звук ИИ длительностью ms (кусок PCM или RTP-пакет с голосом).
+    const noteAiAudio = (ms) => {
+      const now = Date.now();
+      if (!reply) {
+        // Задержка ответа: от «гость договорил» (событие провайдера) и от
+        // последнего громкого звука микрофона до первого звука ИИ.
+        app.log.info({
+          guestId, restaurantId, transport,
+          fromTurnEndMs: turnEndAt ? now - turnEndAt : null,
+          fromGuestVoiceMs: lastGuestVoiceAt ? now - lastGuestVoiceAt : null,
+        }, 'задержка ответа');
+        turnEndAt = 0;
+        reply = {
+          startedAt: now, lastAt: now, playhead: now, audioMs: 0, stallMs: 0,
+          maxGapMs: 0, chunks: 0, micChunks: 0, micLoudChunks: 0, inputDuring: 0,
+        };
+      }
+      // Простой «телефон без буфера»: если кусок пришёл позже, чем
+      // доиграл предыдущий, — это провал в потоке от провайдера.
+      if (now > reply.playhead) {
+        if (reply.chunks) reply.stallMs += now - reply.playhead;
+        reply.playhead = now;
+      }
+      reply.playhead += ms;
+      reply.audioMs += ms;
+      reply.maxGapMs = Math.max(reply.maxGapMs, now - reply.lastAt);
+      reply.lastAt = now;
+      reply.chunks += 1;
+      clearTimeout(replyTimer);
+      replyTimer = setTimeout(finishReply, reply.playhead - now + REPLY_END_GAP_MS);
+    };
 
-          if (event.type === 'relay.error' || event.type === 'error') {
-            app.log.error(event, 'realtime session error');
-          } else if (event.type === 'user.transcript') {
-            app.log.info({ guestId, restaurantId, text: event.text }, 'гость сказал');
-            // Реплика гостя из голоса — в общую историю, чтобы текстовый
-            // режим видел, что именно гость спрашивал/выбирал голосом.
-            saveConversationTurn({
-              sessionId, restaurantId, guestId,
-              role: 'user', content: event.text, source: 'voice',
-            }).catch((e) => app.log.error(e, 'не удалось записать реплику гостя в историю'));
-          } else if (event.type === 'response.transcript') {
-            app.log.info({ guestId, restaurantId, text: event.text }, 'ИИ сказал');
-            // Пишем реплику ИИ в общую историю — чтобы текстовый режим
-            // (и следующая голосовая сессия) видели, что уже было сказано.
-            // Best-effort: сбой записи не должен ронять разговор.
-            saveConversationTurn({
-              sessionId, restaurantId, guestId,
-              role: 'assistant', content: event.text, source: 'voice',
-            }).catch((e) => app.log.error(e, 'не удалось записать реплику ИИ в историю'));
-          } else if (event.type === 'tool.called') {
-            app.log.info({ guestId, restaurantId, name: event.name, args: event.args, result: event.result }, 'ИИ вызвал инструмент');
-          }
-        },
-        onClose: () => {
-          releaseSlot();
-          guestSocket.close();
-        },
-      });
-    } catch (err) {
-      app.log.error(err, 'не удалось открыть голосовую сессию');
-      releaseSlot();
-      guestSocket.close();
-      return;
-    }
+    // Пришёл кусок микрофона гостя (loud — громче порога).
+    const noteGuestAudio = (loud) => {
+      if (loud) lastGuestVoiceAt = Date.now();
+      const speaking = aiAudible();
+      if (speaking) {
+        reply.micChunks += 1;
+        if (loud) reply.micLoudChunks += 1;
+      }
+      return speaking;
+    };
+
+    const onEvent = (event) => {
+      // Для бокала на телефоне: «гость договорил» и ответ ИИ по кускам.
+      // GPT-Live присылает их нашими событиями (gptLiveEvents), Realtime
+      // (openai/grok) — сырыми событиями API.
+      if (event.type === 'user.turn_end' || event.type === 'input_audio_buffer.speech_stopped') {
+        turnEndAt = Date.now();
+        lastTurnEndAt = turnEndAt;
+        toGuest({ type: 'user_turn_end' });
+      } else if (
+        (event.type === 'response.transcript.delta' ||
+          event.type === 'response.output_audio_transcript.delta' ||
+          event.type === 'response.audio_transcript.delta') &&
+        (event.text || event.delta)
+      ) {
+        toGuest({ type: 'transcript_delta', text: event.text || event.delta });
+      } else if (
+        event.type === 'response.transcript.end' ||
+        event.type === 'response.output_audio_transcript.done' ||
+        event.type === 'response.audio_transcript.done'
+      ) {
+        toGuest({ type: 'transcript_end' });
+      }
+
+      if (event.type === 'relay.error' || event.type === 'error') {
+        app.log.error(event, 'realtime session error');
+      } else if (event.type === 'webrtc.guest_state') {
+        app.log.info({ guestId, restaurantId, state: event.state }, 'WebRTC с гостем');
+      } else if (event.type === 'webrtc.ai_session') {
+        app.log.info({ guestId, restaurantId, liveSessionId: event.id }, 'WebRTC с GPT-Live: сессия создана');
+      } else if (event.type === 'user.transcript') {
+        // duringAiSpeech — реплика распознана, пока у гостя звучал ИИ:
+        // либо гость перебил, либо модель услышала саму себя (эхо).
+        const duringAiSpeech = Boolean(aiAudible());
+        if (duringAiSpeech) reply.inputDuring += 1;
+        app.log.info({ guestId, restaurantId, text: event.text, duringAiSpeech }, 'гость сказал');
+        // Реплика гостя из голоса — в общую историю, чтобы текстовый
+        // режим видел, что именно гость спрашивал/выбирал голосом.
+        saveConversationTurn({
+          sessionId, restaurantId, guestId,
+          role: 'user', content: event.text, source: 'voice',
+        }).catch((e) => app.log.error(e, 'не удалось записать реплику гостя в историю'));
+      } else if (event.type === 'response.transcript') {
+        app.log.info({ guestId, restaurantId, text: event.text }, 'ИИ сказал');
+        // Пишем реплику ИИ в общую историю — чтобы текстовый режим
+        // (и следующая голосовая сессия) видели, что уже было сказано.
+        // Best-effort: сбой записи не должен ронять разговор.
+        saveConversationTurn({
+          sessionId, restaurantId, guestId,
+          role: 'assistant', content: event.text, source: 'voice',
+        }).catch((e) => app.log.error(e, 'не удалось записать реплику ИИ в историю'));
+      } else if (event.type === 'tool.called') {
+        app.log.info({
+          guestId, restaurantId, name: event.name, args: event.args, result: event.result,
+          fromTurnEndMs: lastTurnEndAt ? Date.now() - lastTurnEndAt : null,
+        }, 'ИИ вызвал инструмент');
+      }
+    };
+
+    const handleGuestMessage = (msg) => {
+      if (msg.type === 'audio' && msg.data) {
+        const speaking = noteGuestAudio(pcm16Rms(msg.data) > GUEST_VOICE_RMS);
+        openaiSession.sendAudio(speaking && config.muteMicWhileSpeaking ? pcm16Silence(msg.data) : msg.data);
+      } else if (msg.type === 'webrtc_offer' && typeof msg.sdp === 'string' && openaiSession.answerGuest) {
+        openaiSession.answerGuest(msg.sdp)
+          .then((sdp) => toGuest({ type: 'webrtc_answer', sdp }))
+          .catch((err) => {
+            app.log.error({ guestId, restaurantId, err: String(err) }, 'WebRTC с гостем: не удалось ответить на offer');
+            toGuest({ type: 'webrtc_failed' });
+          });
+      } else if (msg.type === 'client_stats') {
+        // Как звук играл на телефоне (опустошения очереди, подвисания
+        // вкладки; в WebRTC — потери, джиттер, тип соединения).
+        const { type, ...stats } = msg;
+        app.log.info({ guestId, restaurantId, transport, ...stats }, 'звук на телефоне');
+      } else if (msg.type === 'barge_in') {
+        // Телефон оборвал звук ИИ: гость заговорил поверх (или эхо — тогда
+        // таких строк будет много без реальных реплик гостя).
+        app.log.info({ guestId, restaurantId, level: msg.level }, 'гость перебил ИИ');
+      } else if (msg.type === 'start_greeting') {
+        // Заставка закончилась — можно здороваться (см. deferGreeting).
+        openaiSession.startGreeting();
+      }
+    };
 
     guestSocket.on('message', (raw) => {
       let msg;
@@ -363,17 +467,65 @@ export async function voiceRoutes(app) {
       } catch {
         return;
       }
-      if (msg.type === 'audio' && msg.data) {
-        openaiSession.sendAudio(msg.data);
-      } else if (msg.type === 'start_greeting') {
-        // Заставка закончилась — можно здороваться (см. deferGreeting).
-        openaiSession.startGreeting();
-      }
+      if (openaiSession) handleGuestMessage(msg);
+      else pendingGuestMessages.push(msg);
     });
 
+    let guestClosed = false;
     guestSocket.on('close', () => {
+      guestClosed = true;
+      clearTimeout(replyTimer);
+      finishReply();
       releaseSlot();
       openaiSession?.close();
     });
+
+    // Телефону сразу — каким путём пойдёт звук (если WebRTC выключен на
+    // сервере, телефон останется на этом же сокете), а для WebRTC — ICE-серверы
+    // (TURN), чтобы он готовил offer, пока мы грузим контекст.
+    toGuest(transport === 'webrtc'
+      ? { type: 'transport', transport, iceServers: guestIceServers() }
+      : { type: 'transport', transport });
+
+    try {
+      const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
+      if (guestClosed) return;
+
+      const sessionOpts = {
+        instructions,
+        voice,
+        hasHistory,
+        deferGreeting,
+        tools: buildTools(restaurantId, tableNumber, guestSocket),
+        onEvent,
+        onClose: () => {
+          releaseSlot();
+          guestSocket.close();
+        },
+      };
+      openaiSession = transport === 'webrtc'
+        ? openGptLiveWebrtcSession({
+          ...sessionOpts,
+          // Голос ИИ: пакет Opus 20 мс; короткие пакеты — тишина между словами.
+          onAiPacket: (bytes) => { if (bytes > AI_VOICE_PACKET_BYTES) noteAiAudio(OPUS_PACKET_MS); },
+          onGuestPacket: (bytes) => { noteGuestAudio(bytes > GUEST_VOICE_PACKET_BYTES); },
+        })
+        : openVoiceSession({
+          ...sessionOpts,
+          onAudioDelta: (base64Audio) => {
+            noteAiAudio(pcm16DurationMs(base64Audio));
+            if (guestSocket.readyState === guestSocket.OPEN) {
+              guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));
+            }
+          },
+        });
+    } catch (err) {
+      app.log.error(err, 'не удалось открыть голосовую сессию');
+      releaseSlot();
+      guestSocket.close();
+      return;
+    }
+
+    pendingGuestMessages.splice(0).forEach(handleGuestMessage);
   });
 }

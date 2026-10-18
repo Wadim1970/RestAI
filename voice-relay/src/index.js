@@ -22,6 +22,7 @@ app.get('/status', async () => ({
   activeSessions: getActiveSessionCount(),
   maxConcurrentSessions: config.maxConcurrentSessions,
   voiceProvider: config.voiceProvider,
+  webrtc: config.voiceProvider === 'gptlive' && config.webrtcEnabled,
 }));
 
 await app.register(voiceRoutes);
