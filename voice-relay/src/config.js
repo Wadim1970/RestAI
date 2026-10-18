@@ -26,10 +26,29 @@ export const config = {
   // Подталкивать ли первое приветствие response.create'ом (=0 отключает, если
   // GPT-Live здоровается сам и выходит двойное приветствие).
   gptLiveNudgeGreeting: process.env.GPTLIVE_NUDGE_GREETING !== '0',
+  // Адрес создания сессии GPT-Live по WebRTC (переопределяется только в тестах).
+  gptLiveSessionsUrl: process.env.OPENAI_LIVE_SESSIONS_URL || 'https://api.openai.com/v1/live/sessions',
   // =1 — пока у гостя играет голос ИИ, вместо микрофона шлём тишину (защита
   // от эха: модель не слышит саму себя из динамика и не обрывает ответ).
   // Цена — гость не может перебить ИИ голосом. Для проверки, по умолчанию выкл.
+  // Только для запасного WebSocket-пути: в WebRTC эхо гасит сам браузер.
   muteMicWhileSpeaking: process.env.MUTE_MIC_WHILE_AI_SPEAKS === '1',
+
+  // --- WebRTC (основной путь для gptlive): телефон ⇄ relay ⇄ GPT-Live ---
+  // =0 — выключить и пускать всех по WebSocket (как раньше).
+  webrtcEnabled: process.env.WEBRTC_ENABLED !== '0',
+  // UDP-порты, на которых relay принимает звук гостей (по одному на
+  // разговор и ещё по одному на ногу к OpenAI). Их нужно открыть на входящие
+  // в файрволе хостинга.
+  webrtcPortMin: Number(process.env.WEBRTC_PORT_MIN || 40000),
+  webrtcPortMax: Number(process.env.WEBRTC_PORT_MAX || 40199),
+  // Публичный IP сервера — только если он НЕ виден на сетевом интерфейсе
+  // (сервер за NAT хостинга). Тогда relay подставит его в свои кандидаты.
+  webrtcPublicIp: process.env.WEBRTC_PUBLIC_IP || '',
+  // TURN (coturn) для гостей, у которых мобильная сеть режет UDP: адреса через
+  // запятую и общий секрет (use-auth-secret в coturn). Пусто — без TURN.
+  turnUrls: list(process.env.TURN_URLS),
+  turnSecret: process.env.TURN_SECRET || '',
 
   grokApiKey: process.env.GROK_API_KEY || '',
   grokVoiceModel: process.env.GROK_VOICE_MODEL || 'grok-voice-latest',

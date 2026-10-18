@@ -32,6 +32,14 @@ const SAME_REPLY_GAP = 0.6;
 // Диагностика: кадр дольше этого — вкладка подвисла; сводка — раз в N мс.
 const LONG_FRAME_MS = 100;
 const STATS_INTERVAL_MS = 5000;
+// WebRTC: сколько ждём соединения, прежде чем уйти на WebSocket; сводку
+// статистики шлём раз в WEBRTC_STATS_EVERY интервалов.
+const WEBRTC_CONNECT_TIMEOUT_MS = 6000;
+const WEBRTC_STATS_EVERY = 3;
+// WebRTC: «ИИ говорит», пока входящий звук громче AI_TALK_RMS; молчание
+// короче AI_QUIET_MS (паузы между словами) речь не прерывает.
+const AI_TALK_RMS = 0.01;
+const AI_QUIET_MS = 300;
 
 // Мягкий клиппер (tanh) — страховка от жёсткого клиппинга на самом выходе.
 // Кривая почти линейна в рабочем диапазоне и плавно насыщается у краёв,
@@ -91,6 +99,51 @@ function rmsLevel(float32) {
   return Math.min(1, Math.sqrt(sum / float32.length) * 4);
 }
 
+// Громкость (RMS) того, что сейчас проходит через анализатор.
+const analyserBuffers = new WeakMap();
+function analyserRms(analyser) {
+  let data = analyserBuffers.get(analyser);
+  if (!data) {
+    data = new Uint8Array(analyser.frequencyBinCount);
+    analyserBuffers.set(analyser, data);
+  }
+  analyser.getByteTimeDomainData(data);
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = (data[i] - 128) / 128;
+    sum += v * v;
+  }
+  return Math.sqrt(sum / data.length);
+}
+
+// Сводка WebRTC для лога relay: потери, джиттер, «додуманные» браузером
+// куски (провалы), средний буфер, задержка сети и путь (прямой/через TURN).
+async function collectWebrtcStats(pc) {
+  const report = await pc.getStats();
+  let inbound = null;
+  let pair = null;
+  report.forEach((s) => {
+    if (s.type === 'inbound-rtp' && s.kind === 'audio') inbound = s;
+    if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s;
+  });
+  const local = pair ? report.get(pair.localCandidateId) : null;
+  const round1 = (v) => Math.round(v * 10) / 10;
+  const lost = inbound?.packetsLost ?? 0;
+  const received = inbound?.packetsReceived ?? 0;
+  return {
+    lossPct: received + lost > 0 ? round1((100 * lost) / (received + lost)) : 0,
+    jitterMs: inbound?.jitter != null ? Math.round(inbound.jitter * 1000) : null,
+    concealedPct: inbound?.totalSamplesReceived
+      ? round1((100 * (inbound.concealedSamples || 0)) / inbound.totalSamplesReceived)
+      : null,
+    bufferMs: inbound?.jitterBufferEmittedCount
+      ? Math.round((1000 * inbound.jitterBufferDelay) / inbound.jitterBufferEmittedCount)
+      : null,
+    rttMs: pair?.currentRoundTripTime != null ? Math.round(pair.currentRoundTripTime * 1000) : null,
+    path: local ? `${local.candidateType}/${local.protocol}` : null,
+  };
+}
+
 // Порог уровня микрофона (после rmsLevel), выше которого считаем, что гость
 // говорит, и сколько держим «слушаю» после последнего звука.
 const MIC_TALK_LEVEL = 0.06;
@@ -112,16 +165,17 @@ const THINK_MAX_MS = 9000;
 const ROLE_TEXT_MIN = 18;
 const ROLE_TEXT_MAX = 160;
 
-// Реальный голосовой разговор: микрофон гостя течёт в voice-relay
-// (wss://voice.restai.space/voice) и обратно, звук ИИ проигрывается тут же.
+// Реальный голосовой разговор с voice-relay (wss://voice.restai.space/voice).
+// Основной путь — WebRTC: микрофон и голос ИИ идут живым потоком, как в
+// звонке (эхоподавление браузера, мгновенное перебивание); по WebSocket —
+// только сигнализация и команды экрана. Запасной путь (WebRTC не поднялся) —
+// звук кусками PCM прямо по WebSocket.
 // Визуально — «дым в бокале» (SmokeGlass): состояние idle/listen/think/speak,
 // амплитуда — уровень микрофона, пока говорит гость, и уровень голоса ИИ,
 // пока отвечает он; цвет — кто отвечает (шеф, сомелье, диетолог).
 //
-// ScriptProcessorNode официально deprecated в пользу AudioWorklet, но пока
-// работает во всех нужных браузерах и не требует отдельного модуля-файла —
-// смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
-// снять работу с основного потока.
+// ScriptProcessorNode (только запасной путь) официально deprecated в пользу
+// AudioWorklet, но пока работает во всех нужных браузерах.
 export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, initialRole = 'chef', onExpandDish, onCartAdd, onShowCart, onHideCart }) {
   const glassRef = useRef(null);
   const [roleColor, setRoleColor] = useState(ROLE_COLORS[initialRole] || ROLE_COLORS.chef);
@@ -136,7 +190,14 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   // отбрасываем хвост старого ответа, и функция обрыва из фазы 1 для фазы 2.
   const playingSourcesRef = useRef(new Set());
   const droppingSinceRef = useRef(0);
-  const stopPlaybackRef = useRef(null);
+  // Транспорт звука ('webrtc' | 'ws', пока неизвестен — null), отправитель
+  // микрофона в WebRTC, <audio> для голоса ИИ, подключение микрофона из фазы 1
+  // для фазы 2 и было ли уже запрошено приветствие.
+  const modeRef = useRef(null);
+  const micSenderRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  const attachMicRef = useRef(null);
+  const greetingRequestedRef = useRef(false);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   // Блюда, которые ИИ показал за этот разговор (show_dish_card/
@@ -195,17 +256,36 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
 
   // ФАЗА 1 — соединение и ВОСПРОИЗВЕДЕНИЕ (без микрофона). Запускается при
   // монтировании: под видео-заставкой (prewarm) это и есть «прогрев» —
-  // WebSocket, сессия Grok и загрузка контекста готовятся заранее, а само
+  // WebSocket, WebRTC и загрузка контекста готовятся заранее, а само
   // приветствие откладывается (deferGreeting) до сигнала из фазы 2.
   // prewarm читается один раз при монтировании — смена флага НЕ пересоздаёт
   // соединение (иначе прогрев был бы бессмысленным).
+  //
+  // Звук идёт по WebRTC (relay сообщает {type:'transport'}): микрофон — трек
+  // соединения, голос ИИ — входящий трек в <audio>; эхо гасит браузер, а
+  // перебивание отрабатывает сам GPT-Live. Если WebRTC не поднялся (нет в
+  // браузере, сеть режет UDP, таймаут) — переподключаемся с transport=ws:
+  // звук кусками PCM в JSON, как раньше.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let stopped = false;
     let rafId = null;
-    let outputAnalyser = null;
     let makeupGain = null;
     let removeUnlock = null;
+    let ws = null;
+    let pc = null;
+    let fellBack = false;
+    let fallbackReason = '';
+    let connectTimer = null;
+    let aiQuietSince = 0;
+
+    // Раньше AudioContext разблокировал клик по кнопке «войти». Кнопки
+    // больше нет — заставка стартует сама после скана QR, поэтому контекст
+    // создаём здесь, а разблокировку звука вешаем на первое касание экрана
+    // (см. unlockAudio ниже).
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = audioContext;
+    const remoteAudio = remoteAudioRef.current;
 
     // Уровень звука ИИ — из живого аудио-графа через AnalyserNode. Цикл
     // крутится ВСЕГДА (не только пока играет ИИ) и каждый кадр подтягивает
@@ -224,15 +304,34 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         }
       }
       lastFrameAt = frameAt;
-      if (aiSpeakingRef.current && outputAnalyser) {
-        const data = new Uint8Array(outputAnalyser.frequencyBinCount);
-        outputAnalyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = (data[i] - 128) / 128;
-          sum += v * v;
+      const now = performance.now();
+      const webrtc = modeRef.current === 'webrtc';
+      const outputAnalyser = outputAnalyserRef.current;
+
+      // WebRTC: кусков нет — «ИИ говорит» узнаём по уровню входящего звука
+      // (с короткой задержкой на паузы между словами).
+      if (webrtc && outputAnalyser) {
+        if (analyserRms(outputAnalyser) > AI_TALK_RMS) {
+          aiSpeakingRef.current = true;
+          aiQuietSince = 0;
+        } else if (aiSpeakingRef.current) {
+          if (!aiQuietSince) aiQuietSince = now;
+          else if (now - aiQuietSince > AI_QUIET_MS) aiSpeakingRef.current = false;
         }
-        targetLevelRef.current = Math.min(1, Math.sqrt(sum / data.length) * 3.5);
+      }
+
+      if (aiSpeakingRef.current && outputAnalyser) {
+        targetLevelRef.current = Math.min(1, analyserRms(outputAnalyser) * 3.5);
+      } else if (webrtc && micAnalyserRef.current) {
+        // WebRTC: микрофон не проходит через ScriptProcessor — уровень гостя
+        // берём из анализатора микрофона.
+        const level = Math.min(1, analyserRms(micAnalyserRef.current) * 4);
+        targetLevelRef.current = level;
+        micLevelRef.current = level;
+        if (level > MIC_TALK_LEVEL) {
+          micHeardAtRef.current = now;
+          thinkingSinceRef.current = 0; // гость снова заговорил
+        }
       } else {
         // Ни ИИ, ни свежих данных с микрофона — плавно гасим (микрофон, если
         // активен, тут же перепишет цель своим значением в onaudioprocess).
@@ -245,7 +344,6 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       // нет → think; гость говорит → listen; иначе idle.
       const glass = glassRef.current;
       if (glass) {
-        const now = performance.now();
         let state = 'idle';
         let amp = 0;
         if (aiSpeakingRef.current) {
@@ -264,9 +362,9 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       rafId = requestAnimationFrame(visualLoop);
     };
 
+    // --- WebSocket-путь (запасной): куски PCM → очередь AudioBuffer ---
+
     const playChunk = (base64Audio) => {
-      const audioContext = audioContextRef.current;
-      if (!audioContext) return;
       // После перебивания: хвост старого ответа (куски идут без паузы) — мимо.
       if (droppingSinceRef.current) {
         const t = audioContext.currentTime;
@@ -314,7 +412,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     };
 
     // Гость перебил: глушим всё, что стоит в очереди, и не доигрываем хвост.
-    stopPlaybackRef.current = () => {
+    const stopPlayback = () => {
       const t = audioContext.currentTime;
       playingSourcesRef.current.forEach((s) => {
         try { s.stop(); } catch { /* уже доиграл */ }
@@ -326,15 +424,68 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       lastChunkAtRef.current = t;
     };
 
-    // Раньше AudioContext разблокировал клик по кнопке «войти». Кнопки
-    // больше нет — заставка стартует сама после скана QR, поэтому контекст
-    // создаём здесь, а разблокировку звука вешаем на первое касание экрана
-    // (см. unlockAudio ниже).
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    audioContextRef.current = audioContext;
+    // Микрофон по WebSocket: ScriptProcessorNode → 24 кГц PCM16 → JSON.
+    // ScriptProcessorNode подключаем к destination через нулевой гейн — иначе
+    // onaudioprocess не гарантированно срабатывает, но эхо своего микрофона
+    // гость слышать не должен.
+    const startMicOverWs = (stream) => {
+      if (scriptNodeRef.current) return;
+      const source = audioContext.createMediaStreamSource(stream);
+      const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+      scriptNodeRef.current = scriptNode;
+      const silentGain = audioContext.createGain();
+      silentGain.gain.value = 0;
+      source.connect(scriptNode);
+      scriptNode.connect(silentGain);
+      silentGain.connect(audioContext.destination);
 
-    // Цепочка воспроизведения: кусок -> makeupGain (усиление) -> limiter
-    // (потолок против клиппинга) -> softClip (мягкая страховка) ->
+      let bargeInSec = 0;
+      scriptNode.onaudioprocess = (event) => {
+        const socket = wsRef.current;
+        if (stopped || !socket || socket.readyState !== WebSocket.OPEN) return;
+        const input = event.inputBuffer.getChannelData(0);
+        if (aiSpeakingRef.current) {
+          // Гость говорит поверх ИИ достаточно громко и долго — перебил.
+          const level = rmsLevel(input);
+          bargeInSec = level > BARGE_IN_LEVEL ? bargeInSec + input.length / audioContext.sampleRate : 0;
+          if (bargeInSec * 1000 >= BARGE_IN_MS) {
+            bargeInSec = 0;
+            stopPlayback();
+            socket.send(JSON.stringify({ type: 'barge_in', level: Math.round(level * 100) / 100 }));
+          }
+        } else {
+          bargeInSec = 0;
+        }
+        if (!aiSpeakingRef.current) {
+          const level = rmsLevel(input);
+          setLevel(level);
+          micLevelRef.current = level;
+          if (level > MIC_TALK_LEVEL) {
+            micHeardAtRef.current = performance.now();
+            thinkingSinceRef.current = 0; // гость снова заговорил
+          }
+        }
+        const resampled = resampleTo24k(input, audioContext.sampleRate);
+        socket.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
+      };
+    };
+
+    // Микрофон (если уже разрешён) — в текущий транспорт. Вызывается и из
+    // фазы 2 (микрофон получили), и здесь (транспорт стал известен/сменился).
+    const attachMic = () => {
+      const stream = streamRef.current;
+      if (!stream || stopped) return;
+      if (modeRef.current === 'webrtc') {
+        const track = stream.getAudioTracks()[0];
+        if (track && micSenderRef.current) micSenderRef.current.replaceTrack(track).catch(() => {});
+      } else if (modeRef.current === 'ws') {
+        startMicOverWs(stream);
+      }
+    };
+    attachMicRef.current = attachMic;
+
+    // Цепочка воспроизведения (WebSocket): кусок -> makeupGain (усиление) ->
+    // limiter (потолок против клиппинга) -> softClip (мягкая страховка) ->
     // outputAnalyser (визуализация шара) -> колонки. Усиление ДО лимитера,
     // иначе усиленные пики режутся уже на выходе (был треск на речи).
     makeupGain = audioContext.createGain();
@@ -348,14 +499,94 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     const softClip = audioContext.createWaveShaper();
     softClip.curve = makeSoftClipCurve();
     softClip.oversample = '2x';
-    outputAnalyser = audioContext.createAnalyser();
-    outputAnalyser.fftSize = 256;
-    outputAnalyserRef.current = outputAnalyser;
+    const wsOutputAnalyser = audioContext.createAnalyser();
+    wsOutputAnalyser.fftSize = 256;
+    outputAnalyserRef.current = wsOutputAnalyser;
     makeupGain.connect(limiter);
     limiter.connect(softClip);
-    softClip.connect(outputAnalyser);
-    outputAnalyser.connect(audioContext.destination);
+    softClip.connect(wsOutputAnalyser);
+    wsOutputAnalyser.connect(audioContext.destination);
     rafId = requestAnimationFrame(visualLoop);
+
+    // --- WebRTC-путь (основной) ---
+
+    // Голос ИИ из WebRTC: играет <audio> (так браузер видит его как звонок и
+    // вычитает из микрофона — эхо), а в аудио-граф идёт только на анализатор
+    // для бокала и визуализатора (в колонки через WebAudio не дублируем).
+    const playRemoteStream = (stream) => {
+      if (remoteAudio) {
+        remoteAudio.srcObject = stream;
+        remoteAudio.play().catch(() => { /* разблокирует первое касание */ });
+      }
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const sink = audioContext.createGain();
+      sink.gain.value = 0;
+      source.connect(analyser);
+      analyser.connect(sink);
+      sink.connect(audioContext.destination);
+      outputAnalyserRef.current = analyser;
+    };
+
+    const closePc = () => {
+      clearTimeout(connectTimer);
+      if (!pc) return;
+      pc.ontrack = null;
+      pc.onconnectionstatechange = null;
+      pc.close();
+      pc = null;
+      micSenderRef.current = null;
+    };
+
+    // WebRTC не поднялся — тот же разговор по WebSocket (новая сессия relay).
+    const fallbackToWs = (reason) => {
+      if (fellBack || stopped) return;
+      fellBack = true;
+      fallbackReason = reason;
+      console.warn('VoiceStage: WebRTC не поднялся, переходим на WebSocket:', reason);
+      closePc();
+      if (remoteAudio) remoteAudio.srcObject = null;
+      outputAnalyserRef.current = wsOutputAnalyser;
+      aiSpeakingRef.current = false;
+      modeRef.current = 'ws';
+      const old = ws;
+      connect('ws');
+      old?.close();
+    };
+
+    const startWebrtc = async (iceServers) => {
+      try {
+        pc = new RTCPeerConnection({ iceServers });
+        const thisPc = pc;
+        const transceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
+        micSenderRef.current = transceiver.sender;
+        attachMic();
+        pc.ontrack = (event) => {
+          playRemoteStream(event.streams[0] || new MediaStream([event.track]));
+        };
+        pc.onconnectionstatechange = () => {
+          if (thisPc.connectionState === 'connected') clearTimeout(connectTimer);
+          if (thisPc.connectionState === 'failed') fallbackToWs('failed');
+        };
+        // Offer уходит сразу, без ожидания кандидатов телефона: у relay
+        // публичный адрес, телефон сам стучится к нему (и через TURN тоже), а
+        // relay узнаёт адрес телефона из этих проверок. Сбор кандидатов в
+        // браузере местами тянется секундами — ждать его незачем.
+        await pc.setLocalDescription(await pc.createOffer());
+        if (stopped || thisPc !== pc) return;
+        sendToRelay({ type: 'webrtc_offer', sdp: pc.localDescription.sdp });
+        connectTimer = setTimeout(() => {
+          if (thisPc === pc && thisPc.connectionState !== 'connected') fallbackToWs('timeout');
+        }, WEBRTC_CONNECT_TIMEOUT_MS);
+      } catch (err) {
+        fallbackToWs(`error: ${err?.message || err}`);
+      }
+    };
+
+    const sendToRelay = (msg) => {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    };
 
     // Разблокировка звука без кнопки: браузеры (особенно iOS) держат
     // AudioContext в suspended до жеста пользователя, и приветствие ИИ
@@ -374,39 +605,28 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         s.connect(ctx.destination);
         s.start(0);
       } catch { /* контекст уже закрыт — не важно */ }
+      remoteAudio?.play().catch(() => {});
     };
     const unlockEvents = ['pointerdown', 'touchend', 'click'];
     unlockEvents.forEach((e) => document.addEventListener(e, unlockAudio, { once: true, passive: true }));
     removeUnlock = () => unlockEvents.forEach((e) => document.removeEventListener(e, unlockAudio));
 
-    const params = new URLSearchParams({
-      guestId: guestId ?? '',
-      restaurantId: restaurantId ?? '',
-      tableNumber: tableNumber ?? '',
-      sessionId: sessionId ?? '',
-      deferGreeting: prewarm ? '1' : '0',
-    });
-    const ws = new WebSocket(`${RELAY_WS_URL}?${params}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      // При прогреве под видео шар пока не показывается, статус не важен;
-      // «Слушаю…» ставит фаза активации, когда включит микрофон.
-      if (!stopped && !prewarm) setStatus('listening');
-    };
-    ws.onclose = () => {
-      if (stopped) return;
-      setStatus((s) => (s === 'busy' ? s : 'error'));
-    };
-    ws.onmessage = (event) => {
-      if (stopped) return;
-      let msg;
-      try {
-        msg = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-      if (msg.type === 'audio' && msg.data) {
+    const handleMessage = (msg) => {
+      if (msg.type === 'transport') {
+        // Relay сообщает, каким путём пойдёт звук.
+        if (msg.transport === 'webrtc' && !fellBack) {
+          modeRef.current = 'webrtc';
+          startWebrtc(Array.isArray(msg.iceServers) ? msg.iceServers : []);
+        } else {
+          modeRef.current = 'ws';
+          attachMic();
+        }
+      } else if (msg.type === 'webrtc_answer' && pc) {
+        pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp })
+          .catch((err) => fallbackToWs(`answer: ${err?.message || err}`));
+      } else if (msg.type === 'webrtc_failed') {
+        fallbackToWs('relay');
+      } else if (msg.type === 'audio' && msg.data) {
         playChunk(msg.data);
       } else if (msg.type === 'error' && msg.code === 'busy') {
         setStatus('busy');
@@ -448,16 +668,76 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       }
     };
 
-    // Раз в несколько секунд — сводка, как звук играл на телефоне (пишется в
-    // лог voice-relay «звук на телефоне»): отличить сеть от занятого телефона.
+    function connect(transport) {
+      // Приветствие уже запрошено (переход на WebSocket посреди старта) —
+      // новая сессия здоровается сразу, без ожидания start_greeting.
+      const params = new URLSearchParams({
+        guestId: guestId ?? '',
+        restaurantId: restaurantId ?? '',
+        tableNumber: tableNumber ?? '',
+        sessionId: sessionId ?? '',
+        deferGreeting: prewarm && !greetingRequestedRef.current ? '1' : '0',
+        transport,
+      });
+      const socket = new WebSocket(`${RELAY_WS_URL}?${params}`);
+      ws = socket;
+      wsRef.current = socket;
+
+      socket.onopen = () => {
+        if (stopped || socket !== ws) return;
+        // При прогреве под видео шар пока не показывается, статус не важен;
+        // «Слушаю…» ставит фаза активации, когда включит микрофон.
+        if (!prewarm || activatedRef.current) setStatus('listening');
+        if (fallbackReason) {
+          socket.send(JSON.stringify({ type: 'client_stats', webrtcFallback: fallbackReason }));
+        }
+      };
+      socket.onclose = () => {
+        if (stopped || socket !== ws) return;
+        setStatus((s) => (s === 'busy' ? s : 'error'));
+      };
+      socket.onmessage = (event) => {
+        if (stopped || socket !== ws) return;
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        handleMessage(msg);
+      };
+    }
+
+    connect(typeof window.RTCPeerConnection === 'function' ? 'webrtc' : 'ws');
+
+    // Сводка, как звук играл на телефоне (пишется в лог voice-relay «звук на
+    // телефоне»): по WebSocket — опустошения очереди и подвисания вкладки
+    // (раз в 5 с, если что-то изменилось), по WebRTC — потери, джиттер,
+    // буфер и тип соединения (раз в 15 с).
     let uaSent = false;
     let lastStatsKey = '';
-    const statsTimer = setInterval(() => {
+    let tick = 0;
+    const statsTimer = setInterval(async () => {
+      tick += 1;
       const s = playStatsRef.current;
+      if (modeRef.current === 'webrtc') {
+        if (tick % WEBRTC_STATS_EVERY !== 0 || !pc || pc.connectionState !== 'connected') return;
+        const stats = await collectWebrtcStats(pc).catch(() => null);
+        if (!stats) return;
+        sendToRelay({
+          type: 'client_stats',
+          ...stats,
+          longFrames: s.longFrames,
+          maxFrameMs: Math.round(s.maxFrameMs),
+          ua: uaSent ? undefined : navigator.userAgent.slice(0, 160),
+        });
+        uaSent = true;
+        return;
+      }
       const key = `${s.underruns}|${s.longFrames}`;
-      if (key === lastStatsKey || ws.readyState !== WebSocket.OPEN) return;
+      if (key === lastStatsKey || !ws || ws.readyState !== WebSocket.OPEN) return;
       lastStatsKey = key;
-      ws.send(JSON.stringify({
+      sendToRelay({
         type: 'client_stats',
         underruns: s.underruns,
         underrunMs: Math.round(s.underrunMs),
@@ -465,7 +745,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         longFrames: s.longFrames,
         maxFrameMs: Math.round(s.maxFrameMs),
         ua: uaSent ? undefined : navigator.userAgent.slice(0, 160),
-      }));
+      });
       uaSent = true;
     }, STATS_INTERVAL_MS);
 
@@ -474,8 +754,11 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       clearInterval(statsTimer);
       if (removeUnlock) removeUnlock();
       if (rafId) cancelAnimationFrame(rafId);
+      attachMicRef.current = null;
+      closePc();
+      if (remoteAudio) remoteAudio.srcObject = null;
       audioContext.close();
-      ws.close();
+      ws?.close();
     };
   }, [guestId, restaurantId, tableNumber, sessionId]);
 
@@ -490,6 +773,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     let stopped = false;
 
     const sendStartGreeting = () => {
+      greetingRequestedRef.current = true;
       const ws = wsRef.current;
       if (!ws) return;
       const send = () => {
@@ -526,52 +810,20 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         const audioContext = audioContextRef.current;
         if (!audioContext) return;
 
+        // Анализатор микрофона — для бокала и визуализатора (в колонки не
+        // идёт: нулевой гейн лишь «тянет» граф, чтобы анализатор обновлялся).
         const source = audioContext.createMediaStreamSource(stream);
-        // ScriptProcessorNode подключаем к destination через нулевой гейн —
-        // иначе onaudioprocess не гарантированно срабатывает, но эхо своего
-        // микрофона гость слышать не должен.
-        const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
-        scriptNodeRef.current = scriptNode;
-        const silentGain = audioContext.createGain();
-        silentGain.gain.value = 0;
-        source.connect(scriptNode);
-        // Отдельный анализатор микрофона — для визуализатора (в колонки не идёт).
         const micAnalyser = audioContext.createAnalyser();
         micAnalyser.fftSize = 256;
+        const sink = audioContext.createGain();
+        sink.gain.value = 0;
         source.connect(micAnalyser);
+        micAnalyser.connect(sink);
+        sink.connect(audioContext.destination);
         micAnalyserRef.current = micAnalyser;
-        scriptNode.connect(silentGain);
-        silentGain.connect(audioContext.destination);
 
-        let bargeInSec = 0;
-        scriptNode.onaudioprocess = (event) => {
-          const ws = wsRef.current;
-          if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
-          const input = event.inputBuffer.getChannelData(0);
-          if (aiSpeakingRef.current) {
-            // Гость говорит поверх ИИ достаточно громко и долго — перебил.
-            const level = rmsLevel(input);
-            bargeInSec = level > BARGE_IN_LEVEL ? bargeInSec + input.length / audioContext.sampleRate : 0;
-            if (bargeInSec * 1000 >= BARGE_IN_MS) {
-              bargeInSec = 0;
-              stopPlaybackRef.current?.();
-              ws.send(JSON.stringify({ type: 'barge_in', level: Math.round(level * 100) / 100 }));
-            }
-          } else {
-            bargeInSec = 0;
-          }
-          if (!aiSpeakingRef.current) {
-            const level = rmsLevel(input);
-            setLevel(level);
-            micLevelRef.current = level;
-            if (level > MIC_TALK_LEVEL) {
-              micHeardAtRef.current = performance.now();
-              thinkingSinceRef.current = 0; // гость снова заговорил
-            }
-          }
-          const resampled = resampleTo24k(input, audioContext.sampleRate);
-          ws.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
-        };
+        // Микрофон — в текущий транспорт (WebRTC-трек или ScriptProcessor).
+        attachMicRef.current?.();
         micOk = true;
       } catch (err) {
         console.error('VoiceStage: не удалось получить микрофон:', err);
@@ -582,6 +834,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       // микрофона ИИ поздоровается (гость просто не сможет ответить голосом).
       if (stopped) return;
       await resumeContext();
+      remoteAudioRef.current?.play().catch(() => {});
       sendStartGreeting();
 
       if (!stopped) {
@@ -619,6 +872,8 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           onClose={() => setVoiceDishes([])}
         />
       )}
+      {/* Голос ИИ по WebRTC (без controls элемент не виден). */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
       {/* Пока на экране карточки блюд, бокал растворяется и не рисуется. */}
       <SmokeGlass
         ref={glassRef}
