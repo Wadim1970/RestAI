@@ -1,0 +1,18 @@
+/* Треть ширины экрана, по центру. */
+.bars {
+    display: block;
+    width: 33vw;
+    max-width: 180px;
+    min-width: 120px;
+    height: 44px;
+    animation: barsIn 0.45s ease;
+}
+
+@keyframes barsIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bars { animation: none; }
+}

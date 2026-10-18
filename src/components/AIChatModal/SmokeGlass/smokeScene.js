@@ -195,20 +195,25 @@ const GLASS_FRAG = `
         gl_FragColor = vec4(col, 1.0);
       }`;
 
-// Ступени качества: сверху — максимум (дым в полном разрешении, бокал в
-// родном разрешении экрана), вниз — по мере просадки частоты кадров.
-// dpr — потолок плотности пикселей, smoke — доля разрешения для дыма.
-// В прототипе было dpr ≤ 2, дым в половине разрешения — отсюда «мыло».
+// Ступени качества. Дым — самое тяжёлое (рэймарчинг на каждый пиксель),
+// поэтому его разрешение задано бюджетом в пикселях, а не долей экрана:
+// на любом телефоне нагрузка предсказуема. Бокал и фон — до ×2 плотности.
+// Сверху вниз — по мере просадки частоты кадров. Голос и микрофон
+// обрабатываются в том же потоке браузера, что и графика: перегруженная
+// видеокарта = запаздывающий звук, поэтому снижаемся быстро.
 const TIERS = [
-  { dpr: 3, smoke: 1.0, steps: 34 },
-  { dpr: 3, smoke: 0.75, steps: 34 },
-  { dpr: 2, smoke: 0.75, steps: 24 },
-  { dpr: 2, smoke: 0.5, steps: 24 },
-  { dpr: 1.5, smoke: 0.5, steps: 20 },
+  { dpr: 2, smokePx: 900000, steps: 34 },
+  { dpr: 2, smokePx: 600000, steps: 34 },
+  { dpr: 2, smokePx: 600000, steps: 24 },
+  { dpr: 1.5, smokePx: 350000, steps: 24 },
+  { dpr: 1.5, smokePx: 250000, steps: 20 },
 ];
-const MIN_FPS = 45;          // ниже — опускаемся на ступень
-const SAMPLE_SEC = 1.5;      // окно замера
-const SETTLE_SEC = 1.0;      // после смены ступени даём кадрам устояться
+const MIN_FPS = 48;          // ниже — опускаемся на ступень
+const SAMPLE_SEC = 1.0;      // окно замера
+const SETTLE_SEC = 0.5;      // после смены ступени даём кадрам устояться
+// Не чаще 60 кадров в секунду: на экранах 120 Гц (iPhone Pro) иначе
+// видеокарта рисует вдвое больше без видимой пользы.
+const MIN_FRAME_MS = 1000 / 61;
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const smooth01 = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
@@ -307,7 +312,9 @@ export function createSmokeScene(canvas, { onContextLost, onQualityChange, tier:
     const dpr = Math.min(window.devicePixelRatio || 1, t.dpr);
     renderer.setPixelRatio(dpr);
     renderer.setSize(width, height, false);
-    rt.setSize(Math.max(2, Math.floor(width * dpr * t.smoke)), Math.max(2, Math.floor(height * dpr * t.smoke)));
+    const full = width * dpr * height * dpr;
+    const smokeScale = Math.min(1, Math.sqrt(t.smokePx / full));
+    rt.setSize(Math.max(2, Math.floor(width * dpr * smokeScale)), Math.max(2, Math.floor(height * dpr * smokeScale)));
     camera.aspect = width / height;
     U.uAspect.value = width / height;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -391,8 +398,11 @@ export function createSmokeScene(canvas, { onContextLost, onQualityChange, tier:
     }
   }
 
+  let lastDraw = 0;
   function frame(now) {
     if (!running) return;
+    if (now - lastDraw < MIN_FRAME_MS) { rafId = requestAnimationFrame(frame); return; }
+    lastDraw = now;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const t = now / 1000;

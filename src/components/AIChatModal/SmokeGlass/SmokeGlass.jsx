@@ -12,13 +12,16 @@ import styles from './SmokeGlass.module.css';
 
 const FALLBACK_SRC = '/assistant/smoke-fallback.webp';
 
-export default function SmokeGlass({ ref, className = '', initialRole = 'chef' }) {
+// active=false — сцена растворяется и останавливается (например, пока на экране
+// карточки блюд): видеокарта свободна, звук не запаздывает.
+export default function SmokeGlass({ ref, className = '', initialRole = 'chef', active = true }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
   // Команды, пришедшие до готовности сцены, — применяем, как только она поднимется.
   const pendingRef = useRef({ role: initialRole, voice: 'idle' });
   const [fallback, setFallback] = useState(false);
+  const activeRef = useRef(active);
 
   useImperativeHandle(ref, () => ({
     setRole(r) { pendingRef.current.role = r; sceneRef.current?.setRole(r); },
@@ -33,7 +36,7 @@ export default function SmokeGlass({ ref, className = '', initialRole = 'chef' }
 
     const onVisibility = () => {
       if (!scene) return;
-      if (document.hidden) scene.pause();
+      if (document.hidden || !activeRef.current) scene.pause();
       else scene.resume();
     };
 
@@ -60,7 +63,7 @@ export default function SmokeGlass({ ref, className = '', initialRole = 'chef' }
         });
         ro.observe(wrapRef.current);
         document.addEventListener('visibilitychange', onVisibility);
-        if (!document.hidden) scene.resume();
+        if (!document.hidden && activeRef.current) scene.resume();
       })
       .catch((err) => {
         console.warn('SmokeGlass: не удалось загрузить сцену', err);
@@ -76,8 +79,22 @@ export default function SmokeGlass({ ref, className = '', initialRole = 'chef' }
     };
   }, []);
 
+  // Растворение: сначала плавно гасим (CSS), потом останавливаем отрисовку;
+  // при возврате — сразу запускаем и проявляем.
+  useEffect(() => {
+    activeRef.current = active;
+    const scene = sceneRef.current;
+    if (!scene) return undefined;
+    if (active) {
+      if (!document.hidden) scene.resume();
+      return undefined;
+    }
+    const t = setTimeout(() => sceneRef.current?.pause(), 600);
+    return () => clearTimeout(t);
+  }, [active]);
+
   return (
-    <div ref={wrapRef} className={`${styles.wrap} ${className}`}>
+    <div ref={wrapRef} className={`${styles.wrap} ${active ? '' : styles.hidden} ${className}`}>
       {fallback ? (
         <img className={styles.fallback} src={FALLBACK_SRC} alt="" aria-hidden="true" />
       ) : (

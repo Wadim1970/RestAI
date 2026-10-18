@@ -5,6 +5,15 @@
     height: 100%;
     overflow: hidden;
     background: #02040A;
+    transition: opacity 0.55s ease, filter 0.55s ease, transform 0.55s ease;
+}
+
+/* «Растворение» сущности, пока на экране карточки блюд. */
+.hidden {
+    opacity: 0;
+    filter: blur(14px);
+    transform: scale(1.04);
+    pointer-events: none;
 }
 
 .canvas,

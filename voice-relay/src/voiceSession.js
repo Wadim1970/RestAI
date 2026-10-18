@@ -274,6 +274,8 @@ export async function voiceRoutes(app) {
     };
 
     let openaiSession = null;
+    // Когда гость договорил — для замера задержки ответа (см. onAudioDelta).
+    let turnEndAt = 0;
 
     try {
       const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
@@ -285,6 +287,11 @@ export async function voiceRoutes(app) {
         deferGreeting,
         tools: buildTools(restaurantId, tableNumber, guestSocket),
         onAudioDelta: (base64Audio) => {
+          // Задержка ответа: от конца реплики гостя до первого звука ИИ.
+          if (turnEndAt) {
+            app.log.info({ guestId, restaurantId, ms: Date.now() - turnEndAt }, 'задержка ответа');
+            turnEndAt = 0;
+          }
           if (guestSocket.readyState === guestSocket.OPEN) {
             guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));
           }
@@ -297,6 +304,7 @@ export async function voiceRoutes(app) {
             if (guestSocket.readyState === guestSocket.OPEN) guestSocket.send(JSON.stringify(msg));
           };
           if (event.type === 'user.turn_end' || event.type === 'input_audio_buffer.speech_stopped') {
+            turnEndAt = Date.now();
             toGuest({ type: 'user_turn_end' });
           } else if (
             (event.type === 'response.transcript.delta' ||

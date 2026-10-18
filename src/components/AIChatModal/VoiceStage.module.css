@@ -7,6 +7,7 @@
    градиент из основного цвета: центр чуть светлее, края темнее. Fallback
    на фирменный зелёный «Сыроварни», если переменных вдруг нет. */
 .stage {
+  box-sizing: border-box; /* padding-bottom входит в высоту, а не удлиняет экран */
   position: absolute;
   top: 0;
   left: 0;
@@ -16,7 +17,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 24px;
   /* Резерв снизу — buttons-footer-fixed (кнопка "Перейти в меню") лежит
      поверх (z-index 999999) на фиксированном отступе от низа экрана;
@@ -35,14 +36,28 @@
   transition: opacity 0.4s ease;
 }
 
-/* Пока на экране карточки блюд — им главное место, бокал приглушён. */
-.glassDim {
-  opacity: 0.45;
-}
-
-.stage > :not(.glass) {
+.stage > :not(.glass):not(.bottom) {
   position: relative;
   z-index: 1;
+}
+
+/* Низ экрана: визуализатор (пока показаны блюда) и подпись. Выше кнопки
+   «Открыть меню» (buttons-footer-fixed: 6.62vh от низа, высота 13.18vw). */
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(124px, calc(6.62vh + 13.18vw + 18px));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.bottom .status {
+  margin: 0;
 }
 
 /* Текст статуса — светлый, из акцента с подмешанным белым для читаемости
