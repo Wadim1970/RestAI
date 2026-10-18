@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import VoiceDishSlider from '../VoiceDishSlider/VoiceDishSlider';
+import SmokeGlass from './SmokeGlass/SmokeGlass';
+import { roleFromDishes, roleFromText } from '../../lib/assistantRole';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
@@ -80,17 +82,28 @@ function rmsLevel(float32) {
   return Math.min(1, Math.sqrt(sum / float32.length) * 4);
 }
 
+// Порог уровня микрофона (после rmsLevel), выше которого считаем, что гость
+// говорит, и сколько держим «слушаю» после последнего звука.
+const MIC_TALK_LEVEL = 0.06;
+const MIC_HOLD_MS = 1200;
+// «Думаю» — от конца реплики гостя до первого звука ответа, но не дольше.
+const THINK_MAX_MS = 9000;
+// Роль по тексту ответа решаем по его началу — дальше не перекрашиваем.
+const ROLE_TEXT_MIN = 18;
+const ROLE_TEXT_MAX = 160;
+
 // Реальный голосовой разговор: микрофон гостя течёт в voice-relay
 // (wss://voice.restai.space/voice) и обратно, звук ИИ проигрывается тут же.
-// Шар реагирует на то, чья сейчас реплика активна — гостя или ИИ,
-// переключение неявное (кто последний писал в аудио-график, тот и ведёт).
+// Визуально — «дым в бокале» (SmokeGlass): состояние idle/listen/think/speak,
+// амплитуда — уровень микрофона, пока говорит гость, и уровень голоса ИИ,
+// пока отвечает он; цвет — кто отвечает (шеф, сомелье, диетолог).
 //
 // ScriptProcessorNode официально deprecated в пользу AudioWorklet, но пока
 // работает во всех нужных браузерах и не требует отдельного модуля-файла —
 // смена на AudioWorklet имеет смысл отдельной задачей, если понадобится
 // снять работу с основного потока.
-export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, onExpandDish, onCartAdd, onShowCart, onHideCart }) {
-  const orbRef = useRef(null);
+export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, initialRole = 'chef', onExpandDish, onCartAdd, onShowCart, onHideCart }) {
+  const glassRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   // Блюда, которые ИИ показал за этот разговор (show_dish_card/
@@ -128,6 +141,15 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   // микрофона), display — текущее значение, каждый кадр подтягиваемое к цели.
   const targetLevelRef = useRef(0);
   const displayLevelRef = useRef(0);
+  // Для состояний бокала: когда гость последний раз звучал громче порога,
+  // с какого момента «думаем», и текст текущего ответа ИИ (для роли).
+  const micLevelRef = useRef(0);
+  const micHeardAtRef = useRef(0);
+  const thinkingSinceRef = useRef(0);
+  const replyTextRef = useRef('');
+  const roleLockedRef = useRef(false);
+  const statusRef = useRef('connecting');
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   // ФАЗА 1 — соединение и ВОСПРОИЗВЕДЕНИЕ (без микрофона). Запускается при
   // монтировании: под видео-заставкой (prewarm) это и есть «прогрев» —
@@ -164,11 +186,26 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       }
       // Интерполяция к цели — сглаживает и пики ИИ, и стыки кусков аудио.
       displayLevelRef.current += (targetLevelRef.current - displayLevelRef.current) * 0.22;
-      const el = orbRef.current;
-      if (el) {
-        const d = displayLevelRef.current;
-        el.style.transform = `scale(${1 + d * 0.6})`;
-        el.style.opacity = String(0.6 + d * 0.4);
+
+      // Состояние бокала: говорит ИИ → speak; гость договорил, ответа ещё
+      // нет → think; гость говорит → listen; иначе idle.
+      const glass = glassRef.current;
+      if (glass) {
+        const now = performance.now();
+        let state = 'idle';
+        let amp = 0;
+        if (aiSpeakingRef.current) {
+          state = 'speak';
+          amp = displayLevelRef.current;
+          thinkingSinceRef.current = 0;
+        } else if (thinkingSinceRef.current && now - thinkingSinceRef.current < THINK_MAX_MS) {
+          state = 'think';
+        } else if (statusRef.current === 'listening' && now - micHeardAtRef.current < MIC_HOLD_MS) {
+          state = 'listen';
+          amp = micLevelRef.current;
+        }
+        glass.setVoice(state);
+        if (state === 'speak' || state === 'listen') glass.setAmplitude(amp);
       }
       rafId = requestAnimationFrame(visualLoop);
     };
@@ -284,8 +321,32 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       } else if (msg.type === 'error' && msg.code === 'busy') {
         setStatus('busy');
         setStatusMessage(msg.message || '');
+      } else if (msg.type === 'user_turn_end') {
+        // Гость договорил — «думаем», пока не зазвучит ответ.
+        thinkingSinceRef.current = performance.now();
+        replyTextRef.current = '';
+        roleLockedRef.current = false;
+      } else if (msg.type === 'transcript_delta' && msg.text) {
+        // Кто отвечает — по началу ответа (карточки блюд уточнят ниже).
+        if (!roleLockedRef.current && replyTextRef.current.length < ROLE_TEXT_MAX) {
+          replyTextRef.current += msg.text;
+          if (replyTextRef.current.length >= ROLE_TEXT_MIN) {
+            const role = roleFromText(replyTextRef.current);
+            if (role) glassRef.current?.setRole(role);
+          }
+        }
+      } else if (msg.type === 'transcript_end') {
+        replyTextRef.current = '';
+        roleLockedRef.current = false;
       } else if (msg.type === 'show_dish') {
-        setVoiceDishes(Array.isArray(msg.dishes) ? msg.dishes : []);
+        const dishes = Array.isArray(msg.dishes) ? msg.dishes : [];
+        setVoiceDishes(dishes);
+        // Карточки — самый точный сигнал темы: вино → сомелье, еда → шеф.
+        const role = roleFromDishes(dishes);
+        if (role) {
+          glassRef.current?.setRole(role);
+          roleLockedRef.current = true;
+        }
       } else if (msg.type === 'hide_dish') {
         setVoiceDishes([]);
       } else if (msg.type === 'cart_add' && Array.isArray(msg.items)) {
@@ -369,7 +430,15 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           const ws = wsRef.current;
           if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
           const input = event.inputBuffer.getChannelData(0);
-          if (!aiSpeakingRef.current) setLevel(rmsLevel(input));
+          if (!aiSpeakingRef.current) {
+            const level = rmsLevel(input);
+            setLevel(level);
+            micLevelRef.current = level;
+            if (level > MIC_TALK_LEVEL) {
+              micHeardAtRef.current = performance.now();
+              thinkingSinceRef.current = 0; // гость снова заговорил
+            }
+          }
           const resampled = resampleTo24k(input, audioContext.sampleRate);
           ws.send(JSON.stringify({ type: 'audio', data: float32ToPcm16Base64(resampled) }));
         };
@@ -420,9 +489,11 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           onClose={() => setVoiceDishes([])}
         />
       )}
-      <div className={`${styles.orbWrap} ${hasDishes ? styles.orbWrapCompact : ''}`}>
-        <div className={styles.orb} ref={orbRef} />
-      </div>
+      <SmokeGlass
+        ref={glassRef}
+        initialRole={initialRole}
+        className={`${styles.glass} ${hasDishes ? styles.glassDim : ''}`}
+      />
       <p className={styles.status}>
         {status === 'connecting' && 'Подключаюсь…'}
         {status === 'listening' && 'Слушаю…'}

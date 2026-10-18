@@ -16,73 +16,39 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 24px;
   /* Резерв снизу — buttons-footer-fixed (кнопка "Перейти в меню") лежит
      поверх (z-index 999999) на фиксированном отступе от низа экрана;
-     без этого запаса центрированный текст статуса может оказаться на
-     той же высоте и будет частично перекрыт кнопкой. */
+     без этого запаса текст статуса может оказаться под кнопкой. */
   padding-bottom: 140px;
-  background: var(--color-primary, #304D22); /* fallback для браузеров без color-mix */
-  background: radial-gradient(ellipse at 50% 42%,
-    color-mix(in srgb, var(--color-primary, #304D22) 82%, white 18%) 0%,
-    var(--color-primary, #304D22) 50%,
-    color-mix(in srgb, var(--color-primary, #304D22) 58%, black 42%) 100%);
+  /* Сцена «дым в бокале» тёмная всегда — так задумано. */
+  background: #02040A;
   overflow: hidden;
 }
 
-.orbWrap {
-  width: 160px;
-  height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: width 0.3s ease, height 0.3s ease;
+/* «Дым в бокале» — на весь экран разговора, позади слайдера и подписи. */
+.glass {
+  position: absolute !important;
+  inset: 0;
+  z-index: 0;
+  transition: opacity 0.4s ease;
 }
 
-/* Пока на экране куб с блюдами — ему главное место, шар уступает и
-   становится второстепенным индикатором "кто сейчас говорит". */
-.orbWrapCompact {
-  width: 84px;
-  height: 84px;
+/* Пока на экране карточки блюд — им главное место, бокал приглушён. */
+.glassDim {
+  opacity: 0.45;
 }
 
-.orbWrapCompact .orb {
-  width: 72px;
-  height: 72px;
-}
-
-/* Шар — из акцентного цвета ресторана, со светлым центром (подмешан
-   белый), чтобы он всегда выделялся на тёмном фоне. Для «Сыроварни»
-   акцент кремовый — тёплый светлый шар на тёмно-зелёном. Свечение — того
-   же акцента. */
-.orb {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: var(--color-accent, #E5E0D4); /* fallback */
-  background: radial-gradient(circle at 35% 30%,
-    color-mix(in srgb, var(--color-accent, #E5E0D4) 45%, white 55%) 0%,
-    var(--color-accent, #E5E0D4) 55%,
-    color-mix(in srgb, var(--color-accent, #E5E0D4) 78%, black 22%) 100%);
-  box-shadow: 0 0 60px 10px color-mix(in srgb, var(--color-accent, #E5E0D4) 50%, transparent);
-  opacity: 0.75;
-  transform: scale(1);
-  transition: transform 0.08s linear, opacity 0.08s linear, width 0.3s ease, height 0.3s ease;
-  animation: breathe 2.6s ease-in-out infinite;
-}
-
-/* Едва заметное "дыхание" в тишине, чтобы экран не выглядел мёртвым —
-   громкость голоса накладывается поверх через transform/opacity в JS. */
-@keyframes breathe {
-  0%, 100% { box-shadow: 0 0 60px 10px color-mix(in srgb, var(--color-accent, #E5E0D4) 45%, transparent); }
-  50% { box-shadow: 0 0 82px 18px color-mix(in srgb, var(--color-accent, #E5E0D4) 62%, transparent); }
+.stage > :not(.glass) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Текст статуса — светлый, из акцента с подмешанным белым для читаемости
    на тёмном фоне при любом фирменном цвете. */
 .status {
-  color: color-mix(in srgb, var(--color-accent, #E5E0D4) 70%, white 30%);
+  color: rgba(232, 236, 246, 0.82);
   font-size: 14px;
   opacity: 0.9;
   font-family: var(--font-body, sans-serif);

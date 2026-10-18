@@ -1,0 +1,22 @@
+/* Сцена тёмная всегда — так задумано: дым светится на чёрно-синем. */
+.wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #02040A;
+}
+
+.canvas,
+.fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.fallback {
+    object-fit: cover;
+    object-position: 50% 60%;
+}

@@ -4,6 +4,7 @@ import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
 import { getOrCreateDeviceId } from './lib/deviceId';
+import { roleFromContext, roleFromText } from './lib/assistantRole';
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
 import CartModal from './components/CartModal/CartModal';
@@ -253,6 +254,9 @@ useEffect(() => {
   const [isReviewSubmitted, setIsReviewSubmitted] = useState(false); // Отправлен ли отзыв
   const [viewHistory, setViewHistory] = useState([]);
   const [chatContext, setChatContext] = useState('');
+  // С какой роли начинает «дым в бокале» на голосовом экране: из карточки
+  // вина — сомелье, из раздела «Алкогольные напитки» — тоже он, иначе шеф.
+  const [chatRoleHint, setChatRoleHint] = useState('chef');
   const [currentSessionId, setCurrentSessionId] = useState(() => {
     const savedSession = localStorage.getItem('ai_chat_session');
     return savedSession || '';
@@ -294,6 +298,7 @@ useEffect(() => {
       setCurrentSessionId(`sess_${Date.now()}`);
     }
 
+    setChatRoleHint(dish ? roleFromContext(dish) : (roleFromText(currentSection) || 'chef'));
     if (dish) {
       const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
       setChatContext(info);
@@ -1290,6 +1295,7 @@ const handlePayFlowPaid = async () => {
           }}
           viewHistory={viewHistory}
           pageContext={chatContext}
+          roleHint={chatRoleHint}
           sessionId={currentSessionId}
           messages={chatMessages}
           setMessages={setChatMessages}

@@ -290,6 +290,29 @@ export async function voiceRoutes(app) {
           }
         },
         onEvent: (event) => {
+          // Для бокала на телефоне: «гость договорил» и ответ ИИ по кускам.
+          // GPT-Live присылает их нашими событиями (gptLiveProvider), Realtime
+          // (openai/grok) — сырыми событиями API.
+          const toGuest = (msg) => {
+            if (guestSocket.readyState === guestSocket.OPEN) guestSocket.send(JSON.stringify(msg));
+          };
+          if (event.type === 'user.turn_end' || event.type === 'input_audio_buffer.speech_stopped') {
+            toGuest({ type: 'user_turn_end' });
+          } else if (
+            (event.type === 'response.transcript.delta' ||
+              event.type === 'response.output_audio_transcript.delta' ||
+              event.type === 'response.audio_transcript.delta') &&
+            (event.text || event.delta)
+          ) {
+            toGuest({ type: 'transcript_delta', text: event.text || event.delta });
+          } else if (
+            event.type === 'response.transcript.end' ||
+            event.type === 'response.output_audio_transcript.done' ||
+            event.type === 'response.audio_transcript.done'
+          ) {
+            toGuest({ type: 'transcript_end' });
+          }
+
           if (event.type === 'relay.error' || event.type === 'error') {
             app.log.error(event, 'realtime session error');
           } else if (event.type === 'user.transcript') {

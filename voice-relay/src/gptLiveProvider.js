@@ -135,11 +135,18 @@ export function openGptLiveSession({
       if (event.delta) userT += event.delta;
     } else if (event.type === 'session.input_transcript.done') {
       flushUser();
+      // Гость договорил — на телефоне бокал «думает», пока не пошёл ответ.
+      onEvent?.({ type: 'user.turn_end' });
     } else if (event.type === 'session.output_transcript.delta') {
       if (userT.trim()) flushUser(); // гость договорил — его реплику фиксируем первой
-      if (event.delta) asstT += event.delta;
+      if (event.delta) {
+        asstT += event.delta;
+        // Ответ по мере произнесения — телефон определяет по нему, кто отвечает.
+        onEvent?.({ type: 'response.transcript.delta', text: event.delta });
+      }
     } else if (event.type === 'session.output_transcript.done') {
       flushAsst();
+      onEvent?.({ type: 'response.transcript.end' });
     } else if (event.type === 'error') {
       onEvent?.({ type: 'relay.error', error: event.error?.message || JSON.stringify(event) });
     } else {
