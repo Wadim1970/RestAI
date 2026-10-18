@@ -53,9 +53,21 @@ function extractFunctionCall(event) {
 }
 
 // send(obj) → true, если событие ушло в GPT-Live (канал открыт).
-export function createLiveEventHandler({ tools = [], hasHistory = false, send, onEvent, onAudioDelta }) {
+// greetOnStart=false — приветствие не на session.started, а по вызову greet()
+// (WebRTC: сессия поднимается заранее, под заставкой).
+export function createLiveEventHandler({ tools = [], hasHistory = false, greetOnStart = true, send, onEvent, onAudioDelta }) {
   let seq = 0;
   const nextId = (p) => `${p}_${++seq}`;
+
+  // Свежий разговор → подтолкнуть приветствие (первая реплика без входного
+  // аудио). Если GPT-Live здоровается сам и выходит ДВОЙНОЕ приветствие —
+  // выключите GPTLIVE_NUDGE_GREETING=0.
+  let greeted = false;
+  const greet = () => {
+    if (greeted || hasHistory || !config.gptLiveNudgeGreeting) return false;
+    greeted = true;
+    return send({ type: 'response.create', event_id: nextId('greet') });
+  };
 
   // Транскрипты приходят дельтами — копим и фиксируем реплику на *.done. Гостя
   // фиксируем и в момент, когда ИИ начинает отвечать (см. output_transcript),
@@ -86,12 +98,7 @@ export function createLiveEventHandler({ tools = [], hasHistory = false, send, o
 
   async function handle(event) {
     if (event.type === 'session.started') {
-      // Свежий разговор → подтолкнуть приветствие (первая реплика без входного
-      // аудио). Если GPT-Live здоровается сам и выходит ДВОЙНОЕ приветствие —
-      // выключите GPTLIVE_NUDGE_GREETING=0 (проверить вживую).
-      if (!hasHistory && config.gptLiveNudgeGreeting) {
-        send({ type: 'response.create', event_id: nextId('greet') });
-      }
+      if (greetOnStart) greet();
     } else if (event.type === 'session.output_audio.delta') {
       if (event.delta) onAudioDelta?.(event.delta);
     } else if (event.type === 'session.input_transcript.delta') {
@@ -125,6 +132,7 @@ export function createLiveEventHandler({ tools = [], hasHistory = false, send, o
 
   return {
     handle,
+    greet,
     nextId,
     flush() { flushUser(); flushAsst(); },
   };

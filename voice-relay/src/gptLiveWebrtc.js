@@ -34,6 +34,10 @@ function peerConfig() {
     iceServers: [],
     iceStunGatherTimeout: 1,
     bundlePolicy: 'max-bundle',
+    // Канал событий: session.started несёт весь конфиг сессии (инструкции с
+    // меню — 70+ КБ). При стандартных 64 КБ OpenAI его не присылает
+    // (data_channel_message_too_large) — и приветствие не запускалось.
+    maxMessageSize: 1024 * 1024,
     iceUseIpv6: false,
     icePortRange: [config.webrtcPortMin, config.webrtcPortMax],
   };
@@ -68,11 +72,46 @@ export function guestIceServers() {
   return [{ urls: config.turnUrls, username, credential }];
 }
 
+// Ровность потока пакетов (норма — пакет каждые 20 мс): сколько пришло,
+// самый большой разрыв и сколько разрывов длиннее LATE_GAP_MS. По ним видно,
+// откуда «рваный» звук — от OpenAI или из сети телефона.
+const LATE_GAP_MS = 60;
+function createFlowMeter() {
+  let packets = 0;
+  let maxGapMs = 0;
+  let late = 0;
+  let lastAt = 0;
+  return {
+    packet() {
+      const now = Date.now();
+      if (lastAt) {
+        const gap = now - lastAt;
+        // Пауза дольше секунды — тишина/DTX, а не провал потока.
+        if (gap < 1000) {
+          maxGapMs = Math.max(maxGapMs, gap);
+          if (gap > LATE_GAP_MS) late += 1;
+        }
+      }
+      lastAt = now;
+      packets += 1;
+    },
+    take() {
+      const snapshot = { packets, maxGapMs, late };
+      packets = 0;
+      maxGapMs = 0;
+      late = 0;
+      return snapshot;
+    },
+  };
+}
+
 export function openGptLiveWebrtcSession({
   instructions, voice, tools = [], hasHistory = false, deferGreeting = false,
-  onEvent, onClose, onAiPacket, onGuestPacket,
+  onEvent, onClose,
 }) {
   let closed = false;
+  const aiFlow = createFlowMeter();
+  const guestFlow = createFlowMeter();
 
   // --- Нога к GPT-Live: мы предлагаем (offer), OpenAI отвечает ---
   const aiPc = new RTCPeerConnection(peerConfig());
@@ -87,13 +126,13 @@ export function openGptLiveWebrtcSession({
   // Пересылка звука: голос ИИ → гостю, микрофон гостя → ИИ.
   aiPc.onTrack.subscribe((track) => {
     track.onReceiveRtp.subscribe((rtp) => {
-      onAiPacket?.(rtp.payload.length);
+      aiFlow.packet();
       toGuest.writeRtp(rtp);
     });
   });
   guestPc.onTrack.subscribe((track) => {
     track.onReceiveRtp.subscribe((rtp) => {
-      onGuestPacket?.(rtp.payload.length);
+      guestFlow.packet();
       toAi.writeRtp(rtp);
     });
   });
@@ -106,11 +145,26 @@ export function openGptLiveWebrtcSession({
     if (dc.readyState === 'connecting') { pendingOut.push(obj); return true; }
     return false;
   };
-  const handler = createLiveEventHandler({ tools, hasHistory, send, onEvent });
+  const handler = createLiveEventHandler({ tools, hasHistory, greetOnStart: false, send, onEvent });
+
+  // Приветствие — когда сессия GPT-Live уже поднялась (session.started) И
+  // телефон готов слушать (start_greeting / без прогрева сразу). Сессию
+  // поднимаем заранее, под заставкой, — после сигнала остаётся только сама
+  // реплика ИИ.
+  let sessionStarted = false;
+  let greetRequested = !deferGreeting;
+  const maybeGreet = () => {
+    if (sessionStarted && greetRequested && handler.greet()) onEvent?.({ type: 'webrtc.greet_sent' });
+  };
+
   dc.onMessage.subscribe((data) => {
     let event;
     try { event = JSON.parse(data.toString()); } catch { return; }
     handler.handle(event);
+    if (event.type === 'session.started') {
+      sessionStarted = true;
+      maybeGreet();
+    }
   });
 
   const close = () => {
@@ -141,20 +195,16 @@ export function openGptLiveWebrtcSession({
     onEvent?.({ type: 'webrtc.guest_state', state });
   });
 
-  // Свой offer к OpenAI собираем сразу (кандидаты, DTLS) — чтобы к сигналу
-  // приветствия оставался только HTTP-запрос.
-  const offerReady = (async () => {
-    await aiPc.setLocalDescription(await aiPc.createOffer());
-    await waitGathering(aiPc);
-    return withPublicIp(aiPc.localDescription.sdp);
-  })();
-
-  let startRequested = false;
+  // Сессию GPT-Live поднимаем сразу, ещё под заставкой: HTTP-запрос,
+  // соединение и session.started занимают пару секунд — гость их не ждёт.
+  // Сама GPT-Live первой не заговаривает (молчит до нашего response.create),
+  // так что поверх заставки ИИ не зазвучит.
   const startSession = async () => {
-    if (startRequested || closed) return;
-    startRequested = true;
     try {
-      const sdp = await offerReady;
+      await aiPc.setLocalDescription(await aiPc.createOffer());
+      await waitGathering(aiPc);
+      const sdp = withPublicIp(aiPc.localDescription.sdp);
+      if (closed) return;
       const res = await fetch(config.gptLiveSessionsUrl, {
         method: 'POST',
         headers: {
@@ -176,13 +226,18 @@ export function openGptLiveWebrtcSession({
       close();
     }
   };
-  // Прогрев под заставкой: сессию (и счётчик минут) запускаем по сигналу
-  // start_greeting, иначе ИИ поздоровался бы поверх видео.
-  if (!deferGreeting) startSession();
+  startSession();
 
   return {
     transport: 'webrtc',
-    startGreeting() { startSession(); },
+    startGreeting() {
+      greetRequested = true;
+      maybeGreet();
+    },
+    // Ровность потоков звука с прошлого вызова (для периодического лога).
+    takeFlowStats() {
+      return { ai: aiFlow.take(), guest: guestFlow.take() };
+    },
     // Телефон прислал offer — отвечаем своим SDP.
     async answerGuest(offerSdp) {
       await guestPc.setRemoteDescription({ type: 'offer', sdp: offerSdp });

@@ -12,13 +12,9 @@ const { openGptLiveWebrtcSession } = await import('../src/gptLiveWebrtc.js');
 test('звук гостя доходит до GPT-Live и возвращается, события идут', async () => {
   const { sessions, stop } = await startFakeLive(8099);
   const events = [];
-  let aiPackets = 0;
-  let guestPackets = 0;
   const bridge = openGptLiveWebrtcSession({
     instructions: 'тест', voice: 'marin', tools: [], hasHistory: false, deferGreeting: true,
     onEvent: (e) => events.push(e),
-    onAiPacket: () => { aiPackets += 1; },
-    onGuestPacket: () => { guestPackets += 1; },
   });
 
   const guest = new RTCPeerConnection({ codecs: { audio: [useOPUS()], video: [] }, iceServers: [], iceStunGatherTimeout: 0.2, bundlePolicy: 'max-bundle', iceUseIpv6: false });
@@ -30,10 +26,13 @@ test('звук гостя доходит до GPT-Live и возвращаетс
   await new Promise((r) => (guest.iceGatheringState === 'complete' ? r() : guest.iceGatheringStateChange.subscribe((s) => s === 'complete' && r())));
   const answer = await bridge.answerGuest(guest.localDescription.sdp);
   await guest.setRemoteDescription({ type: 'answer', sdp: answer });
-  bridge.startGreeting();
 
   await new Promise((r) => guest.connectionStateChange.subscribe((s) => s === 'connected' && r()));
   await new Promise((r) => setTimeout(r, 1500)); // нога к OpenAI поднимается
+  // Сессия GPT-Live поднята заранее (под заставкой), но здороваться рано.
+  assert.ok(events.some((e) => e.type === 'session.started'), 'session.started (100+ КБ) дошёл');
+  assert.ok(!sessions[0].events.some((e) => e.type === 'response.create'), 'до сигнала не здороваемся');
+  bridge.startGreeting();
   for (let i = 0; i < 100; i++) {
     const payload = Buffer.alloc(80, i);
     mic.writeRtp(new RtpPacket(new RtpHeader({ payloadType: 111, sequenceNumber: i, timestamp: i * 960, ssrc: 1234, marker: false }), payload));
@@ -41,6 +40,9 @@ test('звук гостя доходит до GPT-Live и возвращаетс
   }
   await new Promise((r) => setTimeout(r, 800));
 
+  const flow = bridge.takeFlowStats();
+  const guestPackets = flow.guest.packets;
+  const aiPackets = flow.ai.packets;
   assert.ok(guestPackets >= 90, `relay получил от гостя ${guestPackets}`);
   assert.ok(sessions[0]?.echoed >= 90, `GPT-Live получил ${sessions[0]?.echoed}`);
   assert.ok(aiPackets >= 90, `relay получил от GPT-Live ${aiPackets}`);

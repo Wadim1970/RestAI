@@ -20,7 +20,9 @@ export function startFakeLive(port = 8099) {
     pc.onDataChannel.subscribe((dc) => {
       dc.onMessage.subscribe((m) => info.events.push(JSON.parse(m.toString())));
       const hello = () => {
-        dc.send(JSON.stringify({ type: 'session.started' }));
+        // Как у настоящего GPT-Live: session.started несёт весь конфиг
+        // (инструкции с меню) — больше стандартных 64 КБ канала.
+        dc.send(JSON.stringify({ type: 'session.started', session: { ...session, pad: 'м'.repeat(50000) } }));
         dc.send(JSON.stringify({ type: 'session.output_transcript.delta', delta: 'Привет! Я Марко.' }));
         dc.send(JSON.stringify({ type: 'session.output_transcript.done' }));
       };
