@@ -1,6 +1,15 @@
 import { buildSessionContext, lookupDishDetails, callWaiter, findDishesForDisplay, saveConversationTurn, getDishModifierGroups, resolveModifierSelections } from './context.js';
 import { openVoiceSession } from './voiceProvider.js';
 import { config } from './config.js';
+import { pcm16DurationMs, pcm16Rms, pcm16Silence } from './audioStats.js';
+
+// Замеры голоса (логи «задержка ответа», «ответ ИИ: поток звука»):
+// ответ ИИ закончился, если звука нет столько после того, как он доиграл бы;
+// микрофон гостя «звучит», если громкость куска выше порога (после AGC
+// браузера речь ~0.05–0.3, тишина в зале ~0.005–0.02).
+const REPLY_END_GAP_MS = 2000;
+const AI_AUDIBLE_TAIL_MS = 600;
+const GUEST_VOICE_RMS = 0.03;
 
 // show_dish_card/hide_dish_card — единственные инструменты, которые
 // шлют что-то ГОСТЮ напрямую (guestSocket), в обход ответа модели: тут
@@ -276,6 +285,33 @@ export async function voiceRoutes(app) {
     let openaiSession = null;
     // Когда гость договорил — для замера задержки ответа (см. onAudioDelta).
     let turnEndAt = 0;
+    let lastTurnEndAt = 0;
+    // Когда микрофон гостя последний раз был громче порога — второй замер
+    // задержки, не зависящий от того, прислал ли провайдер «гость договорил».
+    let lastGuestVoiceAt = 0;
+    // Текущий ответ ИИ: сколько звука пришло и сколько телефон простоял бы
+    // без звука, если бы играл куски сразу (= провалы в потоке от OpenAI).
+    let reply = null;
+    let replyTimer = null;
+    // До какого момента у гостя ещё звучит ИИ (с запасом на буфер и сеть).
+    const aiAudible = () => reply && Date.now() < reply.playhead + AI_AUDIBLE_TAIL_MS;
+
+    const finishReply = () => {
+      if (!reply) return;
+      app.log.info({
+        guestId, restaurantId,
+        audioMs: Math.round(reply.audioMs),
+        wallMs: reply.lastAt - reply.startedAt,
+        stallMs: Math.round(reply.stallMs),
+        maxGapMs: reply.maxGapMs,
+        chunks: reply.chunks,
+        // Доля кусков микрофона громче порога, пока звучал ИИ: высокая —
+        // микрофон слышит ИИ из динамика (эхо) или гость говорит поверх.
+        micLoudPct: reply.micChunks ? Math.round((reply.micLoudChunks / reply.micChunks) * 100) : 0,
+        inputDuringReply: reply.inputDuring,
+      }, 'ответ ИИ: поток звука');
+      reply = null;
+    };
 
     try {
       const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
@@ -287,11 +323,36 @@ export async function voiceRoutes(app) {
         deferGreeting,
         tools: buildTools(restaurantId, tableNumber, guestSocket),
         onAudioDelta: (base64Audio) => {
-          // Задержка ответа: от конца реплики гостя до первого звука ИИ.
-          if (turnEndAt) {
-            app.log.info({ guestId, restaurantId, ms: Date.now() - turnEndAt }, 'задержка ответа');
+          const now = Date.now();
+          if (!reply) {
+            // Задержка ответа: от «гость договорил» (событие провайдера) и от
+            // последнего громкого куска микрофона до первого звука ИИ.
+            app.log.info({
+              guestId, restaurantId,
+              fromTurnEndMs: turnEndAt ? now - turnEndAt : null,
+              fromGuestVoiceMs: lastGuestVoiceAt ? now - lastGuestVoiceAt : null,
+            }, 'задержка ответа');
             turnEndAt = 0;
+            reply = {
+              startedAt: now, lastAt: now, playhead: now, audioMs: 0, stallMs: 0,
+              maxGapMs: 0, chunks: 0, micChunks: 0, micLoudChunks: 0, inputDuring: 0,
+            };
           }
+          // Простой «телефон без буфера»: если кусок пришёл позже, чем
+          // доиграл предыдущий, — это провал в потоке от провайдера.
+          if (now > reply.playhead) {
+            if (reply.chunks) reply.stallMs += now - reply.playhead;
+            reply.playhead = now;
+          }
+          const ms = pcm16DurationMs(base64Audio);
+          reply.playhead += ms;
+          reply.audioMs += ms;
+          reply.maxGapMs = Math.max(reply.maxGapMs, now - reply.lastAt);
+          reply.lastAt = now;
+          reply.chunks += 1;
+          clearTimeout(replyTimer);
+          replyTimer = setTimeout(finishReply, reply.playhead - now + REPLY_END_GAP_MS);
+
           if (guestSocket.readyState === guestSocket.OPEN) {
             guestSocket.send(JSON.stringify({ type: 'audio', data: base64Audio }));
           }
@@ -305,6 +366,7 @@ export async function voiceRoutes(app) {
           };
           if (event.type === 'user.turn_end' || event.type === 'input_audio_buffer.speech_stopped') {
             turnEndAt = Date.now();
+            lastTurnEndAt = turnEndAt;
             toGuest({ type: 'user_turn_end' });
           } else if (
             (event.type === 'response.transcript.delta' ||
@@ -324,7 +386,11 @@ export async function voiceRoutes(app) {
           if (event.type === 'relay.error' || event.type === 'error') {
             app.log.error(event, 'realtime session error');
           } else if (event.type === 'user.transcript') {
-            app.log.info({ guestId, restaurantId, text: event.text }, 'гость сказал');
+            // duringAiSpeech — реплика распознана, пока у гостя звучал ИИ:
+            // либо гость перебил, либо модель услышала саму себя (эхо).
+            const duringAiSpeech = Boolean(aiAudible());
+            if (duringAiSpeech) reply.inputDuring += 1;
+            app.log.info({ guestId, restaurantId, text: event.text, duringAiSpeech }, 'гость сказал');
             // Реплика гостя из голоса — в общую историю, чтобы текстовый
             // режим видел, что именно гость спрашивал/выбирал голосом.
             saveConversationTurn({
@@ -341,7 +407,10 @@ export async function voiceRoutes(app) {
               role: 'assistant', content: event.text, source: 'voice',
             }).catch((e) => app.log.error(e, 'не удалось записать реплику ИИ в историю'));
           } else if (event.type === 'tool.called') {
-            app.log.info({ guestId, restaurantId, name: event.name, args: event.args, result: event.result }, 'ИИ вызвал инструмент');
+            app.log.info({
+              guestId, restaurantId, name: event.name, args: event.args, result: event.result,
+              fromTurnEndMs: lastTurnEndAt ? Date.now() - lastTurnEndAt : null,
+            }, 'ИИ вызвал инструмент');
           }
         },
         onClose: () => {
@@ -364,7 +433,18 @@ export async function voiceRoutes(app) {
         return;
       }
       if (msg.type === 'audio' && msg.data) {
-        openaiSession.sendAudio(msg.data);
+        const loud = pcm16Rms(msg.data) > GUEST_VOICE_RMS;
+        if (loud) lastGuestVoiceAt = Date.now();
+        const speaking = aiAudible();
+        if (speaking) {
+          reply.micChunks += 1;
+          if (loud) reply.micLoudChunks += 1;
+        }
+        openaiSession.sendAudio(speaking && config.muteMicWhileSpeaking ? pcm16Silence(msg.data) : msg.data);
+      } else if (msg.type === 'client_stats') {
+        // Как звук играл на телефоне: опустошения очереди, подвисания вкладки.
+        const { underruns, underrunMs, leadMs, longFrames, maxFrameMs, ua } = msg;
+        app.log.info({ guestId, restaurantId, underruns, underrunMs, leadMs, longFrames, maxFrameMs, ua }, 'звук на телефоне');
       } else if (msg.type === 'start_greeting') {
         // Заставка закончилась — можно здороваться (см. deferGreeting).
         openaiSession.startGreeting();
@@ -372,6 +452,8 @@ export async function voiceRoutes(app) {
     });
 
     guestSocket.on('close', () => {
+      clearTimeout(replyTimer);
+      finishReply();
       releaseSlot();
       openaiSession?.close();
     });

@@ -29,6 +29,9 @@ const PLAYBACK_LEAD_MAX = 0.45;
 const PLAYBACK_LEAD_STEP = 0.08;
 // Пауза между кусками короче этой — та же фраза, а не новая реплика.
 const SAME_REPLY_GAP = 0.6;
+// Диагностика: кадр дольше этого — вкладка подвисла; сводка — раз в N мс.
+const LONG_FRAME_MS = 100;
+const STATS_INTERVAL_MS = 5000;
 
 // Мягкий клиппер (tanh) — страховка от жёсткого клиппинга на самом выходе.
 // Кривая почти линейна в рабочем диапазоне и плавно насыщается у краёв,
@@ -116,6 +119,8 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   const micAnalyserRef = useRef(null);
   const playbackLeadRef = useRef(PLAYBACK_LEAD);
   const lastChunkAtRef = useRef(-Infinity);
+  // Диагностика звука (уходит в лог voice-relay, см. client_stats).
+  const playStatsRef = useRef({ underruns: 0, underrunMs: 0, longFrames: 0, maxFrameMs: 0 });
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   // Блюда, которые ИИ показал за этот разговор (show_dish_card/
@@ -190,7 +195,19 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     // крутится ВСЕГДА (не только пока играет ИИ) и каждый кадр подтягивает
     // отображаемый уровень к целевому — поэтому шар движется плавно, а не
     // рывками между кусками аудио.
-    const visualLoop = () => {
+    let lastFrameAt = 0;
+    const visualLoop = (frameAt) => {
+      // Подвисание вкладки (кадр дольше LONG_FRAME_MS) — в тот же поток
+      // приходят звук и микрофон, так что это кандидат в причины обрывов.
+      if (lastFrameAt && document.visibilityState === 'visible') {
+        const frameMs = frameAt - lastFrameAt;
+        if (frameMs > LONG_FRAME_MS && frameMs < 2000) {
+          const stats = playStatsRef.current;
+          stats.longFrames += 1;
+          stats.maxFrameMs = Math.max(stats.maxFrameMs, frameMs);
+        }
+      }
+      lastFrameAt = frameAt;
       if (aiSpeakingRef.current && outputAnalyser) {
         const data = new Uint8Array(outputAnalyser.frequencyBinCount);
         outputAnalyser.getByteTimeDomainData(data);
@@ -247,6 +264,9 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       // посреди фразы: увеличиваем запас, чтобы дальше не прерывалось.
       const now = audioContext.currentTime;
       if (!aiSpeakingRef.current && now - lastChunkAtRef.current < SAME_REPLY_GAP) {
+        const stats = playStatsRef.current;
+        stats.underruns += 1;
+        stats.underrunMs += (Math.max(0, now - nextPlaybackTimeRef.current) + playbackLeadRef.current) * 1000;
         playbackLeadRef.current = Math.min(PLAYBACK_LEAD_MAX, playbackLeadRef.current + PLAYBACK_LEAD_STEP);
       }
       lastChunkAtRef.current = now;
@@ -388,8 +408,30 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       }
     };
 
+    // Раз в несколько секунд — сводка, как звук играл на телефоне (пишется в
+    // лог voice-relay «звук на телефоне»): отличить сеть от занятого телефона.
+    let uaSent = false;
+    let lastStatsKey = '';
+    const statsTimer = setInterval(() => {
+      const s = playStatsRef.current;
+      const key = `${s.underruns}|${s.longFrames}`;
+      if (key === lastStatsKey || ws.readyState !== WebSocket.OPEN) return;
+      lastStatsKey = key;
+      ws.send(JSON.stringify({
+        type: 'client_stats',
+        underruns: s.underruns,
+        underrunMs: Math.round(s.underrunMs),
+        leadMs: Math.round(playbackLeadRef.current * 1000),
+        longFrames: s.longFrames,
+        maxFrameMs: Math.round(s.maxFrameMs),
+        ua: uaSent ? undefined : navigator.userAgent.slice(0, 160),
+      }));
+      uaSent = true;
+    }, STATS_INTERVAL_MS);
+
     return () => {
       stopped = true;
+      clearInterval(statsTimer);
       if (removeUnlock) removeUnlock();
       if (rafId) cancelAnimationFrame(rafId);
       audioContext.close();

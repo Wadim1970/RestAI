@@ -26,6 +26,10 @@ export const config = {
   // Подталкивать ли первое приветствие response.create'ом (=0 отключает, если
   // GPT-Live здоровается сам и выходит двойное приветствие).
   gptLiveNudgeGreeting: process.env.GPTLIVE_NUDGE_GREETING !== '0',
+  // =1 — пока у гостя играет голос ИИ, вместо микрофона шлём тишину (защита
+  // от эха: модель не слышит саму себя из динамика и не обрывает ответ).
+  // Цена — гость не может перебить ИИ голосом. Для проверки, по умолчанию выкл.
+  muteMicWhileSpeaking: process.env.MUTE_MIC_WHILE_AI_SPEAKS === '1',
 
   grokApiKey: process.env.GROK_API_KEY || '',
   grokVoiceModel: process.env.GROK_VOICE_MODEL || 'grok-voice-latest',
