@@ -499,34 +499,30 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     const softClip = audioContext.createWaveShaper();
     softClip.curve = makeSoftClipCurve();
     softClip.oversample = '2x';
-    const wsOutputAnalyser = audioContext.createAnalyser();
-    wsOutputAnalyser.fftSize = 256;
-    outputAnalyserRef.current = wsOutputAnalyser;
+    const outputAnalyser = audioContext.createAnalyser();
+    outputAnalyser.fftSize = 256;
+    outputAnalyserRef.current = outputAnalyser;
     makeupGain.connect(limiter);
     limiter.connect(softClip);
-    softClip.connect(wsOutputAnalyser);
-    wsOutputAnalyser.connect(audioContext.destination);
+    softClip.connect(outputAnalyser);
+    outputAnalyser.connect(audioContext.destination);
     rafId = requestAnimationFrame(visualLoop);
 
     // --- WebRTC-путь (основной) ---
 
-    // Голос ИИ из WebRTC: играет <audio> (так браузер видит его как звонок и
-    // вычитает из микрофона — эхо), а в аудио-граф идёт только на анализатор
-    // для бокала и визуализатора (в колонки через WebAudio не дублируем).
+    // Голос ИИ из WebRTC — через ту же цепочку, что и WebSocket-звук
+    // (усиление ×PLAYBACK_GAIN → лимитер → анализатор → колонки): без
+    // усиления голос в звонковом режиме телефона звучит заметно тише.
+    // <audio> без звука нужен только Chrome — иначе входящий WebRTC-поток в
+    // аудио-граф не идёт. Эхо на телефонах гасит системное эхоподавление
+    // (оно вычитает весь звук устройства, не только <audio>).
     const playRemoteStream = (stream) => {
       if (remoteAudio) {
+        remoteAudio.muted = true;
         remoteAudio.srcObject = stream;
         remoteAudio.play().catch(() => { /* разблокирует первое касание */ });
       }
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      const sink = audioContext.createGain();
-      sink.gain.value = 0;
-      source.connect(analyser);
-      analyser.connect(sink);
-      sink.connect(audioContext.destination);
-      outputAnalyserRef.current = analyser;
+      audioContext.createMediaStreamSource(stream).connect(makeupGain);
     };
 
     const closePc = () => {
@@ -547,7 +543,6 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       console.warn('VoiceStage: WebRTC не поднялся, переходим на WebSocket:', reason);
       closePc();
       if (remoteAudio) remoteAudio.srcObject = null;
-      outputAnalyserRef.current = wsOutputAnalyser;
       aiSpeakingRef.current = false;
       modeRef.current = 'ws';
       const old = ws;
@@ -872,8 +867,8 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           onClose={() => setVoiceDishes([])}
         />
       )}
-      {/* Голос ИИ по WebRTC (без controls элемент не виден). */}
-      <audio ref={remoteAudioRef} autoPlay playsInline />
+      {/* Приёмник WebRTC-потока для Chrome (звук идёт через аудио-граф). */}
+      <audio ref={remoteAudioRef} autoPlay playsInline muted />
       {/* Пока на экране карточки блюд, бокал растворяется и не рисуется. */}
       <SmokeGlass
         ref={glassRef}

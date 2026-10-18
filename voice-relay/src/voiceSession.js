@@ -11,11 +11,8 @@ import { openGptLiveWebrtcSession, guestIceServers } from './gptLiveWebrtc.js';
 const REPLY_END_GAP_MS = 2000;
 const AI_AUDIBLE_TAIL_MS = 600;
 const GUEST_VOICE_RMS = 0.03;
-// То же для WebRTC по размеру пакета Opus (20 мс): речь ~60–150 байт,
-// тишина/шум после шумодава — единицы-десятки байт. Приблизительно.
-const OPUS_PACKET_MS = 20;
-const AI_VOICE_PACKET_BYTES = 20;
-const GUEST_VOICE_PACKET_BYTES = 40;
+// WebRTC: как часто писать в лог ровность потоков пакетов.
+const FLOW_LOG_MS = 15000;
 
 // show_dish_card/hide_dish_card — единственные инструменты, которые
 // шлют что-то ГОСТЮ напрямую (guestSocket), в обход ответа модели: тут
@@ -309,15 +306,34 @@ export async function voiceRoutes(app) {
     // задержки, не зависящий от того, прислал ли провайдер «гость договорил».
     let lastGuestVoiceAt = 0;
     // Текущий ответ ИИ: сколько звука пришло и сколько телефон простоял бы
-    // без звука, если бы играл куски сразу (= провалы в потоке от OpenAI; в
-    // WebRTC сюда же попадают короткие паузы в речи).
+    // без звука, если бы играл куски сразу (= провалы в потоке от OpenAI).
+    // В WebRTC звук идёт мимо нас пакетами — там ответ отмечаем по тексту
+    // (транскрипт ИИ идёт вровень с речью), а провалы видны в «поток WebRTC».
     let reply = null;
+
+    // Этапы старта (лог «голос: этап», мс от подключения телефона): видно,
+    // на чём тратится время до приветствия.
+    const openedAt = Date.now();
+    let greetingAskedAt = deferGreeting ? 0 : openedAt;
+    let greetingHeard = false;
+    const stage = (name, extra = {}) => {
+      app.log.info({ guestId, restaurantId, transport, stage: name, ms: Date.now() - openedAt, ...extra }, 'голос: этап');
+    };
     let replyTimer = null;
     // До какого момента у гостя ещё звучит ИИ (с запасом на буфер и сеть).
     const aiAudible = () => reply && Date.now() < reply.playhead + AI_AUDIBLE_TAIL_MS;
 
     const finishReply = () => {
       if (!reply) return;
+      if (transport === 'webrtc') {
+        app.log.info({
+          guestId, restaurantId, transport,
+          wallMs: reply.lastAt - reply.startedAt,
+          inputDuringReply: reply.inputDuring,
+        }, 'ответ ИИ');
+        reply = null;
+        return;
+      }
       app.log.info({
         guestId, restaurantId, transport,
         audioMs: Math.round(reply.audioMs),
@@ -333,23 +349,38 @@ export async function voiceRoutes(app) {
       reply = null;
     };
 
-    // Пришёл звук ИИ длительностью ms (кусок PCM или RTP-пакет с голосом).
+    // Начало ответа ИИ: пишем задержку — от «гость договорил» (событие
+    // провайдера), от последнего звука/текста гостя, а для первой реплики —
+    // от сигнала «здоровайся».
+    const startReply = (now) => {
+      app.log.info({
+        guestId, restaurantId, transport,
+        fromTurnEndMs: turnEndAt ? now - turnEndAt : null,
+        fromGuestVoiceMs: lastGuestVoiceAt ? now - lastGuestVoiceAt : null,
+        fromGreetingAskMs: !greetingHeard && greetingAskedAt ? now - greetingAskedAt : null,
+      }, 'задержка ответа');
+      greetingHeard = true;
+      turnEndAt = 0;
+      reply = {
+        startedAt: now, lastAt: now, playhead: now, audioMs: 0, stallMs: 0,
+        maxGapMs: 0, chunks: 0, micChunks: 0, micLoudChunks: 0, inputDuring: 0,
+      };
+    };
+
+    // WebRTC: пришёл кусок текста ответа ИИ — ответ идёт.
+    const noteAiText = () => {
+      const now = Date.now();
+      if (!reply) startReply(now);
+      reply.lastAt = now;
+      reply.playhead = now;
+      clearTimeout(replyTimer);
+      replyTimer = setTimeout(finishReply, REPLY_END_GAP_MS);
+    };
+
+    // Пришёл звук ИИ длительностью ms (кусок PCM, WebSocket-путь).
     const noteAiAudio = (ms) => {
       const now = Date.now();
-      if (!reply) {
-        // Задержка ответа: от «гость договорил» (событие провайдера) и от
-        // последнего громкого звука микрофона до первого звука ИИ.
-        app.log.info({
-          guestId, restaurantId, transport,
-          fromTurnEndMs: turnEndAt ? now - turnEndAt : null,
-          fromGuestVoiceMs: lastGuestVoiceAt ? now - lastGuestVoiceAt : null,
-        }, 'задержка ответа');
-        turnEndAt = 0;
-        reply = {
-          startedAt: now, lastAt: now, playhead: now, audioMs: 0, stallMs: 0,
-          maxGapMs: 0, chunks: 0, micChunks: 0, micLoudChunks: 0, inputDuring: 0,
-        };
-      }
+      if (!reply) startReply(now);
       // Простой «телефон без буфера»: если кусок пришёл позже, чем
       // доиграл предыдущий, — это провал в потоке от провайдера.
       if (now > reply.playhead) {
@@ -391,6 +422,7 @@ export async function voiceRoutes(app) {
         (event.text || event.delta)
       ) {
         toGuest({ type: 'transcript_delta', text: event.text || event.delta });
+        if (transport === 'webrtc') noteAiText();
       } else if (
         event.type === 'response.transcript.end' ||
         event.type === 'response.output_audio_transcript.done' ||
@@ -401,10 +433,19 @@ export async function voiceRoutes(app) {
 
       if (event.type === 'relay.error' || event.type === 'error') {
         app.log.error(event, 'realtime session error');
+      } else if (event.type === 'session.input_transcript.delta') {
+        // Гость говорит (в WebRTC его звук идёт мимо нас — судим по тексту).
+        lastGuestVoiceAt = Date.now();
       } else if (event.type === 'webrtc.guest_state') {
         app.log.info({ guestId, restaurantId, state: event.state }, 'WebRTC с гостем');
+        if (event.state === 'connected') stage('guest_connected');
       } else if (event.type === 'webrtc.ai_session') {
         app.log.info({ guestId, restaurantId, liveSessionId: event.id }, 'WebRTC с GPT-Live: сессия создана');
+        stage('ai_session_created');
+      } else if (event.type === 'session.started') {
+        stage('ai_session_started');
+      } else if (event.type === 'webrtc.greet_sent') {
+        stage('greet_sent');
       } else if (event.type === 'user.transcript') {
         // duringAiSpeech — реплика распознана, пока у гостя звучал ИИ:
         // либо гость перебил, либо модель услышала саму себя (эхо).
@@ -456,6 +497,8 @@ export async function voiceRoutes(app) {
         app.log.info({ guestId, restaurantId, level: msg.level }, 'гость перебил ИИ');
       } else if (msg.type === 'start_greeting') {
         // Заставка закончилась — можно здороваться (см. deferGreeting).
+        if (!greetingAskedAt) greetingAskedAt = Date.now();
+        stage('greeting_asked');
         openaiSession.startGreeting();
       }
     };
@@ -472,8 +515,10 @@ export async function voiceRoutes(app) {
     });
 
     let guestClosed = false;
+    let flowTimer = null;
     guestSocket.on('close', () => {
       guestClosed = true;
+      clearInterval(flowTimer);
       clearTimeout(replyTimer);
       finishReply();
       releaseSlot();
@@ -490,6 +535,7 @@ export async function voiceRoutes(app) {
     try {
       const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
       if (guestClosed) return;
+      stage('context_loaded');
 
       const sessionOpts = {
         instructions,
@@ -504,12 +550,7 @@ export async function voiceRoutes(app) {
         },
       };
       openaiSession = transport === 'webrtc'
-        ? openGptLiveWebrtcSession({
-          ...sessionOpts,
-          // Голос ИИ: пакет Opus 20 мс; короткие пакеты — тишина между словами.
-          onAiPacket: (bytes) => { if (bytes > AI_VOICE_PACKET_BYTES) noteAiAudio(OPUS_PACKET_MS); },
-          onGuestPacket: (bytes) => { noteGuestAudio(bytes > GUEST_VOICE_PACKET_BYTES); },
-        })
+        ? openGptLiveWebrtcSession(sessionOpts)
         : openVoiceSession({
           ...sessionOpts,
           onAudioDelta: (base64Audio) => {
@@ -524,6 +565,17 @@ export async function voiceRoutes(app) {
       releaseSlot();
       guestSocket.close();
       return;
+    }
+
+    // WebRTC: раз в 15 с — насколько ровно идут пакеты от OpenAI (ai) и от
+    // телефона (guest): late — разрывы длиннее 60 мс при норме 20 мс.
+    if (openaiSession.takeFlowStats) {
+      flowTimer = setInterval(() => {
+        const { ai, guest } = openaiSession.takeFlowStats();
+        if (ai.packets || guest.packets) {
+          app.log.info({ guestId, restaurantId, ai, guest }, 'поток WebRTC');
+        }
+      }, FLOW_LOG_MS);
     }
 
     pendingGuestMessages.splice(0).forEach(handleGuestMessage);
