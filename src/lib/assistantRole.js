@@ -41,3 +41,6 @@ export function roleFromContext(dish) {
   if (!dish) return 'chef';
   return roleFromDishes([dish]) || 'chef';
 }
+
+// Цвет роли для интерфейса (визуализатор и т.п.) — те же, что у дыма.
+export const ROLE_COLORS = { chef: '#EB651A', somm: '#B0123C', diet: '#4DD17A', pair: '#DA4334' };

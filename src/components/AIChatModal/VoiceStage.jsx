@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import VoiceDishSlider from '../VoiceDishSlider/VoiceDishSlider';
 import SmokeGlass from './SmokeGlass/SmokeGlass';
-import { roleFromDishes, roleFromText } from '../../lib/assistantRole';
+import AudioBars from './AudioBars/AudioBars';
+import { roleFromDishes, roleFromText, ROLE_COLORS } from '../../lib/assistantRole';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
@@ -18,11 +19,16 @@ const PLAYBACK_GAIN = 3.0;
 // «кирпичная стена», быстрый attack ловит усиленные пики речи.
 const LIMITER = { threshold: -3.0, knee: 0, ratio: 20, attack: 0.002, release: 0.1 };
 
-// Небольшой запас (сек) перед стартом новой реплики — подушка против
-// сетевого джиттера: куски аудио приходят неравномерно, и без запаса
-// очередь то и дело опустошается, давая щелчки на стыках. 120мс на слух
-// незаметно, зато стыки гладкие.
+// Запас (сек) перед стартом новой реплики — подушка против сетевого
+// джиттера: куски аудио приходят неравномерно, и без запаса очередь то и
+// дело опустошается, давая паузы на стыках. Начинаем со 120 мс (на слух
+// незаметно); если очередь всё же опустела посреди фразы (кусок опоздал —
+// сеть или занятый поток браузера), запас растёт ступенями до 450 мс.
 const PLAYBACK_LEAD = 0.12;
+const PLAYBACK_LEAD_MAX = 0.45;
+const PLAYBACK_LEAD_STEP = 0.08;
+// Пауза между кусками короче этой — та же фраза, а не новая реплика.
+const SAME_REPLY_GAP = 0.6;
 
 // Мягкий клиппер (tanh) — страховка от жёсткого клиппинга на самом выходе.
 // Кривая почти линейна в рабочем диапазоне и плавно насыщается у краёв,
@@ -104,6 +110,12 @@ const ROLE_TEXT_MAX = 160;
 // снять работу с основного потока.
 export default function VoiceStage({ guestId, restaurantId, tableNumber, sessionId, prewarm = false, initialRole = 'chef', onExpandDish, onCartAdd, onShowCart, onHideCart }) {
   const glassRef = useRef(null);
+  const [roleColor, setRoleColor] = useState(ROLE_COLORS[initialRole] || ROLE_COLORS.chef);
+  // Анализаторы для визуализатора: голос ИИ (после лимитера) и микрофон.
+  const outputAnalyserRef = useRef(null);
+  const micAnalyserRef = useRef(null);
+  const playbackLeadRef = useRef(PLAYBACK_LEAD);
+  const lastChunkAtRef = useRef(-Infinity);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   // Блюда, которые ИИ показал за этот разговор (show_dish_card/
@@ -148,6 +160,15 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   const thinkingSinceRef = useRef(0);
   const replyTextRef = useRef('');
   const roleLockedRef = useRef(false);
+  const applyRole = (role) => {
+    glassRef.current?.setRole(role);
+    setRoleColor(ROLE_COLORS[role] || ROLE_COLORS.chef);
+  };
+  // Что показывает визуализатор: пока говорит ИИ — его голос, иначе микрофон.
+  const getAnalyser = useCallback(
+    () => (aiSpeakingRef.current ? outputAnalyserRef.current : micAnalyserRef.current),
+    [],
+  );
   const statusRef = useRef('connecting');
   useEffect(() => { statusRef.current = status; }, [status]);
 
@@ -222,11 +243,19 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       source.buffer = buffer;
       source.connect(makeupGain);
 
+      // Очередь опустела, хотя прошлый кусок пришёл только что, — это обрыв
+      // посреди фразы: увеличиваем запас, чтобы дальше не прерывалось.
+      const now = audioContext.currentTime;
+      if (!aiSpeakingRef.current && now - lastChunkAtRef.current < SAME_REPLY_GAP) {
+        playbackLeadRef.current = Math.min(PLAYBACK_LEAD_MAX, playbackLeadRef.current + PLAYBACK_LEAD_STEP);
+      }
+      lastChunkAtRef.current = now;
+
       // Если очередь опустела (ИИ молчал) — стартуем не впритык к «сейчас», а
-      // с запасом PLAYBACK_LEAD, чтобы сетевой джиттер не рвал звук щелчками.
+      // с запасом, чтобы сетевой джиттер не рвал звук.
       const base = aiSpeakingRef.current
         ? nextPlaybackTimeRef.current
-        : audioContext.currentTime + PLAYBACK_LEAD;
+        : now + playbackLeadRef.current;
       const startAt = Math.max(audioContext.currentTime, base);
       source.start(startAt);
       nextPlaybackTimeRef.current = startAt + buffer.duration;
@@ -261,6 +290,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     softClip.oversample = '2x';
     outputAnalyser = audioContext.createAnalyser();
     outputAnalyser.fftSize = 256;
+    outputAnalyserRef.current = outputAnalyser;
     makeupGain.connect(limiter);
     limiter.connect(softClip);
     softClip.connect(outputAnalyser);
@@ -332,7 +362,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           replyTextRef.current += msg.text;
           if (replyTextRef.current.length >= ROLE_TEXT_MIN) {
             const role = roleFromText(replyTextRef.current);
-            if (role) glassRef.current?.setRole(role);
+            if (role) applyRole(role);
           }
         }
       } else if (msg.type === 'transcript_end') {
@@ -344,7 +374,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         // Карточки — самый точный сигнал темы: вино → сомелье, еда → шеф.
         const role = roleFromDishes(dishes);
         if (role) {
-          glassRef.current?.setRole(role);
+          applyRole(role);
           roleLockedRef.current = true;
         }
       } else if (msg.type === 'hide_dish') {
@@ -423,6 +453,11 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         const silentGain = audioContext.createGain();
         silentGain.gain.value = 0;
         source.connect(scriptNode);
+        // Отдельный анализатор микрофона — для визуализатора (в колонки не идёт).
+        const micAnalyser = audioContext.createAnalyser();
+        micAnalyser.fftSize = 256;
+        source.connect(micAnalyser);
+        micAnalyserRef.current = micAnalyser;
         scriptNode.connect(silentGain);
         silentGain.connect(audioContext.destination);
 
@@ -489,17 +524,22 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
           onClose={() => setVoiceDishes([])}
         />
       )}
+      {/* Пока на экране карточки блюд, бокал растворяется и не рисуется. */}
       <SmokeGlass
         ref={glassRef}
         initialRole={initialRole}
-        className={`${styles.glass} ${hasDishes ? styles.glassDim : ''}`}
+        active={!hasDishes}
+        className={styles.glass}
       />
+      <div className={styles.bottom}>
+      {hasDishes && <AudioBars getAnalyser={getAnalyser} color={roleColor} />}
       <p className={styles.status}>
         {status === 'connecting' && 'Подключаюсь…'}
         {status === 'listening' && 'Слушаю…'}
         {status === 'busy' && (statusMessage || 'Сейчас все голосовые линии заняты, попробуйте через минуту.')}
         {status === 'error' && (statusMessage || 'Не удалось подключиться. Попробуйте ещё раз.')}
       </p>
+      </div>
     </div>
   );
 }
