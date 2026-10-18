@@ -95,6 +95,17 @@ function rmsLevel(float32) {
 // говорит, и сколько держим «слушаю» после последнего звука.
 const MIC_TALK_LEVEL = 0.06;
 const MIC_HOLD_MS = 1200;
+// Перебивание. GPT-Live сам замолкает, когда слышит гостя, но звук, который
+// он уже прислал, лежит в очереди телефона и доигрывался бы до конца — гость
+// слышал бы, что ИИ «говорит поверх». Поэтому, если гость говорит громче
+// BARGE_IN_LEVEL дольше BARGE_IN_MS, пока звучит ИИ, обрываем очередь сами.
+// Порог выше MIC_TALK_LEVEL — чтобы остатки эха ИИ из динамика не обрывали
+// его же. Хвост старого ответа, который ещё долетает, отбрасываем, пока в
+// потоке не будет паузы NEW_REPLY_GAP (= модель начала новый ответ).
+const BARGE_IN_LEVEL = 0.2;
+const BARGE_IN_MS = 300;
+const NEW_REPLY_GAP = 0.5;
+const DROP_MAX_SEC = 15;
 // «Думаю» — от конца реплики гостя до первого звука ответа, но не дольше.
 const THINK_MAX_MS = 9000;
 // Роль по тексту ответа решаем по его началу — дальше не перекрашиваем.
@@ -121,6 +132,11 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
   const lastChunkAtRef = useRef(-Infinity);
   // Диагностика звука (уходит в лог voice-relay, см. client_stats).
   const playStatsRef = useRef({ underruns: 0, underrunMs: 0, longFrames: 0, maxFrameMs: 0 });
+  // Перебивание: играющие куски (чтобы оборвать), с какого момента
+  // отбрасываем хвост старого ответа, и функция обрыва из фазы 1 для фазы 2.
+  const playingSourcesRef = useRef(new Set());
+  const droppingSinceRef = useRef(0);
+  const stopPlaybackRef = useRef(null);
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'listening' | 'busy' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   // Блюда, которые ИИ показал за этот разговор (show_dish_card/
@@ -251,6 +267,15 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
     const playChunk = (base64Audio) => {
       const audioContext = audioContextRef.current;
       if (!audioContext) return;
+      // После перебивания: хвост старого ответа (куски идут без паузы) — мимо.
+      if (droppingSinceRef.current) {
+        const t = audioContext.currentTime;
+        if (t - lastChunkAtRef.current < NEW_REPLY_GAP && t - droppingSinceRef.current < DROP_MAX_SEC) {
+          lastChunkAtRef.current = t;
+          return;
+        }
+        droppingSinceRef.current = 0;
+      }
       const float32 = pcm16Base64ToFloat32(base64Audio);
       if (float32.length === 0) return;
 
@@ -281,9 +306,24 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       nextPlaybackTimeRef.current = startAt + buffer.duration;
 
       aiSpeakingRef.current = true;
+      playingSourcesRef.current.add(source);
       source.onended = () => {
+        playingSourcesRef.current.delete(source);
         if (audioContext.currentTime >= nextPlaybackTimeRef.current - 0.02) aiSpeakingRef.current = false;
       };
+    };
+
+    // Гость перебил: глушим всё, что стоит в очереди, и не доигрываем хвост.
+    stopPlaybackRef.current = () => {
+      const t = audioContext.currentTime;
+      playingSourcesRef.current.forEach((s) => {
+        try { s.stop(); } catch { /* уже доиграл */ }
+      });
+      playingSourcesRef.current.clear();
+      nextPlaybackTimeRef.current = t;
+      aiSpeakingRef.current = false;
+      droppingSinceRef.current = t;
+      lastChunkAtRef.current = t;
     };
 
     // Раньше AudioContext разблокировал клик по кнопке «войти». Кнопки
@@ -503,10 +543,23 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         scriptNode.connect(silentGain);
         silentGain.connect(audioContext.destination);
 
+        let bargeInSec = 0;
         scriptNode.onaudioprocess = (event) => {
           const ws = wsRef.current;
           if (stopped || !ws || ws.readyState !== WebSocket.OPEN) return;
           const input = event.inputBuffer.getChannelData(0);
+          if (aiSpeakingRef.current) {
+            // Гость говорит поверх ИИ достаточно громко и долго — перебил.
+            const level = rmsLevel(input);
+            bargeInSec = level > BARGE_IN_LEVEL ? bargeInSec + input.length / audioContext.sampleRate : 0;
+            if (bargeInSec * 1000 >= BARGE_IN_MS) {
+              bargeInSec = 0;
+              stopPlaybackRef.current?.();
+              ws.send(JSON.stringify({ type: 'barge_in', level: Math.round(level * 100) / 100 }));
+            }
+          } else {
+            bargeInSec = 0;
+          }
           if (!aiSpeakingRef.current) {
             const level = rmsLevel(input);
             setLevel(level);

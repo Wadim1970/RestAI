@@ -445,6 +445,10 @@ export async function voiceRoutes(app) {
         // Как звук играл на телефоне: опустошения очереди, подвисания вкладки.
         const { underruns, underrunMs, leadMs, longFrames, maxFrameMs, ua } = msg;
         app.log.info({ guestId, restaurantId, underruns, underrunMs, leadMs, longFrames, maxFrameMs, ua }, 'звук на телефоне');
+      } else if (msg.type === 'barge_in') {
+        // Телефон оборвал звук ИИ: гость заговорил поверх (или эхо — тогда
+        // таких строк будет много без реальных реплик гостя).
+        app.log.info({ guestId, restaurantId, level: msg.level }, 'гость перебил ИИ');
       } else if (msg.type === 'start_greeting') {
         // Заставка закончилась — можно здороваться (см. deferGreeting).
         openaiSession.startGreeting();
