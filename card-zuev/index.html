@@ -175,8 +175,16 @@
                height .75s cubic-bezier(.22,.68,.24,1)}
   .flip.flipped .flip-inner{transform:rotateY(180deg)}
   .face{position:absolute;top:0;left:0;width:100%;
-    backface-visibility:hidden;-webkit-backface-visibility:hidden}
-  .face--back{transform:rotateY(180deg)}
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    /* Страховка к backface-visibility: панели с backdrop-filter мобильные
+       браузеры рисуют отдельным слоем и обратную сторону НЕ прячут — в начале
+       переворота реквизиты просвечивали зеркально. Поэтому неактивную сторону
+       прячем visibility, а переключаем ровно в середине поворота (.375s из
+       .75s), когда карточка стоит ребром и обе стороны не видны. */
+    transition:visibility 0s linear .375s}
+  .face--back{transform:rotateY(180deg);visibility:hidden}
+  .flip.flipped .face--front{visibility:hidden}
+  .flip.flipped .face--back{visibility:visible}
 
   /* ——— обратная сторона: реквизиты ——— */
   .back-title{margin:0 0 4px;text-align:center;font-size:22px;letter-spacing:-.01em}
