@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { useSwipeLeftOpen } from '../../hooks/useSwipeLeftOpen';
 import { useSwipeRightClose } from '../../hooks/useSwipeRightClose';
 import styles from './PersonalCabinet.module.css';
+import CloseButton from '../CloseButton/CloseButton';
 
 const WAITER_API_URL = import.meta.env.VITE_WAITER_API_URL;
 
@@ -236,7 +237,7 @@ export default function PersonalCabinet({
       {isOpen && (
         <div className={styles.overlay}>
           <div className={styles.panel} {...closeSwipeHandlers}>
-            <button className={styles.closeBtn} onClick={handleClose} aria-label="Закрыть">✕</button>
+            <CloseButton className={styles.closeBtn} onClick={handleClose} />
 
             <div className={styles.pointsBlock}>
               <div className={styles.pointsValue}>{profile?.points ?? 0}</div>

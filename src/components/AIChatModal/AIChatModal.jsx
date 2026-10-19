@@ -4,6 +4,7 @@ import styles from './AIChatModal.module.css'; // Подключаем стил�
 import { useChatApi } from './useChatApi'; // Подключаем логику общения с n8n
 import VoiceStage from './VoiceStage'; // Экран голосового ИИ
 import MenuButton from '../MenuButton.jsx'; // Та же кнопка, что и на видео-заставке
+import CloseButton from '../CloseButton/CloseButton';
 
 // isFirstLaunch — открыт по окончании стартового видео (первый разговор
 // с ИИ за сессию), а не кнопкой "Чат" из меню. На этом экране вместо
@@ -244,9 +245,7 @@ const AIChatModal = ({ isOpen, onClose, pageContext, roleHint = 'chef', sessionI
         {/* Кнопка закрытия (крестик) — скрыта на первом голосовом экране:
             оттуда единственный выход — кнопка "Открыть меню". */}
         {!isFirstVoice && (
-          <button className={styles['modal-closeBtn']} onClick={handleClose}>
-            <img src="/icons/icon-on.png" alt="Закрыть" />
-          </button>
+          <CloseButton className={styles['modal-closeBtn']} onClick={handleClose} />
         )}
 
         {/* Область переписки */}

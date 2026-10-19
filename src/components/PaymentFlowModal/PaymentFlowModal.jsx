@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import styles from './PaymentFlowModal.module.css';
+import CloseButton from '../CloseButton/CloseButton';
 
 // Поток самостоятельной оплаты гостем: чек (заглушка) -> СБП (заглушка) ->
 // подтверждение оплаты. Важное правило: места помечаются 'paid'
@@ -105,7 +106,7 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
           <>
             <div className={styles.header}>
               <h2 className={styles.title}>Кассовый чек</h2>
-              <button className={styles.closeBtn} onClick={onClose}>✕</button>
+              <CloseButton onClick={onClose} />
             </div>
             <div className={styles.stubBadge}>предварительный чек · тест</div>
 
@@ -143,7 +144,7 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
           <>
             <div className={styles.header}>
               <h2 className={styles.title}>Оплата через СБП</h2>
-              <button className={styles.closeBtn} onClick={onClose}>✕</button>
+              <CloseButton onClick={onClose} />
             </div>
 
             <div className={styles.sbpBox}>

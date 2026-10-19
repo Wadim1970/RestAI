@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styles from './DishModal.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
+import CloseButton from '../CloseButton/CloseButton';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -279,9 +280,7 @@ export default function DishModal({
               <div className={styles.counter}>{index + 1} / {total}</div>
             )
           )}
-          <button ref={closeBtnRef} type="button" className={styles.glassBtn} onClick={close} aria-label="Закрыть">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
-          </button>
+          <CloseButton ref={closeBtnRef} onClick={close} />
         </div>
 
         <div className={styles.sheet} ref={sheetRef}>

@@ -36,14 +36,6 @@
     margin: 0;
 }
 
-.closeBtn {
-    background: none;
-    border: none;
-    padding: 4px;
-    font-size: 18px;
-    color: #666;
-    cursor: pointer;
-}
 
 .seatList {
     flex: 1;

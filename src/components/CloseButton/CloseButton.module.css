@@ -1,0 +1,17 @@
+/* Как .glassBtn в DishModal: тёмное матовое стекло, белый крестик. */
+.closeBtn {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(18, 22, 16, 0.42);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}

@@ -77,23 +77,10 @@
 }
 
 .closeBtn {
+  /* Вид — общий CloseButton; здесь только место над слайдером. */
   position: absolute;
-  top: -14px;
-  right: -14px;
+  top: -20px;
+  right: -12px;
   z-index: 6;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: none;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.closeBtn img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
