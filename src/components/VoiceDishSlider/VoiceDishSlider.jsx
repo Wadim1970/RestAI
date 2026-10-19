@@ -4,6 +4,7 @@ import 'swiper/css';
 import 'swiper/css/effect-cube';
 import 'swiper/css/autoplay';
 import styles from './VoiceDishSlider.module.css';
+import CloseButton from '../CloseButton/CloseButton';
 
 function dishWeightLabel(dish) {
   const value = dish.nutritional_info?.weight_value;
@@ -24,9 +25,7 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
 
   return (
     <div className={styles.wrapper}>
-      <button className={styles.closeBtn} onClick={onClose} aria-label="Закрыть">
-        <img src="/icons/icon-on.png" alt="" />
-      </button>
+      <CloseButton className={styles.closeBtn} onClick={onClose} />
 
       <Swiper
         key={setKey}

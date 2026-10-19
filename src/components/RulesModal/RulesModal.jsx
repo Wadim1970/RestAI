@@ -1,4 +1,5 @@
 import styles from './RulesModal.module.css'
+import CloseButton from '../CloseButton/CloseButton';
 
 // Заглушка — реальный текст правил программы лояльности добавим позже.
 export default function RulesModal({ onClose }) {
@@ -7,7 +8,7 @@ export default function RulesModal({ onClose }) {
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>Правила участия</h2>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <CloseButton onClick={onClose} />
         </div>
         <p className={styles.text}>
           Здесь будут подробные правила программы лояльности RestAI — как

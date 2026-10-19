@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import styles from './SplitBillModal.module.css';
+import CloseButton from '../CloseButton/CloseButton';
 
 // Открывается только после явного выбора гостя "За весь стол" — до этого
 // момента гость не видит чужие корзины (get_table_bill не вызывается больше
@@ -96,7 +97,7 @@ const SplitBillModal = ({ isOpen, onClose, restaurantId, tableNumber, mySeatNumb
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>Счёт за стол</h2>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className={styles.seatList}>

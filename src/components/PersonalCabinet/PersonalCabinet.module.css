@@ -61,16 +61,10 @@
 }
 
 .closeBtn {
+    /* Вид — общий CloseButton; здесь только место в углу панели. */
     position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    padding: 4px;
-    font-size: 20px;
-    color: #666;
-    cursor: pointer;
-    line-height: 1;
+    top: 12px;
+    right: 12px;
 }
 
 .pointsBlock {

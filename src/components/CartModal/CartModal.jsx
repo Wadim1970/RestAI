@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
+import CloseButton from '../CloseButton/CloseButton';
 
 const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex, onDishClick }) => {
   const [comment, setComment] = useState(''); // Состояние для текста комментария
@@ -136,9 +137,7 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
         
         <div className={styles.header}>
           <h2 className={styles.title}>Ваш заказ</h2>
-          <button className={styles.closeBtn} onClick={handleClose}>
-  <img src="/icons/icon-on.png" alt="Close" />
-</button>
+          <CloseButton className={styles.closeBtn} onClick={handleClose} />
         </div>
 
         <div className={styles.itemList} ref={listRef}>
