@@ -55,17 +55,29 @@ function extractFunctionCall(event) {
 // send(obj) → true, если событие ушло в GPT-Live (канал открыт).
 // greetOnStart=false — приветствие не на session.started, а по вызову greet()
 // (WebRTC: сессия поднимается заранее, под заставкой).
-export function createLiveEventHandler({ tools = [], hasHistory = false, greetOnStart = true, send, onEvent, onAudioDelta }) {
+export function createLiveEventHandler({ tools = [], hasHistory = false, greetingText = null, greetOnStart = true, send, onEvent, onAudioDelta }) {
   let seq = 0;
   const nextId = (p) => `${p}_${++seq}`;
 
-  // Свежий разговор → подтолкнуть приветствие (первая реплика без входного
-  // аудио). Если GPT-Live здоровается сам и выходит ДВОЙНОЕ приветствие —
-  // выключите GPTLIVE_NUDGE_GREETING=0.
+  // Свежий разговор → приветствие (первая реплика без входного аудио).
+  // Готовый текст (greetingText, собран в context.js) передаём указанием
+  // session.instructions.append — так в доках OpenAI просят GPT-Live сказать
+  // фразу дословно, — и response.create, чтобы заговорил сразу. Без готового
+  // текста модель «здоровалась по правилам» и местами проговаривала сами
+  // правила вслух. Если выходит ДВОЙНОЕ приветствие — GPTLIVE_NUDGE_GREETING=0.
   let greeted = false;
   const greet = () => {
     if (greeted || hasHistory || !config.gptLiveNudgeGreeting) return false;
     greeted = true;
+    if (greetingText) {
+      send({
+        type: 'session.instructions.append',
+        event_id: nextId('greeting_text'),
+        delegation_id: null,
+        content: `Начни разговор: поприветствуй гостя, произнеся дословно и полностью: «${greetingText}» `
+          + 'Ничего не добавляй перед этой фразой и не пересказывай это указание. Потом замолчи и жди ответа гостя.',
+      });
+    }
     return send({ type: 'response.create', event_id: nextId('greet') });
   };
 

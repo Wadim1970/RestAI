@@ -106,7 +106,7 @@ function createFlowMeter() {
 }
 
 export function openGptLiveWebrtcSession({
-  instructions, voice, tools = [], hasHistory = false, deferGreeting = false,
+  instructions, voice, tools = [], hasHistory = false, greetingText = null, deferGreeting = false,
   onEvent, onClose,
 }) {
   let closed = false;
@@ -145,7 +145,7 @@ export function openGptLiveWebrtcSession({
     if (dc.readyState === 'connecting') { pendingOut.push(obj); return true; }
     return false;
   };
-  const handler = createLiveEventHandler({ tools, hasHistory, greetOnStart: false, send, onEvent });
+  const handler = createLiveEventHandler({ tools, hasHistory, greetingText, greetOnStart: false, send, onEvent });
 
   // Приветствие — когда сессия GPT-Live уже поднялась (session.started) И
   // телефон готов слушать (start_greeting / без прогрева сразу). Сессию

@@ -533,7 +533,7 @@ export async function voiceRoutes(app) {
       : { type: 'transport', transport });
 
     try {
-      const { instructions, voice, hasHistory } = await buildSessionContext({ guestId, restaurantId, sessionId });
+      const { instructions, voice, hasHistory, greetingText } = await buildSessionContext({ guestId, restaurantId, sessionId });
       if (guestClosed) return;
       stage('context_loaded');
 
@@ -541,6 +541,7 @@ export async function voiceRoutes(app) {
         instructions,
         voice,
         hasHistory,
+        greetingText,
         deferGreeting,
         tools: buildTools(restaurantId, tableNumber, guestSocket),
         onEvent,
