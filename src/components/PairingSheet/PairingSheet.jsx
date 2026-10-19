@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from './PairingSheet.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
+import { dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 
 // Подсказка шефа после добавления блюда: «К пицце Пепперони отлично подходит
 // салат с бурратой». Выезжает снизу поверх нижнего бара только на время
@@ -30,7 +31,7 @@ function Sheet({ offer, dish, onAccept, onDecline }) {
   }, [onDecline]);
 
   const weight = formatWeight(dish);
-  const img = dish.image_url_thumbnail || dish.image_url;
+  const img = dishThumb(dish);
 
   return (
     <div className={styles.root}>
@@ -53,11 +54,7 @@ function Sheet({ offer, dish, onAccept, onDecline }) {
               <img
                 src={img}
                 alt={dish.dish_name}
-                onError={(e) => {
-                  // Миниатюры нет — пробуем полное фото, потом прячем.
-                  if (dish.image_url && e.currentTarget.src !== dish.image_url) e.currentTarget.src = dish.image_url;
-                  else e.currentTarget.style.visibility = 'hidden';
-                }}
+                onError={fallbackToPhoto(dish)}
               />
             )}
           </div>
