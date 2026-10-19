@@ -13,7 +13,7 @@ process.env.VOICE_PROVIDER ||= 'gptlive';
 
 mock.module(new URL('../src/context.js', import.meta.url).href, {
   namedExports: {
-    buildSessionContext: async () => ({ instructions: 'Ты Марко, тестовый официант.', voice: 'marin', hasHistory: false }),
+    buildSessionContext: async () => ({ instructions: 'Ты Марко, тестовый официант.', voice: 'marin', hasHistory: false, greetingText: 'Привет! Я Марко, ваш персональный ассистент по ресторану Тест.' }),
     lookupDishDetails: async () => ({}),
     callWaiter: async () => ({ success: true }),
     findDishesForDisplay: async () => [],

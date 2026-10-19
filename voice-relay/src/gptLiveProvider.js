@@ -25,7 +25,7 @@ import { createLiveEventHandler, liveSessionConfig } from './gptLiveEvents.js';
 const LIVE_URL = 'wss://api.openai.com/v1/live/sessions';
 
 export function openGptLiveSession({
-  instructions, voice, tools = [], hasHistory = false, deferGreeting = false,
+  instructions, voice, tools = [], hasHistory = false, greetingText = null, deferGreeting = false,
   onAudioDelta, onEvent, onClose,
 }) {
   const ws = new WebSocket(LIVE_URL, { headers: { Authorization: `Bearer ${config.openaiApiKey}` } });
@@ -35,7 +35,7 @@ export function openGptLiveSession({
     ws.send(JSON.stringify(obj));
     return true;
   };
-  const handler = createLiveEventHandler({ tools, hasHistory, send, onEvent, onAudioDelta });
+  const handler = createLiveEventHandler({ tools, hasHistory, greetingText, send, onEvent, onAudioDelta });
 
   let opened = false;
   let started = false;

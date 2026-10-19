@@ -14,6 +14,7 @@ test('звук гостя доходит до GPT-Live и возвращаетс
   const events = [];
   const bridge = openGptLiveWebrtcSession({
     instructions: 'тест', voice: 'marin', tools: [], hasHistory: false, deferGreeting: true,
+    greetingText: 'Привет! Я Марко.',
     onEvent: (e) => events.push(e),
   });
 
@@ -52,6 +53,9 @@ test('звук гостя доходит до GPT-Live и возвращаетс
   assert.equal(sessions[0].session.audio.format, undefined);
   // На session.started — подталкивание приветствия по каналу.
   assert.ok(sessions[0].events.some((e) => e.type === 'response.create'), 'приветствие подтолкнули');
+  const greeting = sessions[0].events.find((e) => e.type === 'session.instructions.append');
+  assert.ok(greeting?.content.includes('«Привет! Я Марко.»'), 'готовый текст приветствия передан');
+  assert.equal(greeting.delegation_id, null);
 
   bridge.close();
   await guest.close();
