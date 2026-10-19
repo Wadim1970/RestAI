@@ -5,6 +5,7 @@ import 'swiper/css/effect-cube';
 import 'swiper/css/autoplay';
 import styles from './VoiceDishSlider.module.css';
 import CloseButton from '../CloseButton/CloseButton';
+import { dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 
 function dishWeightLabel(dish) {
   const value = dish.nutritional_info?.weight_value;
@@ -41,17 +42,9 @@ export default function VoiceDishSlider({ dishes, onDishTap, onClose }) {
         {dishes.map((dish) => (
           <SwiperSlide key={dish.id} onClick={() => onDishTap(dish)}>
             <img
-              src={dish.image_url_thumbnail || dish.image_url}
+              src={dishThumb(dish)}
               alt={dish.dish_name}
-              onError={(e) => {
-                // Тот же приём, что уже есть в DishModal — thumbnail лежит
-                // на облачном Supabase-проекте, который сейчас не отвечает,
-                // источник (image_url) — на отдельном хостинге ресторана и
-                // не затронут. Меняем src только один раз, не по кругу.
-                if (e.target.src.includes(dish.image_url_thumbnail) && dish.image_url) {
-                  e.target.src = dish.image_url;
-                }
-              }}
+              onError={fallbackToPhoto(dish)}
             />
             <div className={styles.infoBar}>
               <div className={styles.infoLeft}>

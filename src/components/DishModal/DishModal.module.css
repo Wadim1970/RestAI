@@ -341,7 +341,8 @@
     width: 56px;
     height: 56px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.9);
+    /* Пока фото грузится (или его нет) — тёмная плашка, не белое окно. */
+    background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
 }
 

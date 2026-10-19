@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styles from './DishModal.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import CloseButton from '../CloseButton/CloseButton';
+import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -124,8 +125,8 @@ export default function DishModal({
   const bigFailed = imgNow.failed;
   const isDrink = dish && (dish.product_type === 'drink' || dish.product_type === 'alcohol');
   const isAlcohol = dish?.product_type === 'alcohol';
-  const big = dish?.image_url || dish?.image_url_thumbnail;
-  const thumb = dish?.image_url_thumbnail || dish?.image_url;
+  const big = dishPhoto(dish);
+  const thumb = dishThumb(dish);
   // Еда — всегда на весь экран. Напиток — крупно на поле цвета самой
   // картинки (бутылка без фона на чёрном выглядела бы потерянной).
   const fieldMode = isDrink;
@@ -349,8 +350,8 @@ export default function DishModal({
                   <h3 className={styles.dh}>Шеф советует к этому</h3>
                   <div className={styles.pair}>
                     <div className={styles.pairImg}>
-                      {(pairDish.image_url_thumbnail || pairDish.image_url) && (
-                        <img src={pairDish.image_url_thumbnail || pairDish.image_url} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                      {dishThumb(pairDish) && (
+                        <img src={dishThumb(pairDish)} alt="" onError={fallbackToPhoto(pairDish)} />
                       )}
                     </div>
                     <div className={styles.pairText}>
