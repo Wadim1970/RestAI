@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../supabaseClient';
+import { getOrCreateDeviceId } from '../../lib/deviceId';
 
 // dish_id (сырой UUID) и last_computed_at — не несут смысла для модели,
 // только тратят токены на каждом сообщении чата. Оставляем их в самой
@@ -63,11 +64,22 @@ export const useChatApi = (webhookUrl) => {
         let restaurantHistory = null;
         if (guestId) {
             try {
-                const { data } = await supabase
-                    .from('guests')
-                    .select('preferences, visit_count, avg_check')
-                    .eq('id', guestId)
-                    .single();
+                // Только своё: по номеру устройства, без имени и телефона
+                // (таблица guests закрыта от публичного ключа). До миграции
+                // 20261020020000 функции ещё нет — тогда читаем по-старому.
+                let data = null;
+                const ctx = await supabase.rpc('get_guest_ai_context', {
+                    p_device_id: getOrCreateDeviceId(),
+                });
+                if (!ctx.error) {
+                    data = ctx.data?.[0] || null;
+                } else {
+                    ({ data } = await supabase
+                        .from('guests')
+                        .select('preferences, visit_count, avg_check')
+                        .eq('id', guestId)
+                        .single());
+                }
 
                 const prefs = data?.preferences || {};
                 guestPreferences = {

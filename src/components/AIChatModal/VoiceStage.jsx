@@ -3,6 +3,7 @@ import VoiceDishSlider from '../VoiceDishSlider/VoiceDishSlider';
 import SmokeGlass from './SmokeGlass/SmokeGlass';
 import AudioBars from './AudioBars/AudioBars';
 import { roleFromDishes, roleFromText, ROLE_COLORS } from '../../lib/assistantRole';
+import { getOrCreateDeviceId } from '../../lib/deviceId';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
@@ -668,6 +669,9 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       // новая сессия здоровается сразу, без ожидания start_greeting.
       const params = new URLSearchParams({
         guestId: guestId ?? '',
+        // По номеру устройства relay берёт предпочтения гостя для ИИ
+        // (get_guest_ai_context): таблица гостей закрыта от публичного ключа.
+        deviceId: getOrCreateDeviceId(),
         restaurantId: restaurantId ?? '',
         tableNumber: tableNumber ?? '',
         sessionId: sessionId ?? '',

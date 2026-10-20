@@ -18,18 +18,28 @@ function stripForAI(topDishes) {
   return (topDishes || []).map(({ name, times }) => ({ name, times }));
 }
 
-// Тот же анонимный ключ и те же запросы, что уже делает текстовый чат
-// с клиента (useChatApi.js) — guests.preferences и guest_restaurant_stats
-// открыты на SELECT анониму именно для этого сценария, отдельный
-// сервис-ключ Supabase здесь не нужен.
-async function loadGuestContext(guestId, restaurantId) {
+// Тот же анонимный ключ и те же запросы, что делает текстовый чат с клиента
+// (useChatApi.js). Предпочтения гостя — через get_guest_ai_context по номеру
+// устройства (таблица guests закрыта от публичного ключа миграцией
+// 20261020020000); старое приложение без deviceId и база до миграции —
+// прежним прямым чтением. guest_restaurant_stats открыта на SELECT анониму.
+async function loadGuestContext(guestId, restaurantId, deviceId) {
+  let guestRow = null;
+  if (deviceId) {
+    const { data, error } = await getSupabase().rpc('get_guest_ai_context', { p_device_id: deviceId });
+    if (!error) {
+      guestRow = data?.[0] || null;
+      if (!guestId && guestRow?.guest_id) guestId = guestRow.guest_id;
+    }
+  }
   if (!guestId) return { preferences: null, restaurantHistory: null };
-
-  const { data: guestRow } = await getSupabase()
-    .from('guests')
-    .select('preferences, visit_count, avg_check')
-    .eq('id', guestId)
-    .single();
+  if (!guestRow) {
+    ({ data: guestRow } = await getSupabase()
+      .from('guests')
+      .select('preferences, visit_count, avg_check')
+      .eq('id', guestId)
+      .single());
+  }
 
   const prefs = guestRow?.preferences || {};
   const preferences = {
@@ -631,13 +641,13 @@ const SYSTEM_PROMPT = `Ты — голосовой ассистент ресто
 - Если система прислала готовый текст приветствия — произнеси именно его,
   дословно, без вступлений.`;
 
-export async function buildSessionContext({ guestId, restaurantId, sessionId }) {
+export async function buildSessionContext({ guestId, restaurantId, sessionId, deviceId }) {
   // Ресторан грузим первым — из него нужна локация для погоды, чтобы запрос
   // температуры пошёл параллельно с остальными загрузками.
   const restaurant = await loadRestaurant(restaurantId);
 
   const [{ preferences, restaurantHistory }, menu, aiProfile, history, temperature] = await Promise.all([
-    loadGuestContext(guestId, restaurantId),
+    loadGuestContext(guestId, restaurantId, deviceId),
     loadMenuSummary(restaurantId),
     loadAiProfile(restaurantId),
     loadConversationHistory(sessionId),
