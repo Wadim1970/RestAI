@@ -4,6 +4,7 @@ import MainScreen from './components/MainScreen';
 import HomeGate from './components/HomeGate.jsx';
 import MenuPage from './components/MenuPage'; 
 import { getOrCreateDeviceId } from './lib/deviceId';
+import { resolveGuestId } from './lib/guestIdentity';
 import { roleFromContext, roleFromText } from './lib/assistantRole';
 import AIChatModal from './components/AIChatModal/AIChatModal';
 import DishModal from './components/DishModal/DishModal';
@@ -160,10 +161,16 @@ useEffect(() => {
         if (guest) {
           setGuestId(guest.id)
           console.log(`Гость №${guest.id}, визит: ${guest.visit_count}`)
+          return
         }
       } catch (err) {
         console.error("Системная ошибка при инициализации гостя:", err);
       }
+      // Регистрация визита не удалась (сбой функции в базе, связь) — номер
+      // гостя всё равно нужен викторине и голосовому помощнику: узнаём его
+      // по связке устройство → гость.
+      const fallbackId = await resolveGuestId();
+      if (fallbackId) setGuestId(fallbackId);
     };
 
     initializeGuest();
@@ -1374,6 +1381,7 @@ const handlePayFlowPaid = async () => {
           isOpen={quizTrigger !== null}
           trigger={quizTrigger}
           guestId={guestId}
+          onGuestResolved={setGuestId}
           onDone={handleQuizDone}
           onCorrectAnswer={handleQuizCorrectAnswer}
         />

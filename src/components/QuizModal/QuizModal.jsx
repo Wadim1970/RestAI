@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
+import { resolveGuestId } from '../../lib/guestIdentity';
 import styles from './QuizModal.module.css';
 
 const CONTEXT_TEXT = {
@@ -19,13 +20,19 @@ const CONTEXT_TEXT = {
 // отсчёт здесь — только подсказка в интерфейсе: реальная проверка
 // времени всегда на сервере (issued_at против now() в
 // check_quiz_answer), подделать локальный таймер бессмысленно.
-export default function QuizModal({ isOpen, trigger, guestId, onDone, onCorrectAnswer }) {
+export default function QuizModal({ isOpen, trigger, guestId, onGuestResolved, onDone, onCorrectAnswer }) {
   const [status, setStatus] = useState('loading'); // 'loading' | 'question' | 'wrong' | 'timeout' | 'empty'
   const [question, setQuestion] = useState(null);
   const [correctText, setCorrectText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
   const answeredRef = useRef(false);
+  // Номер гостя, с которым выдан вопрос (тот же нужен для проверки ответа).
+  const quizGuestRef = useRef(null);
+  // Свежий guestId без перезапуска выдачи: если номер узнали здесь же
+  // (onGuestResolved → App), повторно запрашивать вопрос не нужно.
+  const guestIdRef = useRef(guestId);
+  guestIdRef.current = guestId;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -35,8 +42,22 @@ export default function QuizModal({ isOpen, trigger, guestId, onDone, onCorrectA
     setTimeLeft(null);
 
     (async () => {
+      // Номер гостя мог не загрузиться при старте — узнаём его сами, а не
+      // пропускаем викторину: новому гостю она особенно важна (первый вопрос
+      // простой — «100 баллов собрать легко»).
+      let id = guestIdRef.current;
+      if (!id) {
+        id = await resolveGuestId();
+        if (cancelled) return;
+        if (id) onGuestResolved?.(id);
+      }
+      quizGuestRef.current = id;
+      if (!id) {
+        setStatus('empty');
+        return;
+      }
       const { data, error } = await supabase.rpc('get_random_quiz_question', {
-        p_guest_id: guestId,
+        p_guest_id: id,
       });
       if (cancelled) return;
       const row = data?.[0];
@@ -51,7 +72,8 @@ export default function QuizModal({ isOpen, trigger, guestId, onDone, onCorrectA
     })();
 
     return () => { cancelled = true; };
-  }, [isOpen, guestId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleAnswer = async (index) => {
     if (submitting || !question || answeredRef.current) return;
@@ -59,7 +81,7 @@ export default function QuizModal({ isOpen, trigger, guestId, onDone, onCorrectA
     setSubmitting(true);
     try {
       const { data, error } = await supabase.rpc('check_quiz_answer', {
-        p_guest_id: guestId,
+        p_guest_id: quizGuestRef.current,
         p_question_id: question.question_id,
         p_selected_index: index,
       });
