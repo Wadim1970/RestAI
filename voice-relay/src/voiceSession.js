@@ -268,7 +268,7 @@ export async function voiceRoutes(app) {
       return;
     }
 
-    const { guestId, restaurantId, tableNumber, sessionId } = req.query;
+    const { guestId, restaurantId, tableNumber, sessionId, deviceId } = req.query;
     // Прогрев голоса под видео-заставкой: сессия конфигурируется сразу, а
     // приветствие ждёт сигнала start_greeting (когда заставка закончилась).
     const deferGreeting = req.query.deferGreeting === '1';
@@ -533,7 +533,7 @@ export async function voiceRoutes(app) {
       : { type: 'transport', transport });
 
     try {
-      const { instructions, voice, hasHistory, greetingText } = await buildSessionContext({ guestId, restaurantId, sessionId });
+      const { instructions, voice, hasHistory, greetingText } = await buildSessionContext({ guestId, restaurantId, sessionId, deviceId });
       if (guestClosed) return;
       stage('context_loaded');
 
