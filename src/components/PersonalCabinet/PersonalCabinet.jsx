@@ -11,6 +11,18 @@ function onlyDigits(raw, maxLen) {
   return raw.replace(/\D/g, '').slice(0, maxLen);
 }
 
+// Телефон без «+7» (поле уже показывает префикс). Гости по привычке
+// начинают с «8» или вставляют номер целиком (8 903…, +7 903…) — тогда
+// выходило «+7 890…», и SMS-шлюз отбрасывал номер как неверный.
+function phoneDigitsFrom(raw) {
+  let d = raw.replace(/\D/g, '');
+  if (d.length === 11 && (d[0] === '7' || d[0] === '8')) d = d.slice(1);
+  else if (d[0] === '8') d = d.slice(1);
+  return d.slice(0, 10);
+}
+// Мобильный: Россия +7 9…, Казахстан +7 7…
+const isMobile = (digits) => /^[79]\d{9}$/.test(digits);
+
 // Личный кабинет гостя — свайп влево открывает (тот же паттерн, что в
 // Waiter-app для меню ресторана: постоянный флажок на краю экрана +
 // свайп). Имя/телефон — обязательные поля программы баллов. Смена
@@ -96,7 +108,7 @@ export default function PersonalCabinet({
     return () => { cancelled = true; };
   }, [isOpen, deviceId]);
 
-  const phone = phoneDigits.length === 10 ? `+7${phoneDigits}` : '';
+  const phone = isMobile(phoneDigits) ? `+7${phoneDigits}` : '';
   const phoneChanged = !!profile && phone !== (profile.phone || '');
   const isDirty = !!profile && (
     name !== (profile.name || '') ||
@@ -105,7 +117,7 @@ export default function PersonalCabinet({
     birthdayMonth !== (profile.birthday_month ? String(profile.birthday_month) : '') ||
     dislikes !== (profile.dislikes || '')
   );
-  const canSave = name.trim() !== '' && phoneDigits.length === 10 && isDirty && !saving;
+  const canSave = name.trim() !== '' && isMobile(phoneDigits) && isDirty && !saving;
 
   const handleClose = () => {
     setSmsStep('idle');
@@ -272,11 +284,14 @@ export default function PersonalCabinet({
                   <input
                     className={styles.phoneInput}
                     value={phoneDigits}
-                    onChange={(e) => setPhoneDigits(onlyDigits(e.target.value, 10))}
+                    onChange={(e) => setPhoneDigits(phoneDigitsFrom(e.target.value))}
                     placeholder="9XX XXX XX XX"
                     inputMode="numeric"
                   />
                 </div>
+                {phoneDigits.length === 10 && !isMobile(phoneDigits) && (
+                  <p className={styles.fieldHint}>Нужен мобильный номер: +7 9XX XXX XX XX</p>
+                )}
 
                 <label className={styles.fieldLabel}>Дата рождения (без года)</label>
                 <div className={styles.birthdayRow}>
