@@ -4,6 +4,7 @@ import { useSwipeLeftOpen } from '../../hooks/useSwipeLeftOpen';
 import { useSwipeRightClose } from '../../hooks/useSwipeRightClose';
 import styles from './PersonalCabinet.module.css';
 import CloseButton from '../CloseButton/CloseButton';
+import { resolveGuestId } from '../../lib/guestIdentity';
 
 const WAITER_API_URL = import.meta.env.VITE_WAITER_API_URL;
 
@@ -61,17 +62,25 @@ export default function PersonalCabinet({
       // и прямой .from('guests').select(...) здесь упирался в RLS (весь
       // остальной доступ к guests в проекте идёт через RPC), из-за чего
       // profile молча оставался null, а кнопка сохранения — неактивной.
-      const { data, error } = await supabase.rpc('get_guest_profile', {
-        p_device_id: deviceId,
-      });
+      const loadProfile = () => supabase.rpc('get_guest_profile', { p_device_id: deviceId });
+      let { data, error } = await loadProfile();
+      // Гостя за этим устройством ещё нет (стартовая регистрация визита не
+      // прошла) — регистрируем сейчас: без записи гостя profile оставался
+      // null, кнопка — серой при любом вводе, а SMS-регистрация всё равно
+      // отказала бы на сервере.
+      if (!error && !data?.[0]) {
+        await resolveGuestId();
+        ({ data, error } = await loadProfile());
+      }
       if (cancelled) return;
       if (error) {
         console.error('Не удалось загрузить профиль гостя:', error);
         setError('Не удалось загрузить профиль, попробуйте закрыть и открыть кабинет снова');
         return;
       }
-      const row = data?.[0];
-      if (!row) return;
+      // Записи нет и теперь — считаем профиль пустым: форма живая, а
+      // понятную ошибку при отправке вернёт сервер.
+      const row = data?.[0] ?? { name: null, phone: null, points: 0 };
       setProfile(row);
       setName(row.name || '');
       setPhoneDigits((row.phone || '').replace(/\D/g, '').slice(-10));
@@ -328,7 +337,7 @@ export default function PersonalCabinet({
                   onClick={handleSave}
                   disabled={!canSave}
                 >
-                  {saving ? '...' : (isDirty ? 'Обновить' : 'Ок')}
+                  {saving ? '...' : (!profile?.phone || phoneChanged ? 'Получить код' : (isDirty ? 'Обновить' : 'Ок'))}
                 </button>
               </div>
             )}
