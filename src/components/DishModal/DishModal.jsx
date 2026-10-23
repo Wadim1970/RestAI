@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styles from './DishModal.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import CloseButton from '../CloseButton/CloseButton';
-import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
+import { dishPhoto, dishThumb, dishVideo, fallbackToPhoto } from '../../lib/dishImage';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -105,6 +105,7 @@ export default function DishModal({
   const [expandedId, setExpandedId] = useState(null);
   const [closing, setClosing] = useState(false);
   const [img, setImg] = useState({ id: null, loaded: false, failed: false });
+  const [vid, setVid] = useState({ id: null, playing: false, failed: false });
   const [slide, setSlide] = useState(0); // −1/1 — направление листания, для анимации
   const rootRef = useRef(null);
   const sheetRef = useRef(null);
@@ -127,6 +128,14 @@ export default function DishModal({
   const isAlcohol = dish?.product_type === 'alcohol';
   const big = dishPhoto(dish);
   const thumb = dishThumb(dish);
+  // Видео вместо фото — только у еды и только если гость не просил поменьше
+  // движения и не включил экономию трафика. Фото остаётся подложкой: пока
+  // ролик грузится или если он не загрузился, видно его.
+  const videoSrc = dishVideo(dish);
+  const vidNow = vid.id === dishId ? vid : { playing: false, failed: false };
+  const calmMotion = typeof window !== 'undefined'
+    && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData === true);
+  const showVideo = !!videoSrc && !isDrink && !calmMotion && !vidNow.failed;
   // Еда — всегда на весь экран. Напиток — крупно на поле цвета самой
   // картинки (бутылка без фона на чёрном выглядела бы потерянной).
   const fieldMode = isDrink;
@@ -266,6 +275,23 @@ export default function DishModal({
                 if (!bigFailed && thumb && thumb !== big) setImg({ id: dishId, loaded: false, failed: true });
                 else e.currentTarget.style.visibility = 'hidden';
               }}
+            />
+          )}
+          {showVideo && (
+            <video
+              key={videoSrc}
+              className={`${styles.video} ${vidNow.playing ? styles.loaded : ''}`}
+              src={videoSrc}
+              poster={big || undefined}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              aria-hidden="true"
+              onPlaying={() => setVid({ id: dishId, playing: true, failed: false })}
+              onError={() => setVid({ id: dishId, playing: false, failed: true })}
             />
           )}
         </div>

@@ -19,6 +19,14 @@ export function dishPhoto(dish) {
   return dish?.image_url || dishThumb(dish);
 }
 
+// Короткое видео блюда (menu_items.video_url) — вместо фото в карточке.
+// Нет ссылки — null, карточка показывает фото. Только http(s) и путь от корня
+// сайта: чужие схемы (javascript:, data:) в src не пускаем.
+export function dishVideo(dish) {
+  const url = typeof dish?.video_url === 'string' ? dish.video_url.trim() : '';
+  return /^(https?:\/\/|\/(?!\/))/i.test(url) ? url : null;
+}
+
 // onError для <img>: миниатюра не загрузилась — один раз пробуем само фото,
 // не вышло и оно — прячем картинку (остаётся тёмная плашка).
 export function fallbackToPhoto(dish) {

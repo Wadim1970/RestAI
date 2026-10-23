@@ -20,10 +20,11 @@ export default async function handler(req, res) {
   // ходила отдельным запросом напрямую в Supabase из браузера — такой
   // прямой запрос падал по таймауту/CORS в сетях, где хост Supabase
   // недоступен, хотя /api (этот same-origin роут) работает.
-  const query = (hideHidden) => {
+  const COLUMNS = 'id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min, description, ingredients, product_type, specific_details'
+  const query = (hideHidden, withVideo) => {
     let q = supabase
       .from('menu_items')
-      .select('id, dish_name, menu_section, section_order, cost_rub, image_url, image_url_thumbnail, nutritional_info, weight_g, cook_time_min, description, ingredients, product_type, specific_details')
+      .select(withVideo ? `${COLUMNS}, video_url` : COLUMNS)
       .eq('restaurant_id', restaurantId)
     // is_hidden — «скрыто от гостя» (Лавка, комбо и т.п.): официант их видит,
     // гость — нет.
@@ -33,10 +34,11 @@ export default async function handler(req, res) {
       .order('dish_name', { ascending: true })
   }
 
-  let { data, error } = await query(true)
-  // Миграция с is_hidden ещё не применена (нет колонки) — меню без скрытия,
-  // но работает.
-  if (error && error.code === '42703') ({ data, error } = await query(false))
+  // Миграции (is_hidden, video_url) могут быть применены не все сразу: нет
+  // колонки (42703) — пробуем без неё, меню остаётся рабочим.
+  let { data, error } = await query(true, true)
+  if (error && error.code === '42703') ({ data, error } = await query(true, false))
+  if (error && error.code === '42703') ({ data, error } = await query(false, false))
 
   if (error) {
     // Раньше отдавали только общий текст и глотали настоящую причину —
