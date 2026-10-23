@@ -13,7 +13,47 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import dns from 'node:dns'
 import { pathToFileURL } from 'node:url'
+
+// Кэш DNS для исходящих запросов (Supabase, DeepSeek, …). DNS хостера
+// время от времени не отвечает, и каждый поиск адреса ждёт 5 с таймаута —
+// а соединения к базе после паузы открываются заново, поэтому страница
+// админки после простоя грузилась 5–20 с. Теперь адрес берётся из памяти;
+// раз в 5 минут обновляется в фоне, не задерживая запрос; при сбое DNS
+// остаётся последний известный. fetch в Node ищет адреса через dns.lookup.
+const DNS_FRESH_MS = 5 * 60_000
+const DNS_KEEP_MS = 24 * 3600_000
+const dnsCache = new Map()
+const systemLookup = dns.lookup.bind(dns)
+function answer(entry, options, callback) {
+  if (options.all) callback(null, entry.addresses)
+  else callback(null, entry.addresses[0].address, entry.addresses[0].family)
+}
+dns.lookup = function cachedLookup(hostname, options, callback) {
+  if (typeof options === 'function') { callback = options; options = {} }
+  if (typeof options === 'number') options = { family: options }
+  options = options || {}
+  const key = `${hostname}|${options.family || 0}`
+  const hit = dnsCache.get(key)
+  const age = hit ? Date.now() - hit.at : Infinity
+  const refresh = (cb) => systemLookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (!err && addresses?.length) dnsCache.set(key, { at: Date.now(), addresses })
+    cb?.(err, addresses)
+  })
+  if (hit && age < DNS_KEEP_MS) {
+    if (age > DNS_FRESH_MS && !hit.refreshing) {
+      hit.refreshing = true
+      refresh(() => { hit.refreshing = false })
+    }
+    process.nextTick(answer, hit, options, callback)
+    return
+  }
+  refresh((err, addresses) => {
+    if (err || !addresses?.length) return callback(err || new Error(`DNS: нет адреса для ${hostname}`))
+    answer({ addresses }, options, callback)
+  })
+}
 
 function arg(name, def) {
   const i = process.argv.indexOf(`--${name}`)
