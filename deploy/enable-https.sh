@@ -4,6 +4,7 @@
 #
 #   WAITER_DOMAIN=... EMAIL=you@mail.ru bash enable-https.sh   # приложения гостя и официанта
 #   EMAIL=you@mail.ru bash enable-https.sh site                # сайт restai.pro и www
+#   EMAIL=you@mail.ru bash enable-https.sh admin               # панель admin.restai.pro
 #
 # Сертификаты раздельные: приложения и сайт переезжают в разное время, и
 # недошедший DNS одного не должен ломать выпуск другого.
@@ -16,7 +17,11 @@ if ! command -v certbot >/dev/null; then
   sudo ln -sf /snap/bin/certbot /usr/bin/certbot
 fi
 
-if [ "${1:-apps}" = "site" ]; then
+if [ "${1:-apps}" = "admin" ]; then
+  ADMIN_DOMAIN="${ADMIN_DOMAIN:-admin.restai.pro}"
+  sudo certbot --nginx --non-interactive --agree-tos -m "$EMAIL" --redirect \
+    --cert-name restai-admin -d "$ADMIN_DOMAIN"
+elif [ "${1:-apps}" = "site" ]; then
   SITE_DOMAIN="${SITE_DOMAIN:-restai.pro}"
   sudo certbot --nginx --non-interactive --agree-tos -m "$EMAIL" --redirect \
     --cert-name restai-site -d "$SITE_DOMAIN" -d "www.$SITE_DOMAIN"

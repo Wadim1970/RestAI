@@ -165,6 +165,22 @@ pm2 reload restai-waiter-api --update-env
 `DEMO_CODE` (по умолчанию `1111`), `DEMO_TABLES` (`1-9`),
 `DEMO_RESTAURANT_ID` («Сыроварня»), `DEMO_WAITER_NAME`.
 
+## Панель администратора ресторана (admin.restai.pro, вместо Vercel)
+
+1. DNS: A-запись `admin.restai.pro` → IP этого сервера.
+2. Установка (код с GitHub, сборка, nginx; `/api/` панели идёт в сервер официанта на порту 3002):
+   ```bash
+   cd /opt/restai/RestAI && git pull
+   bash /opt/restai/RestAI/deploy/setup-admin.sh
+   ```
+3. Когда DNS дошёл (`getent hosts admin.restai.pro` показывает IP сервера) — HTTPS:
+   ```bash
+   EMAIL=<почта> bash /opt/restai/RestAI/deploy/enable-https.sh admin
+   ```
+4. Обновлять — `bash /opt/restai/RestAI/deploy/update.sh admin` (и в составе `update.sh` без параметров).
+
+Копию на Vercel (admin-restai.vercel.app) после переезда можно удалить: Vercel → проект → Settings → Delete.
+
 ## Обновление (замена «git push → Vercel задеплоил»)
 
 ```bash
