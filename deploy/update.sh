@@ -4,6 +4,7 @@
 #   bash /opt/restai/RestAI/deploy/update.sh guest      # только гостевое
 #   bash /opt/restai/RestAI/deploy/update.sh waiter     # только официанта
 #   bash /opt/restai/RestAI/deploy/update.sh site       # только сайт restai.pro
+#   bash /opt/restai/RestAI/deploy/update.sh admin      # только панель администратора
 #
 # Сайт обновляется и сам: cron раз в 5 минут (deploy/setup-site.sh).
 set -euo pipefail
@@ -21,6 +22,14 @@ deploy() {  # $1=папка $2=ветка $3=pm2-процесс
 
 [ "$what" = all ] || [ "$what" = guest ]  && deploy "$ROOT/RestAI"     main          restai-guest-api
 [ "$what" = all ] || [ "$what" = waiter ] && deploy "$ROOT/Waiter-app" RestAI-weiter restai-waiter-api
+if { [ "$what" = all ] && [ -d "$ROOT/Admin-restai/.git" ]; } || [ "$what" = admin ]; then
+  # Панель — только статика: собрать и всё (nginx отдаёт dist/ сразу).
+  echo "==> $ROOT/Admin-restai (main)"
+  git -C "$ROOT/Admin-restai" fetch -q origin
+  git -C "$ROOT/Admin-restai" checkout -q main
+  git -C "$ROOT/Admin-restai" pull -q --ff-only
+  (cd "$ROOT/Admin-restai" && npm ci --no-audit --no-fund --loglevel=error && npm run build)
+fi
 if [ "$what" = all ] || [ "$what" = site ]; then
   [ -d "$ROOT/site-src/.git" ] && bash "$ROOT/site-src/deploy/site-sync.sh" --pull
 fi
