@@ -622,22 +622,18 @@ const handleRequestBill = async () => {
     // 🔥 ПОЛУЧАЕМ СУММУ ВСЕХ НЕОПЛАЧЕННЫХ ЗАКАЗОВ ЗА СТОЛОМ
     if (restaurantId && tableNumber) {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('total_amount')
-          .eq('restaurant_id', restaurantId)
-          .eq('table_number', tableNumber)
-          .in('status', ['new', 'cooking'])
-          // Защитный пояс: в норме на стол одновременно 1-2 неоплаченных
-          // заказа, но запрос сам по себе от этого не застрахован (если
-          // статус когда-то "зависнет" из-за бага — не даём накопиться
-          // без границы).
-          .limit(20);
-        
+        // Таблица orders закрыта от публичного ключа — сумму отдаёт функция
+        // (последние 20 неоплаченных заказов стола: защитный пояс на случай
+        // «зависшего» статуса).
+        const { data, error } = await supabase.rpc('get_table_unpaid_total', {
+          p_restaurant_id: restaurantId,
+          p_table_number: String(tableNumber),
+        });
+
         if (error) {
           console.error('Ошибка получения суммы стола:', error);
-        } else if (data) {
-          const tableTotal = data.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        } else if (data != null) {
+          const tableTotal = Number(data) || 0;
           console.log('💰 Общий счет за стол:', tableTotal);
           
           // Сохраняем в state для использования в модалке

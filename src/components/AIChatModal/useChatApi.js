@@ -20,12 +20,11 @@ const GREETING_MARKER = 'ПРИВЕТСТВИЕ';
 // выборка по индексу session_id), форматируем для промпта DeepSeek.
 async function loadHistoryText(sessionId) {
     if (!sessionId) return '';
-    const { data, error } = await supabase
-        .from('conversation_turns')
-        .select('role, content')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: false })
-        .limit(40);
+    // Таблица conversation_turns закрыта от публичного ключа — читаем функцией.
+    const { data, error } = await supabase.rpc('get_conversation_history', {
+        p_session_id: sessionId,
+        p_limit: 40,
+    });
     if (error || !data || data.length === 0) return '';
     return data
         .reverse()
@@ -97,12 +96,12 @@ export const useChatApi = (webhookUrl) => {
 
             if (restaurantId) {
                 try {
-                    const { data } = await supabase
-                        .from('guest_restaurant_stats')
-                        .select('tags, top_dishes, avg_check, total_orders')
-                        .eq('guest_id', guestId)
-                        .eq('restaurant_id', restaurantId)
-                        .maybeSingle();
+                    // Своя статистика — по номеру устройства (таблица закрыта от публичного ключа).
+                    const { data: rows } = await supabase.rpc('get_guest_restaurant_stats', {
+                        p_device_id: getOrCreateDeviceId(),
+                        p_restaurant_id: restaurantId,
+                    });
+                    const data = rows?.[0] || null;
 
                     if (data) {
                         restaurantHistory = { ...data, top_dishes: stripForAI(data.top_dishes) };
