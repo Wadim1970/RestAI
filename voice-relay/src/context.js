@@ -22,7 +22,8 @@ function stripForAI(topDishes) {
 // (useChatApi.js). Предпочтения гостя — через get_guest_ai_context по номеру
 // устройства (таблица guests закрыта от публичного ключа миграцией
 // 20261020020000); старое приложение без deviceId и база до миграции —
-// прежним прямым чтением. guest_restaurant_stats открыта на SELECT анониму.
+// прежним прямым чтением. guest_restaurant_stats закрыта от анонима —
+// статистика гостя в ресторане читается функцией get_guest_restaurant_stats.
 async function loadGuestContext(guestId, restaurantId, deviceId) {
   let guestRow = null;
   if (deviceId) {
@@ -53,13 +54,13 @@ async function loadGuestContext(guestId, restaurantId, deviceId) {
   };
 
   let restaurantHistory = null;
-  if (restaurantId) {
-    const { data } = await getSupabase()
-      .from('guest_restaurant_stats')
-      .select('tags, top_dishes, avg_check, total_orders')
-      .eq('guest_id', guestId)
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
+  if (restaurantId && deviceId) {
+    // Таблица guest_restaurant_stats закрыта от публичного ключа — читаем функцией по устройству.
+    const { data: rows } = await getSupabase().rpc('get_guest_restaurant_stats', {
+      p_device_id: deviceId,
+      p_restaurant_id: restaurantId,
+    });
+    const data = rows?.[0] || null;
     if (data) restaurantHistory = { ...data, top_dishes: stripForAI(data.top_dishes) };
   }
 
@@ -333,12 +334,11 @@ export async function callWaiter(restaurantId, tableNumber, reason) {
 // защита от разрастания промпта на очень длинном визите; берём последние.
 export async function loadConversationHistory(sessionId, limit = 40) {
   if (!sessionId) return [];
-  const { data, error } = await getSupabase()
-    .from('conversation_turns')
-    .select('role, content, source, created_at')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  // Таблица conversation_turns закрыта от публичного ключа — читаем функцией.
+  const { data, error } = await getSupabase().rpc('get_conversation_history', {
+    p_session_id: sessionId,
+    p_limit: limit,
+  });
   if (error || !data) return [];
   return data.reverse(); // вернули по убыванию ради limit-«последние», отдаём в хронологическом порядке
 }
@@ -391,12 +391,8 @@ async function loadRestaurant(restaurantId) {
 // ресторана (restaurant_ai_profiles), редактируется напрямую в Supabase.
 async function loadAiProfile(restaurantId) {
   if (!restaurantId) return null;
-  const { data } = await getSupabase()
-    .from('restaurant_ai_profiles')
-    .select('character_profile, restaurant_policy, philosophy')
-    .eq('restaurant_id', restaurantId)
-    .maybeSingle();
-  return data;
+  const { data } = await getSupabase().rpc('get_restaurant_ai_profile', { p_restaurant_id: restaurantId });
+  return data?.[0] || null;
 }
 
 // ── Погода: температура в городе ресторана (Open-Meteo, бесплатно, без ключа).
