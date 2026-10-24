@@ -377,12 +377,12 @@ function formatHistoryForPrompt(turns) {
 // перечисления колонок, где отсутствующая колонка = ошибка запроса).
 async function loadRestaurant(restaurantId) {
   if (!restaurantId) return {};
-  // Внимание: PK этой таблицы называется "restaurantId" (camelCase) — в
-  // отличие от snake_case restaurant_id везде в остальной схеме.
+  // PK таблицы restaurants — id (раньше назывался "restaurantId"); в остальных
+  // таблицах ссылка на него — restaurant_id.
   const { data } = await getSupabase()
     .from('restaurants')
     .select('*')
-    .eq('restaurantId', restaurantId)
+    .eq('id', restaurantId)
     .maybeSingle();
   return data || {};
 }
@@ -453,7 +453,7 @@ async function geocode(name) {
 
 async function fetchTemperature(restaurant) {
   if (!restaurant) return null;
-  const key = restaurant.restaurantId ||
+  const key = restaurant.id ||
     `${restaurant.city}|${restaurant.address}|${restaurant.latitude}|${restaurant.longitude}`;
   const cached = weatherCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.temp;
