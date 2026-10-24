@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     .select(
       'name, branding_primary_color, branding_accent_color, branding_background_color, branding_price_bg_color, branding_heading_font, branding_body_font, font_url_header, font_url_body'
     )
-    .eq('restaurantId', restaurantId)
+    .eq('id', restaurantId)
     .single()
 
   if (error) {
