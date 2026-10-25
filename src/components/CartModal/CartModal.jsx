@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './CartModal.module.css';
 import CloseButton from '../CloseButton/CloseButton';
+import CartAdvice from '../CartAdvice/CartAdvice';
 
-const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex, onDishClick }) => {
+// advice — совет к корзине (CartAdvice): что добавить к этому приёму пищи
+// или похвала и вопрос про десерт. Только в корзине меню (MenuPage).
+const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], updateCart, onConfirmOrder, onRequestBill, overlayZIndex, onDishClick, advice = null }) => {
   const [comment, setComment] = useState(''); // Состояние для текста комментария
   const [isClosing, setIsClosing] = useState(false); // Состояние для запуска анимации закрытия
      
@@ -141,6 +144,17 @@ const CartModal = ({ isOpen, onClose, cartItems = [], confirmedOrders = [], upda
         </div>
 
         <div className={styles.itemList} ref={listRef}>
+          {hasNewItems && advice && (
+            <CartAdvice
+              advice={advice.data}
+              dish={advice.dish}
+              dessertAnswer={advice.dessertAnswer}
+              onAccept={advice.onAccept}
+              onDecline={advice.onDecline}
+              onDessert={advice.onDessert}
+            />
+          )}
+
           {hasNewItems && (
             <div className={styles.newItemsSection}>
               {cartItems.map(item => (

@@ -10,10 +10,12 @@ import MenuFooter from './MenuFooter/MenuFooter';
 import DishModal from './DishModal/DishModal';
 import CartModal from './CartModal/CartModal';
 import PairingSheet from './PairingSheet/PairingSheet';
+import DessertSheet from './DessertSheet/DessertSheet';
 import { supabase } from '../supabaseClient';
 import { getOrCreateDeviceId } from '../lib/deviceId';
 import { formatPrice, formatWeight } from '../lib/menuFormat';
 import { pickPairing, rememberShown, rememberAnswer, loadMemory, saveMemory, expandPairingsByName } from '../lib/pairingRules';
+import { loadAdviceMemory, saveAdviceMemory, fetchCartAdvice, sendAdviceEvent, answerDessert, checkDessert } from '../lib/cartAdvice';
 
 // Сервер официанта (Waiter-app): там подбор пар под конкретного гостя.
 const PAIRINGS_API = (import.meta.env.VITE_PAIRINGS_API_URL || 'https://waiter.restai.pro').replace(/\/$/, '');
@@ -22,8 +24,15 @@ const PAIRINGS_API = (import.meta.env.VITE_PAIRINGS_API_URL || 'https://waiter.r
 const PAIRINGS_TEST_MODE = new URLSearchParams(window.location.search).get('pairs') === 'test';
 
 
+// Советов в корзине за один заход к столу — не больше двух: дальше гость
+// решает сам (похвалу и вопрос про десерт это не ограничивает).
+const MAX_ADVICE_ANSWERS = 2;
+const ALL_GAPS = ['sauce', 'side', 'drink', 'soup', 'main', 'starter', 'snack'];
+const dessertFlagKey = (rid) => `restai_dessert_pending_${rid}`;
+
 export default function MenuPage({
     restaurantId,
+    seatNumber = null,
     cart = {}, 
     updateCart, 
     confirmedOrders = [], 
@@ -392,6 +401,124 @@ useEffect(() => {
         updateCartWithPairing(delta, dishId);
     };
 
+    // ── Совет к корзине: что добавить к этому приёму пищи (или похвала и
+    // вопрос про десерт). Считает сервер официанта, без нейросети — быстро.
+    const [advice, setAdvice] = useState(null);
+    const [adviceNonce, setAdviceNonce] = useState(0);
+    const [dessertAnswer, setDessertAnswer] = useState(null);
+    const [dessertOffer, setDessertOffer] = useState(null);
+    const [dessertCheckNonce, setDessertCheckNonce] = useState(0);
+    const adviceMemoryRef = useRef(null);
+    const shownAdviceRef = useRef(null);
+    const adviceMemory = () => (adviceMemoryRef.current ||= loadAdviceMemory(restaurantId));
+    const cartKey = Object.keys(cart).sort().map((id) => `${id}:${cart[id]}`).join(',');
+    const orderedKey = confirmedOrders.length;
+
+    // Новый заказ ушёл на кухню — снова можно посоветовать (следующий курс).
+    useEffect(() => {
+        if (!restaurantId || !orderedKey) return;
+        const m = adviceMemory();
+        if (m.answered) { m.answered = 0; saveAdviceMemory(restaurantId, m); }
+    }, [orderedKey, restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (!isCartOpen || !restaurantId) return undefined;
+        const m = adviceMemory();
+        setDessertAnswer(m.dessertAnswer);
+        const lines = Object.entries(cart).map(([id, quantity]) => ({ id, quantity }));
+        if (!lines.length) { setAdvice(null); return undefined; }
+        let cancelled = false;
+        const t = setTimeout(async () => {
+            const memory = (m.answered || 0) >= MAX_ADVICE_ANSWERS ? { ...m, gaps: ALL_GAPS } : m;
+            const a = await fetchCartAdvice({
+                restaurantId,
+                cart: lines,
+                ordered: confirmedOrders.map((o) => ({ id: o.id, quantity: o.count })),
+                memory,
+                declinedPairs: pairingMemoryRef.current?.declined || [],
+            });
+            if (cancelled) return;
+            const next = a && (a.kind === 'suggest' || a.kind === 'complete') ? a : null;
+            setAdvice(next && next.kind === 'suggest' && !menuById.get(next.dish?.id) ? null : next);
+        }, 250);
+        return () => { cancelled = true; clearTimeout(t); };
+    }, [isCartOpen, cartKey, orderedKey, restaurantId, adviceNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Корзину закрыли, а совет так и висел без ответа — «проигнорирован».
+    useEffect(() => {
+        if (advice?.kind === 'suggest') shownAdviceRef.current = advice;
+        if (!isCartOpen && shownAdviceRef.current) {
+            sendAdviceEvent(restaurantId, shownAdviceRef.current, 'ignored');
+            shownAdviceRef.current = null;
+            setAdvice(null);
+        }
+    }, [isCartOpen, advice, restaurantId]);
+
+    const answerAdvice = (accepted) => {
+        if (advice?.kind !== 'suggest') return;
+        const m = adviceMemory();
+        m.answered = (m.answered || 0) + 1;
+        if (!accepted) {
+            m.dishes = [...m.dishes, advice.dish.id].slice(-50);
+            m.gaps = [...new Set([...m.gaps, advice.gap])];
+        }
+        saveAdviceMemory(restaurantId, m);
+        sendAdviceEvent(restaurantId, advice, accepted ? 'accepted' : 'rejected');
+        shownAdviceRef.current = null;
+        setAdvice(null);
+        if (accepted) updateCart(1, advice.dish.id);
+        else setAdviceNonce((n) => n + 1);
+    };
+
+    const answerDessertAsk = (yes) => {
+        const m = adviceMemory();
+        m.dessertAnswer = yes ? 'yes' : 'no';
+        saveAdviceMemory(restaurantId, m);
+        setDessertAnswer(m.dessertAnswer);
+        answerDessert({
+            restaurantId,
+            tableNumber: localStorage.getItem('table_number'),
+            seat: seatNumber,
+            meal: advice?.meal,
+            yes,
+        });
+        if (yes) {
+            try { localStorage.setItem(dessertFlagKey(restaurantId), String(Date.now())); } catch { /* без памяти */ }
+            setDessertCheckNonce((n) => n + 1);
+        }
+    };
+
+    // ── Десерт «чуть позже»: гость разрешил — проверяем раз в минуту, пока
+    // открыто меню, и при возвращении в приложение.
+    useEffect(() => {
+        if (!restaurantId) return undefined;
+        let flag = null;
+        try { flag = Number(localStorage.getItem(dessertFlagKey(restaurantId))) || null; } catch { /* без памяти */ }
+        if (!flag) return undefined;
+        if (Date.now() - flag > 6 * 3600_000) {
+            try { localStorage.removeItem(dessertFlagKey(restaurantId)); } catch { /* без памяти */ }
+            return undefined;
+        }
+        let stopped = false;
+        const check = async () => {
+            if (stopped || document.visibilityState !== 'visible') return;
+            const r = await checkDessert(restaurantId);
+            if (stopped || !r?.due) return;
+            try { localStorage.removeItem(dessertFlagKey(restaurantId)); } catch { /* без памяти */ }
+            setDessertOffer(r);
+        };
+        const timer = setInterval(check, 60_000);
+        const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+        document.addEventListener('visibilitychange', onVisible);
+        check();
+        return () => { stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+    }, [restaurantId, dessertCheckNonce]);
+
+    const addDessert = (id) => {
+        updateCart(1, id);
+        sendAdviceEvent(restaurantId, { dish: { id }, gap: 'dessert', source: 'rule' }, 'accepted');
+    };
+
     if (loading) return <div className={styles.loader}>Загрузка...</div>;
 
     return (
@@ -507,10 +634,25 @@ useEffect(() => {
 
             {toast && <div className={styles.toast} role="status">{toast}</div>}
 
+            <DessertSheet
+                offer={dessertOffer}
+                dishesById={menuById}
+                onAdd={addDessert}
+                onClose={() => setDessertOffer(null)}
+            />
+
             <CartModal
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 cartItems={cartItems}
+                advice={advice ? {
+                    data: advice,
+                    dish: advice.kind === 'suggest' ? menuById.get(advice.dish.id) : null,
+                    dessertAnswer,
+                    onAccept: () => answerAdvice(true),
+                    onDecline: () => answerAdvice(false),
+                    onDessert: answerDessertAsk,
+                } : null}
                 confirmedOrders={confirmedOrders || []}
                 updateCart={updateCart}
                 onConfirmOrder={onConfirmOrder}

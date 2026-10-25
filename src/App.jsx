@@ -1276,6 +1276,7 @@ const handlePayFlowPaid = async () => {
             element={
               <MenuPage 
                 restaurantId={restaurantId}
+                seatNumber={seatNumber}
                 cart={cart} 
                 updateCart={updateCart} 
                 confirmedOrders={confirmedOrders}
