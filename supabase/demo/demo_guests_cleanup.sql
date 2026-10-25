@@ -16,7 +16,7 @@ CREATE TEMP TABLE _demo_sessions ON COMMIT DROP AS
 CREATE TEMP TABLE _demo_guests ON COMMIT DROP AS
   SELECT g.id FROM public.guests g WHERE g.device_id LIKE 'restai-demo-%';
 
-DELETE FROM public.reviews WHERE session_id IN (SELECT id FROM _demo_sessions);
+DELETE FROM public.reviews WHERE session_id IN (SELECT id::text FROM _demo_sessions);
 DELETE FROM public.order_item_modifiers WHERE order_item_id IN (SELECT id FROM public.order_items WHERE order_id IN (SELECT id FROM _demo_orders));
 DELETE FROM public.order_items WHERE order_id IN (SELECT id FROM _demo_orders);
 DELETE FROM public.order_guests WHERE order_id IN (SELECT id FROM _demo_orders);

@@ -42,7 +42,7 @@ CREATE TEMP TABLE _demo_sessions ON COMMIT DROP AS
 CREATE TEMP TABLE _demo_guests ON COMMIT DROP AS
   SELECT g.id FROM public.guests g WHERE g.device_id LIKE 'restai-demo-%';
 
-DELETE FROM public.reviews WHERE session_id IN (SELECT id FROM _demo_sessions);
+DELETE FROM public.reviews WHERE session_id IN (SELECT id::text FROM _demo_sessions);
 DELETE FROM public.order_item_modifiers WHERE order_item_id IN (SELECT id FROM public.order_items WHERE order_id IN (SELECT id FROM _demo_orders));
 DELETE FROM public.order_items WHERE order_id IN (SELECT id FROM _demo_orders);
 DELETE FROM public.order_guests WHERE order_id IN (SELECT id FROM _demo_orders);
@@ -167,7 +167,7 @@ BEGIN
                             'restai-demo-maria', pick, ARRAY[m[5], m[6]]);
     IF k IN (1, 4, 9) THEN
       INSERT INTO public.reviews (restaurant_id, table_number, rating_food, rating_service, comment, session_id, created_at)
-      SELECT v_rid, tb.number::text, 5, 5, CASE k WHEN 1 THEN 'Как всегда отлично, спасибо официанту!' WHEN 4 THEN 'Любимое место' ELSE NULL END, s,
+      SELECT v_rid, tb.number::text, 5, 5, CASE k WHEN 1 THEN 'Как всегда отлично, спасибо официанту!' WHEN 4 THEN 'Любимое место' ELSE NULL END, s::text,
              (d + time '21:00') AT TIME ZONE v_tz
       FROM public.table_sessions ts JOIN public.tables tb ON tb.id = ts.table_id WHERE ts.id = s;
     END IF;
@@ -186,7 +186,7 @@ BEGIN
                             ARRAY[m[2], m[3], m[5], m[6], m[1 + (k % n_m)], m[1 + ((k + 3) % n_m)], m[4]]);
     IF k = 3 THEN
       INSERT INTO public.reviews (restaurant_id, table_number, rating_food, rating_service, comment, session_id, created_at)
-      SELECT v_rid, tb.number::text, 4, 3, 'Долго ждали горячее', s, (d + time '22:40') AT TIME ZONE v_tz
+      SELECT v_rid, tb.number::text, 4, 3, 'Долго ждали горячее', s::text, (d + time '22:40') AT TIME ZONE v_tz
       FROM public.table_sessions ts JOIN public.tables tb ON tb.id = ts.table_id WHERE ts.id = s;
     END IF;
   END LOOP;
