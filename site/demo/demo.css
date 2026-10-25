@@ -1,0 +1,211 @@
+/* ==========================================================================
+   RestAI — страница «Демо» (/demo/). Цвета, шрифты, фон, меню — из
+   ../styles.css (главная), здесь только сама страница.
+   ========================================================================== */
+
+.demo-page { padding-bottom: calc(clamp(32px, 5vw, 72px) + env(safe-area-inset-bottom)); }
+
+.demo-back {
+  margin-left: auto;
+  padding: 0 clamp(14px, 2vw, 24px);
+  font: 600 clamp(14px, 1.2vw, 18px)/48px var(--font-ui);
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.demo-back:hover { color: #CBD8FF; }
+
+.demo-main {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding-top: clamp(28px, 4vw, 56px);
+}
+
+.demo-title {
+  margin: 0 0 clamp(12px, 1.4vw, 18px);
+  font: 800 clamp(30px, 4.2vw, 60px)/1.1 var(--font-ui);
+  text-wrap: balance;
+}
+.demo-title__brand {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  color: var(--orange);
+}
+
+.demo-lede {
+  margin: 0;
+  max-width: 60ch;
+  font: 400 clamp(16px, 1.4vw, 21px)/1.55 var(--font-geo);
+  color: #E3E9FF;
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------- карточки */
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: clamp(28px, 3.6vw, 52px);
+}
+
+.demo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(22px, 2.4vw, 34px);
+  background: rgba(3, 10, 54, 0.72);
+  border: 1px solid var(--pill-border);
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(3, 13, 77, 0.35);
+}
+
+.demo-card__num {
+  position: absolute;
+  top: clamp(14px, 1.6vw, 22px);
+  right: clamp(18px, 2vw, 28px);
+  font: 400 clamp(44px, 4.4vw, 64px)/1 var(--font-brand);
+  color: var(--orange);
+  opacity: 0.9;
+}
+
+.demo-card__role {
+  margin: 0 0 6px;
+  font: 800 13px/1.2 var(--font-ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.demo-card__title {
+  margin: 0 0 12px;
+  padding-right: 56px;
+  font: 800 clamp(21px, 1.8vw, 27px)/1.2 var(--font-ui);
+  color: #fff;
+}
+
+.demo-card__text {
+  margin: 0 0 18px;
+  font: 400 16px/1.55 var(--font-geo);
+  color: #E3E9FF;
+}
+
+.demo-card__hint {
+  margin: 0 0 20px;
+  font: 400 14px/1.45 var(--font-ui);
+  color: #AFC0F5;
+}
+
+/* QR — на белой подложке, чтобы камера читала уверенно. */
+.demo-qr {
+  align-self: center;
+  margin: 0 0 18px;
+  padding: 14px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 0 0 4px rgba(235, 101, 26, 0.85);
+}
+.demo-qr img { width: 168px; height: 168px; }
+
+.demo-steps {
+  margin: 0 0 20px;
+  padding-left: 1.3em;
+  font: 400 16px/1.5 var(--font-geo);
+  color: #E3E9FF;
+}
+.demo-steps li + li { margin-top: 6px; }
+.demo-steps li::marker { color: var(--orange); font-weight: 700; }
+.demo-steps b { color: #fff; }
+.demo-steps--plain { list-style: none; padding-left: 0; }
+.demo-steps--plain li { position: relative; padding-left: 20px; }
+.demo-steps--plain li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+
+.demo-code {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 8px;
+  background: var(--orange);
+  font: 700 18px/1.4 var(--font-ui);
+  letter-spacing: 0.18em;
+  color: #fff;
+}
+
+/* Кнопка — как «ДЕМО» на главной. */
+.demo-btn {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 54px;
+  margin-top: auto;
+  padding: 10px 20px;
+  background: var(--demo-bg);
+  border: 1px solid var(--demo-border);
+  border-radius: 29px;
+  box-shadow:
+    -5px -5px 8px rgba(255, 255, 255, 0.18),
+     5px  5px 8px rgba(20, 20, 20, 0.43);
+  font: 700 clamp(17px, 1.4vw, 20px)/1 var(--font-geo);
+  letter-spacing: 0.03em;
+  color: var(--orange);
+  text-decoration: none;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.demo-btn:hover {
+  box-shadow:
+    -3px -3px 6px rgba(255, 255, 255, 0.24),
+     3px  3px 6px rgba(20, 20, 20, 0.5);
+  transform: translateY(1px);
+}
+
+/* ---------------------------------------------------------- подсказка, связь */
+
+.demo-tip {
+  margin: clamp(24px, 3vw, 40px) 0 0;
+  padding: 18px 22px;
+  max-width: 920px;
+  background: var(--sticker-bg);
+  border-radius: 6px;
+  transform: rotate(-1deg);
+  font: 400 clamp(15px, 1.25vw, 18px)/1.5 var(--font-geo);
+  color: var(--sticker-ink);
+}
+.demo-tip b { font-weight: 700; }
+
+.demo-contact {
+  margin: clamp(24px, 3vw, 36px) 0 0;
+  font: 400 clamp(15px, 1.25vw, 18px)/1.5 var(--font-ui);
+  color: #E3E9FF;
+}
+.demo-contact a { color: var(--orange); font-weight: 600; }
+
+/* ============================================================== адаптив */
+
+@media (max-width: 1100px) {
+  .demo-grid { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
+}
+
+@media (max-width: 900px) {
+  /* Меню главной на этой странице не нужно — только логотип и «назад». */
+  .demo-page .nav__pill { flex-wrap: nowrap; border-radius: 48px; }
+}
+
+.only-phone { display: none; }
+
+/* На телефоне код сканировать нечем — сразу кнопки. */
+@media (max-width: 600px) {
+  .demo-qr, .only-wide { display: none; }
+  .only-phone { display: inline; }
+  .demo-card { border-radius: 22px; }
+  .demo-tip { transform: none; }
+}

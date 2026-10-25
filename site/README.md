@@ -20,6 +20,22 @@ python3 -m http.server 8080 --directory site
 # http://localhost:8080/
 ```
 
+## demo/ — страница «Демо» (restai.pro/demo/)
+
+Кнопка «ДЕМО» на главной ведёт сюда. Три блока на тестовом ресторане
+«Сыроварня»: гостевое меню (стол № 7 — из столов демо-официанта 1–9, заказ
+дойдёт до него), приложение официанта (вход кодом 1111) и кабинет
+управляющего (admin.restai.pro, демо-ресторан открыт без входа).
+
+QR-коды — готовые SVG `qr-guest.svg`, `qr-waiter.svg`; поменялась ссылка —
+пересоздайте (библиотека `qrcode` есть в Waiter-app):
+
+```bash
+cd Waiter-app && node -e "require('qrcode').toString('https://waiter.restai.pro/', {type:'svg', margin:0, color:{dark:'#030D4DFF', light:'#FFFFFF00'}}).then(s => require('fs').writeFileSync('../RestAI/site/demo/qr-waiter.svg', s))"
+```
+
+На телефоне QR скрыт (сканировать нечем) — остаются кнопки.
+
 ## images/
 
 | Файл | Размер | Что это |

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Демо RestAI — попробуйте сами</title>
+<meta name="description" content="Попробуйте RestAI на нашем тестовом ресторане «Сыроварня»: меню с ИИ-ассистентом глазами гостя, приложение официанта и кабинет управляющего.">
+<meta name="theme-color" content="#030D4D">
+<link rel="canonical" href="https://restai.pro/demo/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RestAI">
+<meta property="og:title" content="Демо RestAI — попробуйте сами">
+<meta property="og:description" content="Гость, официант и управляющий — три взгляда на один ресторан.">
+<meta property="og:url" content="https://restai.pro/demo/">
+<meta property="og:image" content="https://restai.pro/images/logo.png">
+
+<link rel="icon" href="../images/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="../images/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Agbalumo&family=Gabarito:wght@500&family=Jost:wght@400;500;700&family=Manrope:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+
+<a class="skip" href="#main">К основному содержанию</a>
+
+<div class="page demo-page">
+  <span class="watermark" aria-hidden="true">DEMO</span>
+
+  <header class="nav">
+    <div class="nav__pill">
+      <a class="nav__logo" href="../" aria-label="RestAI — на главную">
+        <picture>
+          <source srcset="../images/logo.webp" type="image/webp">
+          <img src="../images/logo.png" alt="" width="48" height="48" decoding="async">
+        </picture>
+      </a>
+      <a class="demo-back" href="../">← На главную</a>
+    </div>
+  </header>
+
+  <main class="demo-main" id="main">
+    <p class="eyebrow">демо-доступ</p>
+    <h1 class="demo-title">Попробуйте <span class="demo-title__brand">RestAI</span> сами</h1>
+    <p class="demo-lede">
+      «Сыроварня» — наш тестовый ресторан. Посмотрите на него глазами гостя,
+      официанта и управляющего: всё работает по-настоящему.
+    </p>
+
+    <div class="demo-grid">
+
+      <!-- 1. Гость -->
+      <section class="demo-card" aria-labelledby="guest-title">
+        <span class="demo-card__num" aria-hidden="true">1</span>
+        <p class="demo-card__role">Гость</p>
+        <h2 class="demo-card__title" id="guest-title">Меню с ИИ-ассистентом</h2>
+        <p class="demo-card__text">
+          <span class="only-wide">Наведите камеру телефона на код</span><span class="only-phone">Нажмите кнопку</span> — вы сядете за стол № 7.
+          Так ваш гость выбирает блюда, советуется с ассистентом,
+          зовёт официанта и платит.
+        </p>
+        <div class="demo-qr">
+          <img src="qr-guest.svg" width="168" height="168" alt="QR-код: меню ресторана «Сыроварня», стол № 7">
+        </div>
+        <p class="demo-card__hint">Сделайте заказ — он придёт официанту из второго блока.</p>
+        <a class="demo-btn" href="https://guest.restai.pro/?restaurant_id=dd89773c-0952-4fd1-9510-514094a928ee&amp;table=7">Открыть меню</a>
+      </section>
+
+      <!-- 2. Официант -->
+      <section class="demo-card" aria-labelledby="waiter-title">
+        <span class="demo-card__num" aria-hidden="true">2</span>
+        <p class="demo-card__role">Официант</p>
+        <h2 class="demo-card__title" id="waiter-title">Приложение официанта</h2>
+        <p class="demo-card__text">
+          Столы, заказы, вызовы гостей и подсказки ИИ — что предложить к заказу.
+        </p>
+        <div class="demo-qr">
+          <img src="qr-waiter.svg" width="168" height="168" alt="QR-код: приложение официанта RestAI">
+        </div>
+        <ol class="demo-steps">
+          <li>Откройте приложение <span class="only-wide">по коду или кнопке</span><span class="only-phone">кнопкой ниже</span></li>
+          <li>Нажмите <b>«Вход»</b></li>
+          <li>Введите код <span class="demo-code">1111</span></li>
+        </ol>
+        <a class="demo-btn" href="https://waiter.restai.pro/">Открыть приложение</a>
+      </section>
+
+      <!-- 3. Управляющий -->
+      <section class="demo-card" aria-labelledby="admin-title">
+        <span class="demo-card__num" aria-hidden="true">3</span>
+        <p class="demo-card__role">Управляющий</p>
+        <h2 class="demo-card__title" id="admin-title">Личный кабинет ресторана</h2>
+        <p class="demo-card__text">
+          Зал в реальном времени, брони и карточки гостей, кухня и стоп-лист,
+          работа официантов, отзывы и статистика.
+        </p>
+        <ul class="demo-steps demo-steps--plain">
+          <li>Лучше открыть на компьютере</li>
+          <li>Вход не нужен — «Сыроварня» откроется сразу</li>
+          <li>Начните с разделов <b>«Зал»</b> и <b>«Брони»</b></li>
+        </ul>
+        <a class="demo-btn" href="https://admin.restai.pro/">Открыть кабинет</a>
+      </section>
+
+    </div>
+
+    <p class="demo-tip">
+      <b>Как увидеть всё сразу:</b> меню — на одном телефоне, приложение официанта — на другом,
+      кабинет — на компьютере. Закажите блюдо как гость и посмотрите, как заказ появится
+      у официанта и в зале.
+    </p>
+
+    <p class="demo-contact">
+      Хотите так же в своём ресторане? Напишите нам —
+      <a href="mailto:ceo@restai.pro?subject=RestAI%20%E2%80%94%20%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D0%B8%D0%B5">ceo@restai.pro</a>
+    </p>
+  </main>
+</div>
+
+</body>
+</html>
