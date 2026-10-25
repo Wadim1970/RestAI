@@ -479,3 +479,7 @@
 @media (prefers-reduced-motion: reduce) {
     .overlay, .root, .hero, .sheet, .details, .photo { animation: none !important; transition: none !important; }
 }
+
+/* Блюдо в стопе кухни */
+.addBtn:disabled { background: #c9cbd1; cursor: default; }
+.stepper button:disabled { opacity: 0.35; }

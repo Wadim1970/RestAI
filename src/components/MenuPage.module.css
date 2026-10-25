@@ -278,3 +278,14 @@
 @media (prefers-reduced-motion: reduce) {
     .toast { animation: none; }
 }
+
+/* Блюдо в стопе кухни: видно, но заказать нельзя */
+.dishCardStopped .dishImage { filter: grayscale(1); opacity: 0.55; }
+.dishCardStopped .dishName { opacity: 0.6; }
+.stoppedLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8c8f97;
+    white-space: nowrap;
+}
+.stepper button:disabled { opacity: 0.35; }

@@ -374,7 +374,11 @@ export default function DishModal({
           <button type="button" className={styles.chatBtn} onClick={() => onOpenChat?.(dish)} aria-label="Спросить шефа-ИИ об этом блюде">
             <img src="/icons/foto-avatar.png" alt="" />
           </button>
-          {currentCount === 0 ? (
+          {dish.stopped && currentCount === 0 ? (
+            <button type="button" className={styles.addBtn} disabled>
+              Нет в наличии
+            </button>
+          ) : currentCount === 0 ? (
             <button type="button" className={styles.addBtn} onClick={() => updateCart(1, dish.id)}>
               Добавить · {formatPrice(dish.cost_rub)}
             </button>
@@ -382,7 +386,7 @@ export default function DishModal({
             <div className={styles.stepper}>
               <button type="button" onClick={() => updateCart(-1, dish.id)} aria-label="Убрать одну порцию">−</button>
               <span>{currentCount}<small>{formatPrice((Number(dish.cost_rub) || 0) * currentCount)}</small></span>
-              <button type="button" onClick={() => updateCart(1, dish.id)} aria-label="Добавить ещё порцию">+</button>
+              <button type="button" onClick={() => updateCart(1, dish.id)} disabled={dish.stopped} aria-label="Добавить ещё порцию">+</button>
             </div>
           )}
         </div>

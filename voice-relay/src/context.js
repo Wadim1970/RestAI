@@ -106,6 +106,8 @@ async function loadMenuSummary(restaurantId) {
 
   const seen = new Set();
   const text = (items || [])
+    // Блюда в стопе кухни ИИ не видит вовсе — не предложит и не добавит.
+    .filter((i) => !i.stopped)
     .filter((i) => {
       const key = `${i.dish_name}|${i.cost_rub}`;
       if (seen.has(key)) return false;
@@ -122,7 +124,9 @@ async function loadMenuSummary(restaurantId) {
       const modSuffix = modDish?.groups?.length
         ? ` · выбор опций: ${modDish.groups.map((g) => g.name).join(', ')}`
         : '';
-      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}${modSuffix}`;
+      // Приоритет кухни (раздел «Кухня» админки): 3 — в первую очередь, 2 — рекомендуем.
+      const mark = i.priority >= 3 ? ' [рекомендовать в первую очередь]' : i.priority === 2 ? ' [рекомендуем]' : '';
+      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}${modSuffix}${mark}`;
     })
     .join('\n');
 
@@ -659,7 +663,7 @@ export async function buildSessionContext({ guestId, restaurantId, sessionId, de
   const hasHistory = history.length > 0;
   const weatherText = buildWeatherBlock(temperature, hasHistory);
 
-  const dynamicContext = `Меню ресторана:\n${menu || '(меню недоступно)'}\n\n` +
+  const dynamicContext = `Меню ресторана (блюда с пометками [рекомендовать в первую очередь] и [рекомендуем] предлагай первыми, когда они уместны гостю; про пометки гостю не говори):\n${menu || '(меню недоступно)'}\n\n` +
     `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
     JSON.stringify({ preferences, restaurantHistory });
 
