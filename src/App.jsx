@@ -16,6 +16,7 @@ import SplitBillModal from './components/SplitBillModal/SplitBillModal';
 import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
 import PersonalCabinet from './components/PersonalCabinet/PersonalCabinet';
+import { isStopped } from './lib/stopList';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
@@ -368,6 +369,8 @@ useEffect(() => {
   };
 
   const updateCart = (delta, dishId) => {
+    // Блюдо в стопе кухни — не добавляем (убрать уже добавленное можно).
+    if (delta > 0 && isStopped(dishId)) return;
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
       const newCount = Math.max(0, currentCount + delta); 

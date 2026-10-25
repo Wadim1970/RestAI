@@ -1,5 +1,6 @@
 // src/components/MenuPage.jsx
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { setStoppedDishes } from '../lib/stopList';
 import { flushSync } from 'react-dom';
 import styles from './MenuPage.module.css';
 
@@ -88,6 +89,7 @@ useEffect(() => {
             setPairings(json.pairings && typeof json.pairings === 'object' ? json.pairings : {});
 
             const items = Array.isArray(menuItems) ? menuItems : [];
+            setStoppedDishes(items);
             const grouped = items.reduce((acc, item) => {
                 const section = item.menu_section;
                 if (!acc[section]) acc[section] = [];
@@ -417,7 +419,7 @@ useEffect(() => {
                                     const count = cart[dish.id] || 0;
                                     const weight = formatWeight(dish);
                                     return (
-                                    <div key={dish.id} className={styles.dishCard}>
+                                    <div key={dish.id} className={`${styles.dishCard}${dish.stopped ? ` ${styles.dishCardStopped}` : ''}`}>
                                         <div
                                             className={styles.dishImageContainer}
                                             onClick={(e) => handleOpenModal(dish, undefined, e.currentTarget.querySelector('img'))}
@@ -439,11 +441,13 @@ useEffect(() => {
                                                 {formatPrice(dish.cost_rub)}
                                                 {weight && <span className={styles.dishWeight}>{weight}</span>}
                                             </p>
-                                            {count > 0 ? (
+                                            {dish.stopped && count === 0 ? (
+                                                <span className={styles.stoppedLabel}>Нет в наличии</span>
+                                            ) : count > 0 ? (
                                                 <div className={styles.stepper}>
                                                     <button type="button" aria-label={`Убрать ${dish.dish_name}`} onClick={(e) => changeCount(e, dish.id, -1)}>−</button>
                                                     <span>{count}</span>
-                                                    <button type="button" aria-label={`Добавить ещё ${dish.dish_name}`} onClick={(e) => changeCount(e, dish.id, 1)}>+</button>
+                                                    <button type="button" aria-label={`Добавить ещё ${dish.dish_name}`} disabled={dish.stopped} onClick={(e) => changeCount(e, dish.id, 1)}>+</button>
                                                 </div>
                                             ) : (
                                                 <button
