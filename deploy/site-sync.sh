@@ -23,17 +23,18 @@ main() {
   local SRC="${SITE_SRC:-/opt/restai/site-src}"
   local DST="${SITE_DST:-/opt/restai/site}"
   local BRANCH="${SITE_BRANCH:-main}"
+  # Из какой версии собран сайт — рядом с папкой сайта (внутрь нельзя: rsync
+  # --delete её сотрёт). Сравниваем с ним, а не с копией «до скачивания»: после
+  # свежего клона версии совпадают, хотя сайт ещё старый.
+  local STAMP="${DST}.commit"
 
   [ -d "$SRC/.git" ] || { echo "Нет $SRC — запустите deploy/setup-site.sh"; exit 1; }
 
   if [ "${1:-}" = "--pull" ]; then
-    local before after
-    before="$(git -C "$SRC" rev-parse -q --verify HEAD || true)"
     git -C "$SRC" fetch -q --depth 1 origin "$BRANCH"
     git -C "$SRC" reset -q --hard FETCH_HEAD
-    after="$(git -C "$SRC" rev-parse HEAD)"
-    # Ничего не поменялось и сайт уже собран — молча выходим (cron).
-    if [ "$before" = "$after" ] && [ -f "$DST/index.html" ]; then exit 0; fi
+    # Сайт уже собран из этой версии — молча выходим (cron).
+    if [ "$(cat "$STAMP" 2>/dev/null)" = "$(git -C "$SRC" rev-parse HEAD)" ] && [ -f "$DST/index.html" ]; then exit 0; fi
   fi
 
   STAGE="$(mktemp -d)"
@@ -52,6 +53,7 @@ main() {
   mkdir -p "$DST"
   rsync -a --delete "$stage/" "$DST/"
   chmod -R a+rX "$DST"
+  git -C "$SRC" rev-parse HEAD > "$STAMP"
   echo "$(date '+%F %T') сайт собран из $(git -C "$SRC" rev-parse --short HEAD)"
 }
 
