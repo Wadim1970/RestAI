@@ -76,17 +76,19 @@ async function loadGuestContext(guestId, restaurantId, deviceId) {
 const MENU_CACHE_TTL_MS = 60_000; // совпадает с s-maxage у /api/menu
 const menuCache = new Map(); // restaurantId -> { text, expiresAt }
 
+// Возвращает { text, meal }: сжатое меню для промпта и приём пищи сейчас
+// (завтрак/обед/ужин/поздний вечер — по часам ресторана, считает /api/menu).
 async function loadMenuSummary(restaurantId) {
-  if (!restaurantId) return '';
+  if (!restaurantId) return { text: '', meal: null };
 
   const cached = menuCache.get(restaurantId);
-  if (cached && cached.expiresAt > Date.now()) return cached.text;
+  if (cached && cached.expiresAt > Date.now()) return cached;
 
   const res = await fetch(`${config.menuApiBaseUrl}/api/menu?restaurantId=${encodeURIComponent(restaurantId)}`);
   // Сеть/эндпоинт подвели — лучше отдать протухший, но живой кэш, чем
   // оставить ИИ вовсе без меню на этот разговор.
-  if (!res.ok) return cached?.text ?? '';
-  const { items } = await res.json();
+  if (!res.ok) return cached ?? { text: '', meal: null };
+  const { items, meal = null } = await res.json();
 
   // Сжатая версия для системного промпта: полные описания и состав блюда
   // сюда не тащим (лишние токены на десятки блюд, которые за разговор
@@ -126,12 +128,22 @@ async function loadMenuSummary(restaurantId) {
         : '';
       // Приоритет кухни (раздел «Кухня» админки): 3 — в первую очередь, 2 — рекомендуем.
       const mark = i.priority >= 3 ? ' [рекомендовать в первую очередь]' : i.priority === 2 ? ' [рекомендуем]' : '';
-      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}${modSuffix}${mark}`;
+      // Время дня: утром стейк, вечером борщ сам не предлагает (заказать гость может).
+      const offTime = meal && Array.isArray(i.meals) && !i.meals.includes(meal) ? ' [не ко времени]' : '';
+      return `${i.dish_name} — ${i.menu_section} — ${i.cost_rub}₽${suffix}${modSuffix}${mark}${offTime}`;
     })
     .join('\n');
 
-  menuCache.set(restaurantId, { text, expiresAt: Date.now() + MENU_CACHE_TTL_MS });
-  return text;
+  const entry = { text, meal, expiresAt: Date.now() + MENU_CACHE_TTL_MS };
+  menuCache.set(restaurantId, entry);
+  return entry;
+}
+
+const MEAL_NAMES = { breakfast: 'завтрак', lunch: 'обед', dinner: 'ужин', late: 'поздний вечер' };
+// Что уместно предлагать в это время дня — одной строкой для промпта.
+function mealLine(meal) {
+  if (!MEAL_NAMES[meal]) return '';
+  return `Сейчас ${MEAL_NAMES[meal]} (по часам ресторана). Сам предлагай то, что уместно в это время: утром — завтраки и напитки, без стейков и супов; на обед — суп, горячее, салат; на ужин — закуски, горячее с соусом и гарниром, напитки, суп сам не предлагай; поздним вечером — лёгкие закуски, напитки, десерты. Блюда с пометкой [не ко времени] сам не предлагай; если гость просит — оформи без возражений, про пометку не говори.`;
 }
 
 // ── Модификаторы блюд (прожарка/соус/гарнир) ──────────────────────────
@@ -646,7 +658,7 @@ export async function buildSessionContext({ guestId, restaurantId, sessionId, de
   // температуры пошёл параллельно с остальными загрузками.
   const restaurant = await loadRestaurant(restaurantId);
 
-  const [{ preferences, restaurantHistory }, menu, aiProfile, history, temperature] = await Promise.all([
+  const [{ preferences, restaurantHistory }, { text: menu, meal }, aiProfile, history, temperature] = await Promise.all([
     loadGuestContext(guestId, restaurantId, deviceId),
     loadMenuSummary(restaurantId),
     loadAiProfile(restaurantId),
@@ -663,7 +675,8 @@ export async function buildSessionContext({ guestId, restaurantId, sessionId, de
   const hasHistory = history.length > 0;
   const weatherText = buildWeatherBlock(temperature, hasHistory);
 
-  const dynamicContext = `Меню ресторана (блюда с пометками [рекомендовать в первую очередь] и [рекомендуем] предлагай первыми, когда они уместны гостю; про пометки гостю не говори):\n${menu || '(меню недоступно)'}\n\n` +
+  const dynamicContext = (mealLine(meal) ? `${mealLine(meal)}\n\n` : '') +
+    `Меню ресторана (блюда с пометками [рекомендовать в первую очередь] и [рекомендуем] предлагай первыми, когда они уместны гостю; про пометки гостю не говори):\n${menu || '(меню недоступно)'}\n\n` +
     `Статистика и предпочтения гостя (JSON, только для персонализации — см. правила выше):\n` +
     JSON.stringify({ preferences, restaurantHistory });
 
