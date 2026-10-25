@@ -10,7 +10,8 @@
 #   bash site-sync.sh           # пересобрать из того, что уже скачано
 #   bash site-sync.sh --pull    # скачать свежий main и пересобрать, если он изменился
 #
-# --pull запускает cron каждые 5 минут (ставит deploy/setup-site.sh): push в main →
+# --pull запускает cron каждые 5 минут (ставит deploy/setup-site.sh, скрипт — из
+# /opt/restai/RestAI/deploy): push в main →
 # через несколько минут изменения на сайте, как раньше с Pages.
 #
 # Источник — отдельная неглубокая копия репозитория /opt/restai/site-src, а не

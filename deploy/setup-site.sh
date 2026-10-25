@@ -37,7 +37,9 @@ step "Сборка сайта"
 SITE_SRC="$SRC" bash "$HERE/site-sync.sh" --pull
 
 step "Автообновление (cron, каждые 5 минут)"
-line="*/5 * * * * bash $SRC/deploy/site-sync.sh --pull >> $ROOT/site-sync.log 2>&1"
+# Скрипт — из основной копии (её обновляет update.sh), а не из $SRC: в старой
+# копии сайта его могло не быть, и cron молча падал «No such file».
+line="*/5 * * * * SITE_SRC=$SRC bash $HERE/site-sync.sh --pull >> $ROOT/site-sync.log 2>&1"
 # "|| true": у пользователя может не быть crontab вовсе, а grep без совпадений
 # возвращает 1 — под set -e это обрывало установку на пустом месте.
 { crontab -l 2>/dev/null | grep -v 'deploy/site-sync.sh' || true; echo "$line"; } | crontab -
