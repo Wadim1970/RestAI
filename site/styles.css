@@ -314,19 +314,21 @@ a { color: inherit; }
 
 .sticker {
   position: absolute;
-  /* Банер начинается в 24px от левого края страницы и уходит вправо
-     поверх «плашки» и кнопки ДЕМО — как в исходном макете. */
+  /* Банер начинается в 24px от левого края страницы и уходит вправо —
+     как в исходном макете, но ПОД кнопкой ДЕМО: поверх неё он закрывал
+     кнопку на экранах ноутбуков. Поворот — вокруг правого верхнего угла,
+     поэтому весь банер остаётся ниже кнопки. */
   left: calc(24px - var(--content-left));
-  top: 80%;
+  top: 100%;
   z-index: 2;
-  /* Ширина по тексту, но не короче, чем нужно, чтобы накрыть кнопку ДЕМО,
-     и не длиннее макетных 1013px. */
+  /* Ширина по тексту, но не короче кнопки ДЕМО и не длиннее макетных 1013px. */
   width: fit-content;
   min-width: calc(var(--content-left) - 24px + min(430px, 100%));
   max-width: min(1013px, calc(var(--content-left) - 24px + 110%));
   margin: 0;
   padding: clamp(14px, 1.9vw, 28px) clamp(18px, 2.4vw, 34px);
-  transform: translateY(-50%) rotate(-12deg);
+  transform: translateY(clamp(18px, 2vw, 32px)) rotate(-6deg);
+  transform-origin: right top;
   background: var(--sticker-bg);
   font: 700 clamp(15px, 1.78vw, 32px)/1.26 var(--font-geo);
   color: var(--sticker-ink);
@@ -363,10 +365,10 @@ a { color: inherit; }
   filter: drop-shadow(0 24px 48px rgba(3, 13, 77, 0.45));
 }
 
-/* На десктопе наклейка повёрнута и её нижний левый угол уходит ниже
-   колонки с текстом — резервируем под него место, иначе он обрежется. */
+/* На десктопе наклейка стоит под кнопкой ДЕМО вне потока — резервируем
+   под неё место (высота банера плюс опущенный поворотом левый край). */
 @media (min-width: 901px) {
-  .hero__text { padding-bottom: clamp(44px, 6.4vw, 124px); }
+  .hero__text { padding-bottom: clamp(150px, 15vw, 300px); }
 }
 
 /* ======================================================= планшеты (<1200) */

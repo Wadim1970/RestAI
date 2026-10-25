@@ -5,16 +5,6 @@
 
 .demo-page { padding-bottom: calc(clamp(32px, 5vw, 72px) + env(safe-area-inset-bottom)); }
 
-.demo-back {
-  margin-left: auto;
-  padding: 0 clamp(14px, 2vw, 24px);
-  font: 600 clamp(14px, 1.2vw, 18px)/48px var(--font-ui);
-  color: #fff;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.demo-back:hover { color: #CBD8FF; }
-
 .demo-main {
   width: 100%;
   max-width: var(--maxw);
@@ -204,11 +194,6 @@
 
 @media (max-width: 1100px) {
   .demo-grid { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
-}
-
-@media (max-width: 900px) {
-  /* Меню главной на этой странице не нужно — только логотип и «назад». */
-  .demo-page .nav__pill { flex-wrap: nowrap; border-radius: 48px; }
 }
 
 .only-phone { display: none; }

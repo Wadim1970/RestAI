@@ -39,7 +39,20 @@
           <img src="../images/logo.png" alt="" width="48" height="48" decoding="async">
         </picture>
       </a>
-      <a class="demo-back" href="../">← На главную</a>
+
+      <button class="burger" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav__menu" id="nav-menu" aria-label="Основная навигация">
+        <ul class="nav__list">
+          <li><span class="nav__item" aria-disabled="true">Кто мы</span></li>
+          <li><span class="nav__item" aria-disabled="true">Почему мы</span></li>
+          <li><span class="nav__item" aria-disabled="true">Прайс</span></li>
+          <li><a class="nav__item nav__item--link" href="mailto:ceo@restai.pro">Контакты</a></li>
+        </ul>
+        <span class="nav__login" aria-disabled="true">ВХОД</span>
+      </nav>
     </div>
   </header>
 
@@ -120,6 +133,38 @@
     </p>
   </main>
 </div>
+
+<script>
+(function () {
+  var burger = document.querySelector('.burger');
+  var pill = document.querySelector('.nav__pill');
+  if (!burger || !pill) return;
+
+  function setOpen(open) {
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    pill.classList.toggle('is-open', open);
+  }
+
+  burger.addEventListener('click', function () {
+    setOpen(burger.getAttribute('aria-expanded') !== 'true');
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && burger.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      burger.focus();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (pill.classList.contains('is-open') && !pill.contains(e.target)) setOpen(false);
+  });
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 900) setOpen(false);
+  });
+})();
+</script>
 
 </body>
 </html>
