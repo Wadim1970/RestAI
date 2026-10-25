@@ -1,5 +1,6 @@
 -- ============================================================
--- Раздел «Кухня» в админке: стоп-лист, «срочно продать», время готовности.
+-- Раздел «Кухня» в админке: стоп-лист, «срочно продать», время готовности;
+-- раздел «Жалобы и оценки»: отметка «жалоба разобрана».
 --
 -- 1) menu_items.stop_until — блюдо в стопе, пока now() < stop_until
 --    («до конца дня» — до 06:00 следующего дня ресторана, «до отмены» —
@@ -15,6 +16,8 @@
 -- 4) guest_menu_priorities(restaurant) — какие блюда рекомендовать гостю в
 --    первую очередь. Только уровень приоритета, без себестоимости и маржи:
 --    menu_item_costing закрыта от публичного ключа и такой остаётся.
+-- 5) reviews.resolved_at / resolved_note — жалоба гостя разобрана (раздел
+--    «Жалобы и оценки»): когда и что сделали.
 --
 -- Запускать на сервере базы из-под supabase_admin:
 --   sudo docker exec -i supabase-db psql -U supabase_admin -d postgres \
@@ -32,6 +35,11 @@ ALTER TABLE public.menu_items
 
 ALTER TABLE public.order_items
   ADD COLUMN IF NOT EXISTS ready_at timestamptz;
+
+ALTER TABLE public.reviews
+  ADD COLUMN IF NOT EXISTS resolved_at   timestamptz,
+  ADD COLUMN IF NOT EXISTS resolved_note text;
+CREATE INDEX IF NOT EXISTS reviews_restaurant_created_idx ON public.reviews (restaurant_id, created_at);
 
 CREATE OR REPLACE FUNCTION public.order_items_ready_at()
 RETURNS trigger
