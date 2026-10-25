@@ -27,10 +27,21 @@
   font: 800 clamp(30px, 4.2vw, 60px)/1.1 var(--font-ui);
   text-wrap: balance;
 }
-.demo-title__brand {
+/* Название — как на главной (.wordmark): R и AI фирменным шрифтом,
+   «est» — геометрическим, белым и мельче. */
+.demo-brand { white-space: nowrap; }
+.demo-brand__a {
   font-family: var(--font-brand);
   font-weight: 400;
+  font-size: 1.25em;
+  line-height: 0.9;
   color: var(--orange);
+}
+.demo-brand__b {
+  font-family: var(--font-geo);
+  font-weight: 400;
+  font-size: 0.55em;
+  color: #fff;
 }
 
 .demo-lede {
