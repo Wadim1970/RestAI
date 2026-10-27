@@ -87,3 +87,14 @@ test('sameCart', () => {
   assert.ok(!sameCart({ a: 1 }, { a: 2 }))
   assert.ok(!sameCart({ a: 1 }, { a: 1, b: 1 }))
 })
+
+test('картинка блюда: живое фото; ссылка миниатюры на несуществующий облачный Supabase не используется', () => {
+  const DEAD = 'https://utdfzrpkoscyikitceow.supabase.co/storage/v1/object/public/menu-images/thumbnails/x.webp'
+  const PHOTO = 'https://api.syrovarnya.com/photo.jpg'
+  const lines = [
+    line('l1', 'a', 1, 'sent', { image_url: PHOTO, image_url_thumbnail: DEAD }),
+    line('l2', 'b', 1, 'new', { image_url: PHOTO, image_url_thumbnail: DEAD }),
+  ]
+  assert.equal(toConfirmedItems(lines)[0].image_url, PHOTO)
+  assert.equal(dishCardsFromLines(lines).b.image_url, PHOTO)
+})
