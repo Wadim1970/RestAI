@@ -17,6 +17,7 @@ import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
 import PersonalCabinet from './components/PersonalCabinet/PersonalCabinet';
 import { isStopped } from './lib/stopList';
+import { toConfirmedItems, dishCardsFromLines, planPush, adoptServerCart, sameCart } from './lib/tableCart';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { useBrandingConfig } from './hooks/useBrandingConfig';
@@ -26,6 +27,27 @@ import { supabase } from './supabaseClient';
 // пережить сворачивание/выгрузку приложения (гость ушёл за номером телефона).
 const PENDING_REG_KEY = 'restai_pending_registration';
 
+
+const DIRTY_KEY = 'restaurant_cart_dirty';
+// Блюда, которые гость менял, но сервер о них ещё не знает. Живёт в
+// localStorage: правки без связи не теряются при перезапуске приложения.
+const readDirty = (cartKeys) => {
+  try {
+    const raw = localStorage.getItem(DIRTY_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch { /* битое значение — как будто его нет */ }
+  // Ключа нет (первый запуск после обновления): всё, что лежит в локальной
+  // корзине, считаем неотправленным — так корзина не потеряется.
+  return new Set(cartKeys);
+};
+const writeDirty = (set) => {
+  try { localStorage.setItem(DIRTY_KEY, JSON.stringify([...set])); } catch { /* квота */ }
+};
+
+// Одинаковый ли набор позиций «Уже готовится» (чтобы опрос сервера не
+// перерисовывал экран и не сбрасывал таймер бездействия каждые 4 секунды).
+const sameConfirmed = (a, b) =>
+  a.length === b.length && a.every((x, i) => x.lineId === b[i].lineId && x.count === b[i].count && x.status === b[i].status);
 
  // Получаем ID ресторана из URL параметров или localStorage
  function AppContent() {
@@ -224,6 +246,18 @@ useEffect(() => {
   // цена) — здесь: App не грузит полное меню, как MenuPage, поэтому сам
   // не знает карточек блюд без этого словаря.
   const [voiceDishesById, setVoiceDishesById] = useState({});
+  // Корзина — это строки общего заказа стола на сервере (status 'new' на моём
+  // месте). Локальный cart нужен для мгновенного отклика; dirty — блюда,
+  // изменённые гостем и ещё не отправленные на сервер (см. syncCart).
+  const dirtyRef = useRef(null);
+  if (dirtyRef.current === null) dirtyRef.current = readDirty(Object.keys(cart));
+  const cartRef = useRef(cart);
+  const dishesRef = useRef(voiceDishesById);
+  const syncPromiseRef = useRef(null);
+  const syncAgainRef = useRef(false);
+  const syncCartRef = useRef(async () => {});
+  useEffect(() => { cartRef.current = cart; }, [cart]);
+  useEffect(() => { dishesRef.current = voiceDishesById; }, [voiceDishesById]);
   const [isVoiceCartOpen, setIsVoiceCartOpen] = useState(false);
   const [isBillRequested, setIsBillRequested] = useState(false);
   const [isBillChoiceOpen, setIsBillChoiceOpen] = useState(false); // Верхний выбор: позвать официанта / оплатить самому
@@ -371,6 +405,8 @@ useEffect(() => {
   const updateCart = (delta, dishId) => {
     // Блюдо в стопе кухни — не добавляем (убрать уже добавленное можно).
     if (delta > 0 && isStopped(dishId)) return;
+    dirtyRef.current.add(dishId);
+    writeDirty(dirtyRef.current);
     setCart(prev => {
       const currentCount = prev[dishId] || 0;
       const newCount = Math.max(0, currentCount + delta); 
@@ -413,69 +449,74 @@ useEffect(() => {
 
     setIsProcessing(true); // Закрываем замок
 
-    // Не создаём заказ сами (JSONB-блоб + придуманная клиентом цена) —
-    // place_guest_order сама находит/открывает общий заказ этого стола,
-    // назначает место по device_id и берёт цену из menu_items. Один и тот
-    // же order_id получат все устройства за этим столом (официант видит
-    // единый заказ), а order_items/order_guests — та же модель, что уже
-    // использует Waiter-app.
+    // Корзина уже лежит в общем заказе стола (строки 'new' на моём месте):
+    // «Отправить» только переводит их в 'sent' (cart_send). Перед этим
+    // досылаем на сервер последние правки гостя. Если связи нет — заказ
+    // кладётся в очередь и уйдёт, когда она появится.
+    const args = {
+      p_restaurant_id: restaurantId,
+      p_table_number: String(tableNumber),
+      p_device_id: getOrCreateDeviceId(),
+    };
     const itemsToSend = cartItems.map(item => ({
       item_id: item.id,
       quantity: item.count,
-      // Пожелания к блюду, записанные голосовым ИИ (add_to_cart -> comment).
-      // place_guest_order кладёт их в order_items.comment — официант видит.
-      // У блюд, добавленных из меню, поля нет — уходит undefined, это ок.
       comment: item.comment || undefined,
-      // Выбранные опции блюда (прожарка/соус/…) — только id; place_guest_order
-      // сам берёт наценку из БД и пишет order_item_modifiers.
       modifiers: Array.isArray(item.modifiers) && item.modifiers.length
         ? item.modifiers.map(m => m.id)
         : undefined,
     }));
 
-    // Связь пропала прямо на отправке — не теряем заказ: кладём в очередь
-    // (outbox до-отправит его при появлении связи) и оптимистично показываем
-    // как оформленный, как и при обычной успешной отправке.
-    const queueOrderOffline = () => {
-      enqueue({ type: 'order', rpc: 'place_guest_order', params: {
-        p_restaurant_id: restaurantId,
-        p_table_number: String(tableNumber),
-        p_device_id: getOrCreateDeviceId(),
-        p_items: itemsToSend,
-        p_comment: comment || null,
-      }});
+    const finishLocally = () => {
       setConfirmedOrders(prev => [...prev, ...cartItems]);
       setCart({});
+      dirtyRef.current.clear();
+      writeDirty(dirtyRef.current);
     };
 
     try {
-      const { data, error } = await supabase.rpc('place_guest_order', {
-        p_restaurant_id: restaurantId,
-        p_table_number: String(tableNumber),
-        p_device_id: getOrCreateDeviceId(),
-        p_items: itemsToSend,
-        p_comment: comment || null
-      });
+      await syncCartRef.current({ wait: true });
+
+      if (dirtyRef.current.size > 0) {
+        // Правки гостя не дошли до сервера. Нет связи — до-отправим заказ
+        // целиком позже (place_guest_order сам сольёт его с корзиной).
+        if (!navigator.onLine) {
+          enqueue({ type: 'order', rpc: 'place_guest_order', params: { ...args, p_items: itemsToSend, p_comment: comment || null } });
+          finishLocally();
+          return;
+        }
+        alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('cart_send', { ...args, p_comment: comment || null });
 
       if (error) {
-        // Строгая проверка (не isOfflineError): в очередь заказ ставим только
-        // при явном оффлайне устройства — тогда запрос точно не дошёл до
-        // сервера и повтор не создаст дубль. При «онлайн, но сбой» — честная
-        // ошибка (для железобетонной защиты от дублей нужен ключ идемпотентности
-        // в place_guest_order — отдельный шаг).
-        if (!navigator.onLine) { queueOrderOffline(); return; }
-        console.error("Ошибка записи заказа в БД:", error);
+        if (typeof error.message === 'string' && error.message.startsWith('Корзина пуста')) {
+          // Уже отправлена (официантом или прошлой попыткой) — просто обновимся.
+          await syncCartRef.current({ wait: true });
+          return;
+        }
+        if (isOfflineError(error)) {
+          enqueue({ type: 'order', rpc: 'cart_send', params: { ...args, p_comment: comment || null } });
+          finishLocally();
+          return;
+        }
+        console.error("Ошибка отправки заказа:", error);
         alert("Произошла ошибка при отправке заказа. Позовите, пожалуйста, официанта.");
         return;
       }
 
       console.log('✅ Заказ успешно отправлен на кухню:', data?.[0]);
       if (data?.[0]?.seat_number != null) setSeatNumber(data[0].seat_number);
-      setConfirmedOrders(prev => [...prev, ...cartItems]);
-      setCart({});
-
+      finishLocally();
+      syncCartRef.current();
     } catch (err) {
-      if (!navigator.onLine) { queueOrderOffline(); return; }
+      if (!navigator.onLine) {
+        enqueue({ type: 'order', rpc: 'place_guest_order', params: { ...args, p_items: itemsToSend, p_comment: comment || null } });
+        finishLocally();
+        return;
+      }
       console.error("Системная ошибка при оформлении:", err);
     } finally {
       // 2. СНИМАЕМ ЗАМОК в любом случае (даже если была ошибка)
@@ -850,10 +891,12 @@ useEffect(() => {
 // (раньше он POST-ил на заглушку-URL и просто 404-ил, добавляя задержку).
 const finishGuestSession = async () => {
   setCart({});
+  dirtyRef.current.clear();
   setConfirmedOrders([]);
   setChatMessages([]);
   setCurrentSessionId('');
   localStorage.removeItem('restaurant_cart');
+  localStorage.removeItem(DIRTY_KEY);
   localStorage.removeItem('restaurant_orders');
   localStorage.removeItem('chat_history');
   localStorage.removeItem('ai_chat_session');
@@ -993,6 +1036,7 @@ const handlePayFlowPaid = async () => {
     // заново отсканировал QR-код стола.
     const endGuestSession = () => {
       localStorage.removeItem('restaurant_cart');
+      localStorage.removeItem(DIRTY_KEY);
       localStorage.removeItem('restaurant_orders');
       localStorage.removeItem('chat_history');
       localStorage.removeItem('ai_chat_session');
@@ -1078,43 +1122,109 @@ const handlePayFlowPaid = async () => {
       return () => { cancelled = true; };
     }, [restaurantId, tableNumber, skipIntro, tableSessionId]);
 
-    // Черновик корзины на сервер: официант видит, что гость набирает, ещё ДО
-    // отправки заказа. Регистрирует устройство как гостя (даже с пустой
-    // корзиной сразу после скана — попадает в счётчик гостей) и обновляет
-    // содержимое по мере изменения. Дебаунс, чтобы не слать на каждый +/-.
-    // Форма items совпадает с place_guest_order (item_id/quantity/comment/
-    // modifiers) — модификаторы/комментарий берём из данных блюда (их кладёт
-    // голосовой ИИ), у блюд из меню их просто нет.
-    useEffect(() => {
-      if (!restaurantId || !tableNumber) return;
-      // Синкаем только когда сессия установлена/подтверждена (mark на первом
-      // входе либо проверка-резюме на возврате) — иначе на закрытом столе
-      // sync_guest_cart пересоздал бы «занятую» сессию.
-      if (!tableSessionId) return;
-      // Не синкаем в потоке счёта/оплаты: там стол уже закрывается
-      // (pay_table_seats при полной оплате освобождает сессию), а лишний
-      // sync_guest_cart создал бы новую «занятую» сессию — из-за этого стол
-      // после полной оплаты «залипал» в статусе «Занят» вместо «Свободен».
-      if (isBillRequested || payFlowSeats !== null || quizTrigger !== null || isReviewSubmitted) return;
-      const deviceId = getOrCreateDeviceId();
-      const items = Object.entries(cart).map(([id, count]) => {
-        const d = voiceDishesById[id] || {};
-        const mods = Array.isArray(d.modifiers) ? d.modifiers.map(m => m?.id).filter(Boolean) : [];
-        const payload = { item_id: id, quantity: count };
-        if (d.comment) payload.comment = d.comment;
-        if (mods.length) payload.modifiers = mods;
-        return payload;
+    // Корзина = строки общего заказа стола. syncCart: (1) входит за стол
+    // (место и счётчик гостей), (2) досылает блюда, изменённые гостем (cart_set,
+    // количество задаётся абсолютно — повтор безопасен), (3) подтягивает с
+    // сервера всё остальное: правки официанта в корзине и то, что уже
+    // отправлено на кухню («Уже готовится»). Зовётся после изменений корзины
+    // (с дебаунсом), каждые 4 секунды и при возвращении в приложение.
+    syncCartRef.current = (opts = {}) => {
+      if (!restaurantId || !tableNumber || !tableSessionId) return Promise.resolve();
+      if (syncPromiseRef.current) {
+        syncAgainRef.current = true;
+        return opts.wait
+          ? syncPromiseRef.current.then(() => syncCartRef.current({ wait: true }))
+          : syncPromiseRef.current;
+      }
+      const run = async () => {
+        try {
+          const args = {
+            p_restaurant_id: restaurantId,
+            p_table_number: String(tableNumber),
+            p_device_id: getOrCreateDeviceId(),
+          };
+          let { data: state, error } = await supabase.rpc('get_my_table_state', args);
+          if (error || !state?.session_id) return; // стол закрыт — это увидит проверка сессии
+          if (state.seat_number == null) {
+            const { error: joinErr } = await supabase.rpc('cart_join', args);
+            if (joinErr) return;
+            ({ data: state } = await supabase.rpc('get_my_table_state', args));
+          }
+          let lines = state?.lines || [];
+
+          const dirty = dirtyRef.current;
+          if (dirty.size > 0) {
+            const sent = { ...cartRef.current };
+            const ops = planPush(sent, dirty, lines, dishesRef.current);
+            for (const op of ops) {
+              const { error: setErr } = await supabase.rpc('cart_set', {
+                ...args,
+                p_item_id: op.itemId,
+                p_quantity: op.quantity,
+                p_comment: op.comment,
+                p_modifiers: op.modifiers.length ? op.modifiers : null,
+              });
+              if (setErr) return; // следующий цикл повторит
+            }
+            // Блюда, которые гость не менял за время запроса, теперь на сервере.
+            for (const id of [...dirty]) {
+              if ((cartRef.current[id] || 0) === (sent[id] || 0)) dirty.delete(id);
+            }
+            writeDirty(dirty);
+            ({ data: state } = await supabase.rpc('get_my_table_state', args));
+            lines = state?.lines || lines;
+          }
+
+          if (state?.seat_number != null) setSeatNumber(state.seat_number);
+          const cards = dishCardsFromLines(lines, dishesRef.current);
+          if (Object.keys(cards).length) setVoiceDishesById((prev) => ({ ...cards, ...prev }));
+          setCart((prev) => {
+            const next = adoptServerCart(prev, dirtyRef.current, lines);
+            return sameCart(prev, next) ? prev : next;
+          });
+          setConfirmedOrders((prev) => {
+            const next = toConfirmedItems(lines);
+            return sameConfirmed(prev, next) ? prev : next;
+          });
+        } catch (err) {
+          console.warn('syncCart:', err);
+        }
+      };
+      syncPromiseRef.current = run().finally(() => {
+        syncPromiseRef.current = null;
+        if (syncAgainRef.current) {
+          syncAgainRef.current = false;
+          syncCartRef.current();
+        }
       });
-      const t = setTimeout(() => {
-        supabase.rpc('sync_guest_cart', {
-          p_restaurant_id: restaurantId,
-          p_table_number: String(tableNumber),
-          p_device_id: deviceId,
-          p_items: items,
-        }).then(({ error }) => { if (error) console.warn('sync_guest_cart:', error); });
-      }, 500);
+      return syncPromiseRef.current;
+    };
+
+    // Изменили корзину — досылаем через полсекунды (дебаунс на +/-).
+    useEffect(() => {
+      if (!restaurantId || !tableNumber || !tableSessionId) return;
+      // В потоке счёта/оплаты стол закрывается — корзину больше не трогаем.
+      if (isBillRequested || payFlowSeats !== null || quizTrigger !== null || isReviewSubmitted) return;
+      const t = setTimeout(() => { syncCartRef.current(); }, 500);
       return () => clearTimeout(t);
     }, [restaurantId, tableNumber, tableSessionId, cart, voiceDishesById, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted]);
+
+    // Регулярно подтягиваем серверное состояние (правки официанта, статусы).
+    useEffect(() => {
+      if (!restaurantId || !tableNumber || !tableSessionId) return;
+      if (isBillRequested || payFlowSeats !== null || quizTrigger !== null || isReviewSubmitted) return;
+      const tick = () => { if (document.visibilityState === 'visible') syncCartRef.current(); };
+      const id = setInterval(tick, 4000);
+      document.addEventListener('visibilitychange', tick);
+      window.addEventListener('focus', tick);
+      window.addEventListener('online', tick);
+      return () => {
+        clearInterval(id);
+        document.removeEventListener('visibilitychange', tick);
+        window.removeEventListener('focus', tick);
+        window.removeEventListener('online', tick);
+      };
+    }, [restaurantId, tableNumber, tableSessionId, isBillRequested, payFlowSeats, quizTrigger, isReviewSubmitted]);
 
     // Жизненный цикл гостевой сессии, пока гость просто в меню (не в потоке
     // счёта/оплаты — там свой сброс, дёргать reload нельзя):
