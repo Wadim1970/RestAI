@@ -1,3 +1,5 @@
+import { dishPhoto } from './dishImage.js'
+
 // Корзина гостя = строки общего заказа стола (status 'new') на его месте.
 // Сервер — единственный источник правды; здесь чистая логика сверки
 // локальной корзины {id блюда: количество} с тем, что отдаёт get_my_table_state.
@@ -39,7 +41,7 @@ export function toConfirmedItems(lines) {
     id: l.item_id,
     lineId: l.id,
     dish_name: l.dish_name,
-    image_url: l.image_url_thumbnail || l.image_url || null,
+    image_url: dishPhoto(l),
     product_type: l.product_type || null,
     cost_rub: Number(l.unit_price ?? l.cost_rub ?? 0),
     count: Number(l.quantity || 0),
@@ -58,7 +60,7 @@ export function dishCardsFromLines(lines, known = {}) {
     out[l.item_id] = {
       id: l.item_id,
       dish_name: l.dish_name,
-      image_url: l.image_url_thumbnail || l.image_url || null,
+      image_url: dishPhoto(l),
       product_type: l.product_type || null,
       cost_rub: Number(l.cost_rub ?? l.unit_price ?? 0),
       modifiers: Array.isArray(l.modifiers) ? l.modifiers : [],
