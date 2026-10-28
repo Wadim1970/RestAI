@@ -4,6 +4,7 @@ import SmokeGlass from './SmokeGlass/SmokeGlass';
 import AudioBars from './AudioBars/AudioBars';
 import { roleFromDishes, roleFromText, ROLE_COLORS } from '../../lib/assistantRole';
 import { getOrCreateDeviceId } from '../../lib/deviceId';
+import { supabase } from '../../supabaseClient';
 import styles from './VoiceStage.module.css';
 
 const RELAY_WS_URL = import.meta.env.VITE_VOICE_RELAY_URL || 'wss://voice.restai.space/voice';
@@ -624,7 +625,9 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         fallbackToWs('relay');
       } else if (msg.type === 'audio' && msg.data) {
         playChunk(msg.data);
-      } else if (msg.type === 'error' && msg.code === 'busy') {
+      } else if (msg.type === 'error' && ['busy', 'limit', 'time_limit', 'forbidden', 'replaced'].includes(msg.code)) {
+        // Отказ сервера голоса: линии заняты, лимит, вышло время, не принят
+        // билет стола или разговор открыт на другом экране — показываем причину.
         setStatus('busy');
         setStatusMessage(msg.message || '');
       } else if (msg.type === 'user_turn_end') {
@@ -664,7 +667,34 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
       }
     };
 
-    function connect(transport) {
+    async function connect(transport) {
+      // Пока берём билет, события прежнего сокета (при переходе WebRTC →
+      // WebSocket) нам не нужны: он закрывается, это не ошибка.
+      ws = null;
+      wsRef.current = null;
+      // Билет на разговор: одноразовый, выдаёт база (voice_ticket_issue). Сервер
+      // голоса берёт ресторан, стол и устройство из него, а не из ссылки. Не
+      // вышло получить (нет связи с базой) — подключаемся без билета: если
+      // сервер его требует, он сам откажет понятным сообщением.
+      let ticket = '';
+      try {
+        const { data, error } = await supabase.rpc('voice_ticket_issue', {
+          p_restaurant_id: restaurantId,
+          p_table_number: String(tableNumber ?? ''),
+          p_device_id: getOrCreateDeviceId(),
+        });
+        if (error) {
+          if (/Лимит/.test(error.message || '')) {
+            setStatus('busy');
+            setStatusMessage(error.message);
+            return;
+          }
+        } else if (typeof data === 'string') {
+          ticket = data;
+        }
+      } catch { /* без билета */ }
+      if (stopped) return;
+
       // Приветствие уже запрошено (переход на WebSocket посреди старта) —
       // новая сессия здоровается сразу, без ожидания start_greeting.
       const params = new URLSearchParams({
@@ -677,6 +707,7 @@ export default function VoiceStage({ guestId, restaurantId, tableNumber, session
         sessionId: sessionId ?? '',
         deferGreeting: prewarm && !greetingRequestedRef.current ? '1' : '0',
         transport,
+        ticket,
       });
       const socket = new WebSocket(`${RELAY_WS_URL}?${params}`);
       ws = socket;
