@@ -1,6 +1,7 @@
 import styles from './CartAdvice.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import { dishThumb, fallbackToPhoto } from '../../lib/dishImage';
+import { adviserLabel, adviserRegion } from '../../lib/adviser';
 
 // Совет в корзине: чего не хватает к этому завтраку, обеду или ужину
 // («к стейку — перечный соус»), или — если всего хватает — похвала выбора и
@@ -14,8 +15,8 @@ export default function CartAdvice({ advice, dish, dessertAnswer, onAccept, onDe
     const weight = formatWeight(dish);
     const img = dishThumb(dish);
     return (
-      <div className={styles.card} role="region" aria-label="Совет шефа">
-        <Who />
+      <div className={styles.card} role="region" aria-label={adviserRegion(dish)}>
+        <Who dish={dish} />
         <p className={styles.title}>{advice.title}</p>
         <div className={styles.offer}>
           <div className={styles.photo}>
@@ -57,11 +58,11 @@ export default function CartAdvice({ advice, dish, dessertAnswer, onAccept, onDe
   return null;
 }
 
-function Who() {
+function Who({ dish }) {
   return (
     <div className={styles.who}>
       <img src="/icons/foto-avatar.png" alt="" className={styles.avatar} />
-      <span>Шеф советует</span>
+      <span>{adviserLabel(dish)}</span>
     </div>
   );
 }

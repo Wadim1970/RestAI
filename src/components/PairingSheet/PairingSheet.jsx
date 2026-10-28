@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './PairingSheet.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import { dishThumb, fallbackToPhoto } from '../../lib/dishImage';
+import { adviserLabel } from '../../lib/adviser';
 
 // Подсказка шефа после добавления блюда: «К пицце Пепперони отлично подходит
 // салат с бурратой». Выезжает снизу поверх нижнего бара только на время
@@ -45,7 +46,7 @@ function Sheet({ offer, dish, onAccept, onDecline }) {
         <div className={styles.grab} />
         <div className={styles.who}>
           <img src="/icons/foto-avatar.png" alt="" className={styles.avatar} />
-          <span>Шеф советует</span>
+          <span>{adviserLabel(dish)}</span>
         </div>
         <p className={styles.lead} id="pairing-lead">{offer.lead}</p>
         <div className={styles.offer}>
