@@ -3,6 +3,7 @@ import styles from './DishModal.module.css';
 import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import CloseButton from '../CloseButton/CloseButton';
 import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
+import { adviserLabel } from '../../lib/adviser';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -347,7 +348,7 @@ export default function DishModal({
 
               {pairDish && (
                 <>
-                  <h3 className={styles.dh}>Шеф советует к этому</h3>
+                  <h3 className={styles.dh}>{adviserLabel(pairDish, ' к этому')}</h3>
                   <div className={styles.pair}>
                     <div className={styles.pairImg}>
                       {dishThumb(pairDish) && (
