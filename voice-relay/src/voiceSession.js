@@ -3,6 +3,8 @@ import { openVoiceSession } from './voiceProvider.js';
 import { config } from './config.js';
 import { pcm16DurationMs, pcm16Rms, pcm16Silence } from './audioStats.js';
 import { openGptLiveWebrtcSession, guestIceServers } from './gptLiveWebrtc.js';
+import { SessionGuard, originAllowed } from './guard.js';
+import { consumeTicket } from './ticket.js';
 
 // Замеры голоса (логи «задержка ответа», «ответ ИИ: поток звука»):
 // ответ ИИ закончился, если звука нет столько после того, как он доиграл бы;
@@ -256,19 +258,66 @@ export function getActiveSessionCount() {
 // (см. buildTools). Синхронизация с экраном (показ блюд, корзина) во
 // время разговора — следующий, более крупный этап, здесь ещё нет.
 export async function voiceRoutes(app) {
+  const guard = new SessionGuard({
+    perIpMax: config.maxSessionsPerIp,
+    perIpPerMinute: config.maxNewSessionsPerIpPerMinute,
+    perIpMinutesPerDay: config.maxMinutesPerIpPerDay,
+    onWarn: (msg) => app.log.warn(msg),
+  });
+
   app.get('/voice', { websocket: true }, async (guestSocket, req) => {
-    if (activeSessions >= config.maxConcurrentSessions) {
-      app.log.warn({ activeSessions, max: config.maxConcurrentSessions }, 'лимит одновременных голосовых сессий достигнут');
-      guestSocket.send(JSON.stringify({
-        type: 'error',
-        code: 'busy',
-        message: 'Сейчас все голосовые линии заняты, попробуйте через минуту.',
-      }));
+    const reject = (code, message) => {
+      try { guestSocket.send(JSON.stringify({ type: 'error', code, message })); } catch { /* сокет уже закрыт */ }
       guestSocket.close();
+    };
+
+    // 1. Подключение должно идти с нашего сайта (если список задан).
+    if (!originAllowed(req.headers.origin, config.allowedOrigins)) {
+      app.log.warn({ origin: req.headers.origin, ip: req.ip }, 'голос: чужой Origin, отклонено');
+      reject('forbidden', 'Подключение не разрешено.');
       return;
     }
 
-    const { guestId, restaurantId, tableNumber, sessionId, deviceId } = req.query;
+    if (activeSessions >= config.maxConcurrentSessions) {
+      app.log.warn({ activeSessions, max: config.maxConcurrentSessions }, 'лимит одновременных голосовых сессий достигнут');
+      reject('busy', 'Сейчас все голосовые линии заняты, попробуйте через минуту.');
+      return;
+    }
+
+    let { guestId, restaurantId, tableNumber, sessionId, deviceId } = req.query;
+
+    // 2. Лимиты по IP и устройству (один разговор на телефон — новый вытесняет
+    //    прежний, поэтому переход WebRTC → WebSocket у того же телефона проходит).
+    const admitted = guard.open({
+      ip: req.ip,
+      deviceId,
+      close: () => {
+        try { guestSocket.send(JSON.stringify({ type: 'error', code: 'replaced', message: 'Разговор открыт на другом экране.' })); } catch { /* закрыт */ }
+        guestSocket.close();
+      },
+    });
+    if (!admitted.ok) {
+      app.log.warn({ ip: req.ip, code: admitted.code }, 'голос: лимит подключений');
+      reject(admitted.code, admitted.message);
+      return;
+    }
+    guestSocket.once('close', admitted.release);
+
+    // 3. Билет из базы (voice_ticket_issue): ресторан, стол и устройство берём
+    //    из него, а не из ссылки. Если задан REQUIRE_TICKET=1 — без билета нельзя.
+    if (req.query.ticket || config.requireTicket) {
+      const t = await consumeTicket(req.query.ticket);
+      if (!t) {
+        app.log.warn({ ip: req.ip, hasTicket: Boolean(req.query.ticket) }, 'голос: билет не принят');
+        reject('forbidden', 'Не удалось подтвердить стол. Отсканируйте QR-код на столе заново.');
+        return;
+      }
+      restaurantId = t.restaurantId;
+      tableNumber = t.tableNumber;
+      deviceId = t.deviceId;
+      if (guestSocket.readyState !== guestSocket.OPEN) return; // гость ушёл, пока проверяли
+    }
+
     // Прогрев голоса под видео-заставкой: сессия конфигурируется сразу, а
     // приветствие ждёт сигнала start_greeting (когда заставка закончилась).
     const deferGreeting = req.query.deferGreeting === '1';
@@ -281,6 +330,19 @@ export async function voiceRoutes(app) {
 
     activeSessions += 1;
     app.log.info({ guestId, restaurantId, sessionId, activeSessions, transport }, 'голосовая сессия гостя открыта');
+
+    // Потолок одного разговора: потом гость может начать новый (лимиты по IP
+    // в guard.js не дадут переоткрывать без конца).
+    let maxTimer = null;
+    if (config.maxSessionMinutes > 0) {
+      maxTimer = setTimeout(() => {
+        app.log.info({ guestId, restaurantId }, 'голос: потолок времени разговора');
+        try {
+          guestSocket.send(JSON.stringify({ type: 'error', code: 'time_limit', message: 'Время разговора вышло. Нажмите, чтобы начать заново.' }));
+        } catch { /* закрыт */ }
+        guestSocket.close();
+      }, config.maxSessionMinutes * 60_000);
+    }
 
     // На случай, если гость и OpenAI-нога закроются почти одновременно —
     // слот освобождается ровно один раз, кто бы ни закрылся первым.
@@ -518,6 +580,7 @@ export async function voiceRoutes(app) {
     let flowTimer = null;
     guestSocket.on('close', () => {
       guestClosed = true;
+      clearTimeout(maxTimer);
       clearInterval(flowTimer);
       clearTimeout(replyTimer);
       finishReply();

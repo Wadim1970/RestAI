@@ -61,4 +61,20 @@ export const config = {
   waiterApiUrl: process.env.WAITER_API_URL || '',
 
   maxConcurrentSessions: Number(process.env.MAX_CONCURRENT_SESSIONS || 15),
+
+  // --- Защита /voice от посторонних и от перерасхода (см. src/guard.js) ---
+  // На каком адресе слушать. 127.0.0.1 — только через nginx, прямой порт снаружи
+  // закрыт. По умолчанию все интерфейсы (как было), в .env рекомендуется 127.0.0.1.
+  host: process.env.HOST || '0.0.0.0',
+  // Каким прокси верим в X-Forwarded-For (реальный IP гостя за nginx).
+  trustProxy: list(process.env.TRUST_PROXY || '127.0.0.1,::1'),
+  // Какие сайты могут открывать разговор (Origin). Пусто — любые (не для прода).
+  allowedOrigins: list(process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN),
+  maxSessionsPerIp: Number(process.env.MAX_SESSIONS_PER_IP || 3),
+  maxNewSessionsPerIpPerMinute: Number(process.env.MAX_NEW_SESSIONS_PER_IP_PER_MINUTE || 12),
+  maxMinutesPerIpPerDay: Number(process.env.MAX_MINUTES_PER_IP_PER_DAY || 90),
+  // Потолок одного разговора, минут (0 — без потолка).
+  maxSessionMinutes: Number(process.env.MAX_SESSION_MINUTES || 10),
+  // 1 — без билета из базы (voice_ticket_issue) разговор не открывается.
+  requireTicket: process.env.REQUIRE_TICKET === '1',
 };

@@ -132,3 +132,22 @@ TURN (один раз): `bash /root/restai-voice-relay/voice-relay/deploy/setup-
 `npm test` — мост WebRTC с поддельным GPT-Live; для ручной проверки в
 браузере — `node --experimental-test-module-mocks test/e2eServer.mjs`
 (relay с заглушками контекста + поддельный GPT-Live с эхом).
+
+## Защита от посторонних и перерасхода
+
+Каждая минута разговора — деньги у провайдера, а адрес `/voice` публичный.
+Слои (все настраиваются в `.env`, см. `.env.example`):
+
+- **Билет** (`REQUIRE_TICKET=1`): телефон перед разговором получает у базы
+  одноразовый билет (`voice_ticket_issue`, миграция `20261029010000`), сервер
+  гасит его (`voice_ticket_consume`) и берёт ресторан, стол и устройство из
+  билета. Включать после миграции и выкладки приложения гостя.
+- **Лимиты** (`MAX_SESSIONS_PER_IP`, `MAX_NEW_SESSIONS_PER_IP_PER_MINUTE`,
+  `MAX_MINUTES_PER_IP_PER_DAY`): по реальному IP гостя из `X-Forwarded-For`
+  (nginx должен его передавать). Один разговор на телефон: новый вытесняет прежний.
+- **Потолок разговора** (`MAX_SESSION_MINUTES`, 10 минут).
+- **Origin** (`ALLOWED_ORIGINS` / `CORS_ORIGIN`): только наши сайты.
+- **Порт** (`HOST=127.0.0.1`): слушаем только локально, снаружи — через nginx.
+
+Отказы телефону приходят как `{type:'error', code, message}`: `busy`, `limit`,
+`time_limit`, `forbidden`, `replaced`.

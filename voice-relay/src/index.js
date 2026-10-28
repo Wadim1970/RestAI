@@ -5,7 +5,7 @@ import websocket from '@fastify/websocket';
 import { config } from './config.js';
 import { voiceRoutes, getActiveSessionCount } from './voiceSession.js';
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 if (config.corsOrigin.length > 0) {
   await app.register(cors, { origin: config.corsOrigin });
@@ -30,7 +30,7 @@ await app.register(voiceRoutes);
 app.log.info({ voiceProvider: config.voiceProvider }, 'голосовой провайдер активен');
 
 try {
-  await app.listen({ port: config.port, host: '0.0.0.0' });
+  await app.listen({ port: config.port, host: config.host });
 } catch (err) {
   app.log.error(err);
   process.exit(1);
