@@ -314,23 +314,23 @@ a { color: inherit; }
 
 .sticker {
   position: absolute;
-  /* Банер начинается в 24px от левого края страницы и уходит вправо —
-     как в исходном макете, но ПОД кнопкой ДЕМО: поверх неё он закрывал
-     кнопку на экранах ноутбуков. Поворот — вокруг правого верхнего угла,
-     поэтому весь банер остаётся ниже кнопки. */
-  left: calc(24px - var(--content-left));
+  /* Компактная наклейка между кнопкой ДЕМО и шефом: начинается под правой
+     частью кнопки и уходит вправо-вверх (поворот вокруг левого верхнего
+     угла). Кнопку не закрывает, страницу не удлиняет — шеф стоит на нижнем
+     крае экрана. */
+  left: calc(min(405px, 100%) - clamp(110px, 9vw, 160px));
   top: 100%;
   z-index: 2;
-  /* Ширина по тексту, но не короче кнопки ДЕМО и не длиннее макетных 1013px. */
-  width: fit-content;
-  min-width: calc(var(--content-left) - 24px + min(430px, 100%));
-  max-width: min(1013px, calc(var(--content-left) - 24px + 110%));
+  /* Ровно две строки (перенос — <br class="sticker__br">): высота не растёт
+     на узких окнах, и наклейка не вылезает за низ страницы. */
+  width: max-content;
+  white-space: nowrap;
   margin: 0;
-  padding: clamp(14px, 1.9vw, 28px) clamp(18px, 2.4vw, 34px);
-  transform: translateY(clamp(18px, 2vw, 32px)) rotate(-6deg);
-  transform-origin: right top;
+  padding: clamp(9px, 0.9vw, 15px) clamp(14px, 1.5vw, 24px);
+  transform: translateY(clamp(14px, 1.4vw, 24px)) rotate(-8deg);
+  transform-origin: left top;
   background: var(--sticker-bg);
-  font: 700 clamp(15px, 1.78vw, 32px)/1.26 var(--font-geo);
+  font: 700 clamp(13px, 1.05vw, 19px)/1.3 var(--font-geo);
   color: var(--sticker-ink);
   pointer-events: none;
 }
@@ -366,15 +366,17 @@ a { color: inherit; }
 }
 
 /* На десктопе наклейка стоит под кнопкой ДЕМО вне потока — резервируем
-   под неё место (высота банера плюс опущенный поворотом левый край). */
+   под неё место (её высота плюс отступ от кнопки). */
 @media (min-width: 901px) {
-  .hero__text { padding-bottom: clamp(150px, 15vw, 300px); }
+  .hero__text { padding-bottom: clamp(80px, 6.2vw, 106px); }
 }
 
 /* ======================================================= планшеты (<1200) */
 
 @media (max-width: 1199px) {
   .hero__art img { max-height: calc(100dvh - 130px); }
+  /* Колонки уже — наклейка начинается левее, чтобы не заходить на шефа. */
+  .sticker { left: calc(min(405px, 100%) - clamp(200px, 26vw, 260px)); }
 }
 
 /* ====================================================== мобильные (<=900) */
@@ -457,6 +459,7 @@ a { color: inherit; }
     border-radius: 6px;
     pointer-events: auto;
   }
+  .sticker { white-space: normal; }
   .sticker a { white-space: normal; }
   .sticker__br { display: none; }
 
