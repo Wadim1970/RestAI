@@ -41,14 +41,14 @@ if [ "$mode" = "--check" ]; then
     -H "apikey: $1" -H "Authorization: Bearer $1" -H 'Content-Type: application/json' \
     -d '{"p_session_id":"00000000-0000-0000-0000-000000000000"}'; }
   n1="$(code "$NEWANON")"; n2="$(code "$NEWSVC")"; o1="$(code "$OLDANON")"; o2="$(code "$OLDSVC")"
-  echo "новый anon:          $n1  (ждём 200)"
-  echo "новый service_role:  $n2  (ждём 200)"
-  echo "СТАРЫЙ anon:         $o1  (ждём 401)"
-  echo "СТАРЫЙ service_role: $o2  (ждём 401)"
+  echo "new anon:          $n1  (expected 200)"
+  echo "new service_role:  $n2  (expected 200)"
+  echo "OLD anon:          $o1  (expected 401)"
+  echo "OLD service_role:  $o2  (expected 401)"
   if [ "$n1" = 200 ] && [ "$n2" = 200 ] && [ "$o1" = 401 ] && [ "$o2" = 401 ]; then
-    echo "ГОТОВО: старые ключи не работают, новые работают."
+    echo "DONE: old keys are dead, new keys work."
   else
-    echo "ЧТО-ТО НЕ ТАК — пришлите эти четыре строки."; exit 1
+    echo "SOMETHING IS WRONG: if you see 502 run: sudo docker restart supabase-nginx and check again; else send these 4 lines."; exit 1
   fi
   exit 0
 fi
@@ -102,6 +102,7 @@ cat <<EOF
 
 Дальше (по порядку, подробности в чате):
   1. cd $(dirname "$ENV_FILE") && sudo docker compose up -d --force-recreate
-  2. bash $0 --check
-  3. Подставить новые ключи в .env приложений и n8n, пересобрать (update.sh).
+  2. sudo docker restart supabase-nginx     (если такой контейнер есть — иначе будет 502)
+  3. bash $0 --check
+  4. bash $(dirname "$0")/apply-new-keys.sh --from-file $OUT  — и так на каждом сервере (см. чат).
 EOF
