@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RestAI для сети «Здрасте» — коммерческое предложение</title>
+<meta name="description" content="Рост выручки с каждого гостя и ежедневно видимый сервис на всех точках сети: предложение RestAI для управляющей компании сети кофеен «Здрасте».">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241A12; --ink2:#4A3A2C; --mute:#7C6A58;
+    --honey:#C0731F; --brick:#B0503A; --sage:#5E7A54;
+    --paper:#F4ECE0; --cream:#FBF7F1; --line:#E2D4C1;
+    --dark:#2A1C12;
+    --sans:'Manrope','Noto Sans',Arial,sans-serif;
+    --serif:'Spectral','Noto Serif',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:13.333in 7.5in; margin:0}
+  html,body{background:#fff}
+  @media screen{
+    html{background:#DCD1C1}
+    body{background:#DCD1C1;display:flex;flex-direction:column;align-items:center;
+         gap:26px;padding:30px 20px 46px}
+    .slide{flex:none;border-radius:8px;box-shadow:0 14px 34px rgba(36,26,18,.22)}
+    /* Слайд — жёсткие 1280px. Масштаб каждой ступени подобран по её нижней
+       границе, чтобы 1280 × zoom + поля влезали и горизонтальной прокрутки
+       не было нигде. zoom: calc() пока не поддерживается, отсюда лестница. */
+    @media (max-width:1320px){body{padding:20px 16px 36px}}
+    @media (max-width:1320px){.slide{zoom:.84}}
+    @media (max-width:1120px){.slide{zoom:.72}}
+    @media (max-width:960px) {.slide{zoom:.61}}
+    @media (max-width:820px) {.slide{zoom:.52}}
+    @media (max-width:700px) {.slide{zoom:.44}}
+    @media (max-width:600px) {.slide{zoom:.38}}
+    @media (max-width:520px) {.slide{zoom:.31}}
+    @media (max-width:440px) {.slide{zoom:.26}}
+    @media (max-width:380px) {.slide{zoom:.22}}
+  }
+  @media print{
+    body{display:block;gap:0;padding:0;background:#fff}
+    .slide{border-radius:0;box-shadow:none;zoom:1}
+  }
+
+  /* Панель страницы — только на экране, в PDF её нет */
+  .bar{display:none}
+  @media screen{
+    .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;
+         width:min(1280px,100%);margin-bottom:-4px;color:#4A3A2C;font-size:14px}
+    .bar .who{font-weight:700;letter-spacing:.02em}
+    .bar .who span{display:block;font-weight:500;color:#6B5A49;font-size:13px;margin-top:2px}
+    .bar .pdf{display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+              background:#2A1C12;color:#F7EFE4;font-weight:700;font-size:14px;
+              padding:11px 20px;border-radius:999px;box-shadow:0 8px 20px rgba(36,26,18,.25)}
+    .bar .pdf:hover{background:#3A2817}
+    .bar .hint{display:none}
+    @media (max-width:820px){
+      .bar{gap:10px}
+      .bar .hint{display:block;flex-basis:100%;order:3;font-size:13px;line-height:1.45;color:#6B5A49}
+    }
+    .bar .pdf svg{width:15px;height:15px;fill:none;stroke:#E8A757;stroke-width:2;
+                  stroke-linecap:round;stroke-linejoin:round}
+  }
+  @media print{.bar{display:none !important}}
+  body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .slide{
+    width:1280px;height:720px;position:relative;overflow:hidden;
+    background:var(--cream);page-break-after:always;break-after:page;
+    padding:54px 64px 58px;display:flex;flex-direction:column;
+  }
+  .slide:last-child{page-break-after:auto;break-after:auto}
+
+  /* --- chrome --- */
+  .kicker{font-size:12.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--honey);margin-bottom:14px}
+  .kicker .sep{color:var(--line);margin:0 9px}
+  .kicker .ghost{color:var(--mute);font-weight:700}
+  h1{font-family:var(--serif);font-weight:600;font-size:62px;line-height:1.06;letter-spacing:-.015em}
+  h2{font-family:var(--serif);font-weight:600;font-size:40px;line-height:1.14;letter-spacing:-.01em;max-width:30ch}
+  h2.wide{max-width:44ch}
+  h2.sm{font-size:34px;max-width:40ch}
+  .sub{font-size:18px;line-height:1.5;color:var(--ink2);max-width:92ch;margin-top:14px}
+  .sub b{color:var(--ink);font-weight:700}
+  .slide .foot{position:absolute;left:64px;right:64px;bottom:22px;display:flex;justify-content:space-between;
+        font-size:11.5px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  .slide .num{position:absolute;right:64px;top:54px;font-size:12.5px;font-weight:800;color:var(--line);letter-spacing:.1em}
+  .body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+  .body.top{justify-content:flex-start;padding-top:26px}
+
+  /* --- title slide --- */
+  .title{background:var(--dark);color:#F7EFE4;justify-content:space-between;padding:60px 70px}
+  .title:before{content:"";position:absolute;inset:0;
+    background:radial-gradient(900px 540px at 88% 8%,rgba(192,115,31,.40),transparent 62%),
+               radial-gradient(640px 460px at 4% 100%,rgba(94,122,84,.30),transparent 66%)}
+  .title>*{position:relative}
+  .title .brand{font-size:13px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:#E0A860}
+  .title h1{font-size:70px;color:#FFF9F0;max-width:21ch}
+  .title h1 em{font-style:normal;color:#E8A757}
+  .title .lede{font-size:20px;line-height:1.5;color:#D9C8B4;max-width:66ch;margin-top:22px}
+  .title .meta{display:flex;gap:46px;align-items:flex-end;justify-content:space-between;
+    border-top:1px solid rgba(247,239,228,.18);padding-top:20px;font-size:14px;color:#C9B49B}
+  .title .meta b{color:#F7EFE4;display:block;font-size:15px;margin-bottom:3px}
+
+  /* --- section divider --- */
+  .sect{background:var(--dark);color:#F7EFE4;justify-content:center}
+  .sect:before{content:"";position:absolute;inset:0;
+    background:radial-gradient(760px 500px at 92% 96%,rgba(176,80,58,.34),transparent 64%),
+               radial-gradient(620px 420px at 6% 6%,rgba(192,115,31,.26),transparent 66%)}
+  .sect>*{position:relative}
+  .sect .kicker{color:#E8A757}
+  .sect h2{font-size:52px;color:#FFF9F0;max-width:28ch}
+  .sect .sub{color:#D4C2AD;font-size:19px;max-width:78ch}
+  .sect .foot{color:rgba(201,180,155,.8)}
+
+  /* --- metric strip --- */
+  .metrics{display:flex;gap:0;margin-top:34px;border-top:1px solid rgba(247,239,228,.2)}
+  .metrics .m{flex:1;padding:22px 26px 0;border-right:1px solid rgba(247,239,228,.14)}
+  .metrics .m:last-child{border-right:0}
+  .metrics .m:first-child{padding-left:0}
+  .metrics .v{font-family:var(--serif);font-size:38px;font-weight:600;color:#E8A757;line-height:1}
+  .metrics .l{font-size:13.5px;color:#C9B49B;margin-top:9px;line-height:1.4}
+
+  /* --- card grids --- */
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px;
+        box-shadow:0 1px 0 rgba(36,26,18,.03)}
+  .card .ct{font-size:17px;font-weight:800;line-height:1.28;color:var(--ink)}
+  .card .cf{font-size:14.5px;line-height:1.42;color:var(--honey);font-weight:700;margin-top:11px;
+            padding-top:11px;border-top:1px solid var(--line)}
+  .card .cr{font-size:14.5px;line-height:1.46;color:var(--ink2);margin-top:11px}
+  .card .cr b{color:var(--brick);font-weight:700}
+  .card.dense .ct{font-size:16px}
+  .card.dense .cf,.card.dense .cr{font-size:13.5px;line-height:1.4}
+
+  .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column}
+  .tile .tn{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--honey);margin-bottom:10px}
+  .tile .th{font-size:19px;font-weight:800;line-height:1.26;margin-bottom:11px}
+  .tile .tb{font-size:14.5px;line-height:1.5;color:var(--ink2)}
+  .tile .tb b{color:var(--ink);font-weight:700}
+  .tile.accent{background:var(--dark);border-color:var(--dark);color:#F2E7D9}
+  .tile.accent .tn{color:#E8A757}
+  .tile.accent .th{color:#FFF9F0}
+  .tile.accent .tb{color:#D4C2AD}
+  .tile.accent .tb b{color:#FFF9F0}
+
+  /* --- step block (label : text rows) --- */
+  .rows{display:flex;flex-direction:column;gap:13px;margin-top:4px}
+  .row{display:grid;grid-template-columns:208px 1fr;gap:24px;align-items:start;
+       background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 22px}
+  .row .rl{font-size:14.5px;font-weight:800;color:var(--honey);line-height:1.3}
+  .row .rl span{display:block;font-size:12px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+  .row .rt{font-size:15.5px;line-height:1.52;color:var(--ink2)}
+  .row .rt b{color:var(--ink);font-weight:700}
+  .row.pain{background:#FDF3EE;border-color:#EBCFC3}
+  .row.pain .rl{color:var(--brick)}
+
+  /* --- tables --- */
+  table{width:100%;table-layout:fixed;border-collapse:collapse;background:#fff}
+  .tbl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  th{background:var(--paper);font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+     color:var(--ink2);text-align:left;padding:13px 18px;border-bottom:1px solid var(--line)}
+  td{font-size:15.5px;line-height:1.45;color:var(--ink2);padding:14px 18px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:700;color:var(--ink)}
+  td.v{font-weight:800;color:var(--honey);font-family:var(--serif);font-size:19px}
+  td.vs{font-weight:800;color:var(--sage);font-family:var(--serif);font-size:19px}
+  tr.hi td{background:#FBF4EA}
+  table.money th{font-size:11.5px;letter-spacing:.07em;line-height:1.3}
+  table.money td{font-size:16px}
+  table.compact td{padding:12px 18px}
+  table.compact th{padding:11px 18px}
+  table.money td:not(.k){text-align:right}
+  table.money th:not(:first-child){text-align:right}
+
+  /* --- timeline --- */
+  .tl{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:6px}
+  .tl .s{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px;position:relative}
+  .tl .s:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--honey);
+                border-radius:14px 14px 0 0}
+  .tl .s:nth-child(3):before{background:var(--brick)}
+  .tl .s:nth-child(4):before{background:var(--sage)}
+  .tl .w{font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:6px 0 10px}
+  .tl .d{font-size:14.5px;line-height:1.48;color:var(--ink2)}
+  .tl .d b{color:var(--ink);font-weight:700}
+
+  /* --- callout --- */
+  .callout{background:var(--dark);color:#F7EFE4;border-radius:14px;padding:22px 28px;margin-top:18px;
+           font-size:18px;line-height:1.46;display:flex;align-items:center;gap:20px}
+  .callout .tag{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#E8A757;white-space:nowrap}
+  .callout b{color:#FFD9A3}
+  .callout.light{background:#FDF3EE;color:var(--ink2);border:1px solid #EBCFC3}
+  .callout.light .tag{color:var(--brick)}
+  .callout.light b{color:var(--brick)}
+
+  .note{font-size:13.5px;line-height:1.5;color:var(--mute);margin-top:16px;max-width:98ch}
+  .note b{color:var(--ink2);font-weight:700}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 18px;font-size:14.5px;font-weight:700;color:var(--ink2)}
+  .chip b{color:var(--honey)}
+
+  .people{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px}
+  .p{background:#fff;border:1px solid var(--line);border-radius:14px;padding:19px 22px;display:flex;gap:16px}
+  .p .av{width:44px;height:44px;flex:0 0 44px;border-radius:12px;background:var(--paper);color:var(--honey);
+         font-family:var(--serif);font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .p .pn{font-size:16.5px;font-weight:800;line-height:1.2}
+  .p .pr{font-size:13px;font-weight:800;color:var(--honey);text-transform:uppercase;letter-spacing:.08em;margin:5px 0 7px}
+  .p .pb{font-size:14px;line-height:1.5;color:var(--ink2)}
+
+  /* --- CTA --- */
+  .cta{background:var(--dark);color:#F7EFE4;justify-content:space-between;padding:58px 70px}
+  .cta:before{content:"";position:absolute;inset:0;
+    background:radial-gradient(820px 540px at 86% 92%,rgba(192,115,31,.38),transparent 62%),
+               radial-gradient(560px 400px at 8% 10%,rgba(94,122,84,.26),transparent 68%)}
+  .cta>*{position:relative}
+  .cta h2{font-size:48px;color:#FFF9F0;max-width:30ch}
+  .cta .sub{color:#D4C2AD;font-size:19px;max-width:74ch}
+  .cta .asks{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
+  .cta .ask{border:1px solid rgba(247,239,228,.2);border-radius:14px;padding:19px 22px;background:rgba(247,239,228,.05)}
+  .cta .ask .an{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#E8A757;margin-bottom:9px}
+  .cta .ask .ab{font-size:15px;line-height:1.45;color:#E7DBCB}
+  .cta .sign{border-top:1px solid rgba(247,239,228,.18);padding-top:18px;display:flex;justify-content:space-between;align-items:flex-end;font-size:14px;color:#C9B49B}
+  .cta .sign b{color:#F7EFE4;display:block;font-size:16px;margin-bottom:3px}
+  .cta .sign a{color:inherit;text-decoration:none;border-bottom:1px solid rgba(201,180,155,.45)}
+  .cta .sign a:hover{color:#F7EFE4;border-bottom-color:#E8A757}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="who">RestAI × сеть кофеен «Здрасте»<span>Коммерческое предложение · 27 октября 2026</span></div>
+  <a class="pdf" href="RestAI-Zdraste-KP.pdf" download>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 19h16"/></svg>
+    Скачать PDF
+  </a>
+  <div class="hint">Слайды уменьшены под ширину экрана — с телефона удобнее читать PDF.</div>
+</div>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title">
+  <div class="brand">RestAI</div>
+  <div>
+    <h1>Рост выручки с каждого гостя и <em>видимый сервис</em> на всех 141 точках</h1>
+    <div class="lede">Коммерческое предложение для сети кофеен «ЗДРАСТЕ». Без замены iiko и без нагрузки на франчайзи. Предлагаем проверить на двух ваших собственных кофейнях за два месяца — бесплатно.</div>
+  </div>
+  <div class="meta">
+    <div><b>Кому</b>Владислав и операционная команда «ЗДРАСТЕ»</div>
+    <div><b>От кого</b>Вадим Фоменко, основатель RestAI</div>
+    <div><b>Дата</b>27 октября 2026</div>
+  </div>
+</section>
+
+<!-- ============ 2. КОРОТКО ============ -->
+<section class="slide">
+  <div class="num">02</div>
+  <div class="kicker">Коротко <span class="sep">/</span> <span class="ghost">о чём это предложение</span></div>
+  <h2 class="wide">Три вещи, которые RestAI даёт управляющей компании</h2>
+  <div class="body">
+    <div class="grid g3">
+      <div class="tile">
+        <div class="tn">Первое</div>
+        <div class="th">Выручка с каждого гостя</div>
+        <div class="tb">ИИ-подсказки официанту: <b>что и как предложить именно этому столу</b> — с учётом маржинальности, спешла и заготовок, которые нужно продать сегодня.</div>
+      </div>
+      <div class="tile">
+        <div class="tn">Второе</div>
+        <div class="th">Качество сервиса на всех точках сразу</div>
+        <div class="tb">Разговоры в зале проверяются по стандартам «Здрасте». УК видит <b>рейтинг точек каждый день</b>, а не выборочно по приёмкам.</div>
+      </div>
+      <div class="tile accent">
+        <div class="tn">Третье</div>
+        <div class="th">Постоянный гость узнаётся в зале</div>
+        <div class="tb">QR-меню с ИИ-ассистентом — <b>продолжение вашей программы лояльности</b>, а не второе приложение рядом с ней.</div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="tag">Что встраиваем, а не меняем</span>
+      <div>iiko, «Академия Здрасте», ваше приложение и доставка остаются как есть. <b>RestAI работает поверх них.</b></div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Коммерческое предложение</span></div>
+</section>
+
+<!-- ============ 3. РАЗДЕЛ 1 ============ -->
+<section class="slide sect">
+  <div class="kicker">Раздел 1</div>
+  <h2>Что мы увидели в ваших цифрах</h2>
+  <div class="sub">Сеть растёт быстрее рынка. Но рост сейчас держится на цене, а не на гостях — и это главный риск для дохода управляющей компании. Всё дальше — из ваших открытых данных и публикаций.</div>
+  <div class="metrics">
+    <div class="m"><div class="v">141</div><div class="l">кофейня в сети,<br>~125 из них — франчайзинговые</div></div>
+    <div class="m"><div class="v">389,8 млн ₽</div><div class="l">рекордная выручка сети<br>в марте 2026</div></div>
+    <div class="m"><div class="v">21,7%</div><div class="l">фудкост — снижен<br>с 28,9%</div></div>
+    <div class="m"><div class="v">38</div><div class="l">открытий за первое<br>полугодие 2026</div></div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 1 · Ваши цифры</span></div>
+</section>
+
+<!-- ============ 4. ЦИФРЫ → РИСК 1/2 ============ -->
+<section class="slide">
+  <div class="num">04</div>
+  <div class="kicker">Раздел 1 <span class="sep">/</span> <span class="ghost">что происходит → чем грозит владельцу сети</span></div>
+  <h2 class="sm">Четыре процесса, которые уже идут</h2>
+  <div class="body top">
+    <div class="grid g2">
+      <div class="card dense">
+        <div class="ct">Гостей становится меньше, выручку держит цена</div>
+        <div class="cf">Март 2026: средний чек +18,3%, число чеков −2,4%. Цены в 2025 подняты на 10–11%</div>
+        <div class="cr">Поднимать цены бесконечно нельзя. Следующий рост выручки должен прийти <b>из допродаж и частоты визитов</b>, иначе роялти перестанет расти.</div>
+      </div>
+      <div class="card dense">
+        <div class="ct">Качество сервиса на 125+ франчайзинговых точках видно выборочно</div>
+        <div class="cf">Приёмка по 93 критериям, чек-листы и конкурсы; был случай расторжения договора из-за жалоб гостей; оценки гостей заметно различаются между точками</div>
+        <div class="cr">Одна слабая точка в ЖК бьёт по бренду во всём районе — <b>а именно бренд вы продаёте новым партнёрам</b>.</div>
+      </div>
+      <div class="card dense">
+        <div class="ct">Сеть растёт на 4–6 точек в месяц и выходит в регионы</div>
+        <div class="cf">Иркутск, Тюмень, Киров, Уфа; 38 открытий за первое полугодие 2026</div>
+        <div class="cr">Выездной контроль в регионах дорог и медленен: <b>стандарт размывается быстрее, чем его успевают проверить</b>.</div>
+      </div>
+      <div class="card dense">
+        <div class="ct">Новые сотрудники должны быстро освоить меню и стандарт продаж</div>
+        <div class="cf">12 человек на точку, 50+ блюд из-под ножа, регулярные сезонные спешлы — восемь новинок весны сразу вошли в топ-20</div>
+        <div class="cr">Чем быстрее новинка доходит до слов официанта у каждого стола, тем больше она приносит. <b>Сейчас это зависит от конкретного менеджера.</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 1 · Ваши цифры</span></div>
+</section>
+
+<!-- ============ 5. ЦИФРЫ → РИСК 2/2 ============ -->
+<section class="slide">
+  <div class="num">05</div>
+  <div class="kicker">Раздел 1 <span class="sep">/</span> <span class="ghost">что происходит → чем грозит владельцу сети</span></div>
+  <h2 class="sm">И три, которые определят следующие пять лет</h2>
+  <div class="body top">
+    <div class="grid g3">
+      <div class="card">
+        <div class="ct">Постоянный гость ЖК — главный актив, но в зале он почти не виден</div>
+        <div class="cf">Программа лояльности на 170 000+ гостей, кешбэк 5%; в отзывах на приложение гости жалуются, что бонусы не начислились</div>
+        <div class="cr">Ваша модель держится на том, что <b>30% жителей становятся постоянными гостями</b>. Если зал не узнаёт гостя, лояльность работает только в доставке.</div>
+      </div>
+      <div class="card">
+        <div class="ct">Окно для захвата ЖК закрывается</div>
+        <div class="cf">По вашей оценке, Москва насытится через 3–5 лет; на ЖК в 8 тыс. жителей — 3–4 кофейни</div>
+        <div class="cr">Выиграет тот, кто к моменту прихода конкурентов удержит гостей района. <b>Удержание надо строить сейчас.</b></div>
+      </div>
+      <div class="card">
+        <div class="ct">Кухня из-под ножа — это много заготовок со сроками</div>
+        <div class="cf">Фудкост снижен с 28,9% до 21,7% — это ваш ключевой показатель</div>
+        <div class="cr">Каждый процент списаний на 141 точке — заметные деньги. <b>Сейчас сроки контролируются вручную.</b></div>
+      </div>
+    </div>
+    <div class="callout light">
+      <span class="tag">Наша позиция</span>
+      <div>Мы не предлагаем менять то, что у вас работает: iiko, «Академию Здрасте», ваше приложение и доставку. <b>RestAI встраивается поверх них.</b></div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 1 · Ваши цифры</span></div>
+</section>
+
+<!-- ============ 6. РАЗДЕЛ 2 ============ -->
+<section class="slide sect">
+  <div class="kicker">Раздел 2</div>
+  <h2>Что мы предлагаем: три шага</h2>
+  <div class="sub">Внедряем по шагам, от самого быстрого эффекта к самому глубокому. Каждый шаг окупается сам и не требует следующего.</div>
+  <div class="metrics">
+    <div class="m"><div class="v">Шаг 1</div><div class="l">«Контроль стандартов» —<br>сервис каждой точки виден каждый день</div></div>
+    <div class="m"><div class="v">Шаг 2</div><div class="l">Приложение официанта с ИИ-подсказками<br>и тренажёр для новичков</div></div>
+    <div class="m"><div class="v">Шаг 3</div><div class="l">Гостевое QR-меню с ИИ-ассистентом —<br>лояльность приходит в зал</div></div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Три шага</span></div>
+</section>
+
+<!-- ============ 7. ШАГ 1 ============ -->
+<section class="slide">
+  <div class="num">07</div>
+  <div class="kicker">Шаг 1 <span class="sep">/</span> <span class="ghost">Контроль стандартов</span></div>
+  <h2 class="wide">Сервис каждой точки виден каждый день, а не по приёмке</h2>
+  <div class="body">
+    <div class="rows">
+      <div class="row">
+        <div class="rl">Что делает<span>Механика</span></div>
+        <div class="rt">Записывает разговоры официантов и бариста с гостями, переводит в текст и проверяет по стандартам «Здрасте»: <b>приветствие, предложение новинки и допродажи, работа с жалобой, прощание</b>.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Что видит УК<span>Результат</span></div>
+        <div class="rt">Рейтинг точек и сотрудников по выполнению стандарта, разбор конкретных смен, <b>сигнал о точке, которая начала проседать, — до того как это появится в отзывах</b>.</div>
+      </div>
+      <div class="row pain">
+        <div class="rl">Какую боль закрывает<span>Связь с разделом 1</span></div>
+        <div class="rt">Выборочный контроль 125+ франчайзи, размывание стандарта при быстром росте и выходе в регионы.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Как устроено<span>Корректность</span></div>
+        <div class="rt">Сотрудники и гости уведомлены о записи; анализируется обезличенный текст; <b>сеть сама решает, сколько разговоров проверять</b>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Шаг 1</span></div>
+</section>
+
+<!-- ============ 8. ШАГ 2 ============ -->
+<section class="slide">
+  <div class="num">08</div>
+  <div class="kicker">Шаг 2 <span class="sep">/</span> <span class="ghost">Приложение официанта и тренажёр</span></div>
+  <h2 class="wide">Подсказка у каждого стола и новичок, готовый к смене быстрее</h2>
+  <div class="body">
+    <div class="rows">
+      <div class="row">
+        <div class="rl">Что делает<span>Механика</span></div>
+        <div class="rt">Официант ведёт столы и заказы в приложении, связанном с iiko. На каждом этапе визита ИИ подсказывает, <b>что и как предложить именно этому столу</b>: учитывает маржинальность, популярность, сочетаемость блюд, текущий спешл и заготовки, которые нужно продать сегодня.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Тренажёр<span>Обучение</span></div>
+        <div class="rt">Новый сотрудник учит меню из 50+ блюд и техники продаж <b>в формате диалога с ИИ</b>, а не только по статьям. Сезонная новинка попадает в тренажёр и в подсказки во всех точках в один день. Встраивается в «Академию Здрасте», а не заменяет её.</div>
+      </div>
+      <div class="row pain">
+        <div class="rl">Какую боль закрывает<span>Связь с разделом 1</span></div>
+        <div class="rt">Падение числа чеков — выручку приходится добирать с каждого гостя; зависимость продаж от опыта конкретного официанта; скорость ввода новичков и новинок.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Шаг 2</span></div>
+</section>
+
+<!-- ============ 9. САМООБУЧЕНИЕ ============ -->
+<section class="slide">
+  <div class="num">09</div>
+  <div class="kicker">Шаг 2 <span class="sep">/</span> <span class="ghost">главное отличие</span></div>
+  <h2 class="wide">Модель учится на вашей сети, а не на чужих лучших практиках</h2>
+  <div class="body">
+    <div class="grid g3">
+      <div class="tile">
+        <div class="tn">Этап 1 · Первые недели</div>
+        <div class="th">Пробует</div>
+        <div class="tb">Модель перебирает <b>разные техники продаж и разные способы их подачи</b>: что предложить, в какой момент визита, какими словами.</div>
+      </div>
+      <div class="tile">
+        <div class="tn">Этап 2 · Постоянно</div>
+        <div class="th">Проверяет по чекам</div>
+        <div class="tb">По данным из iiko она видит, <b>что сработало на самом деле</b> — не по экспертному мнению, а по закрытым чекам ваших гостей.</div>
+      </div>
+      <div class="tile accent">
+        <div class="tn">Этап 3 · С накоплением данных</div>
+        <div class="th">Предлагает лучшее</div>
+        <div class="tb">Всё чаще подсказывает самые эффективные приёмы. Результат — <b>рост среднего чека и продаж</b>.</div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="tag">И обратная сторона того же</span>
+      <div>Гости получают предложения, которые им действительно подходят, — <b>и возвращаются чаще</b>. Это и есть удержание гостя района, о котором раздел 1.</div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Шаг 2</span></div>
+</section>
+
+<!-- ============ 10. ШАГ 3 ============ -->
+<section class="slide">
+  <div class="num">10</div>
+  <div class="kicker">Шаг 3 <span class="sep">/</span> <span class="ghost">Гостевое QR-меню с ИИ-ассистентом</span></div>
+  <h2 class="wide">Ваша программа лояльности приходит в зал</h2>
+  <div class="body">
+    <div class="rows">
+      <div class="row">
+        <div class="rl">Что делает<span>Механика</span></div>
+        <div class="rt">Гость сканирует QR на столе: меню под брендом «Здрасте», ИИ-ассистент помогает выбрать — <b>завтрак для ребёнка, без лактозы, что взять к этому кофе</b>. Официант получает заказ и подсказку.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Главное<span>Чем это не является</span></div>
+        <div class="rt">Это <b>не второе приложение рядом с вашим</b>, а продолжение вашей программы лояльности: гость узнаётся как её участник, кешбэк 5% начисляется в вашу программу, профиль гостя хранится у сети. Устанавливать ничего не нужно.</div>
+      </div>
+      <div class="row pain">
+        <div class="rl">Какую боль закрывает<span>Связь с разделом 1</span></div>
+        <div class="rt">Постоянный гость ЖК узнаётся с момента, когда сел за стол, а не только при оплате; меньше потерь бонусов и жалоб на них; данные о частоте визитов — основа для удержания района.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Шаг 3</span></div>
+</section>
+
+<!-- ============ 11. ДОПОЛНИТЕЛЬНО: ЗАГОТОВКИ ============ -->
+<section class="slide">
+  <div class="num">11</div>
+  <div class="kicker">Дополнительно <span class="sep">/</span> <span class="ghost">контроль заготовок на кухне</span></div>
+  <h2 class="wide">Фудкост 21,7% — ваш ключевой показатель. Его можно держать не вручную</h2>
+  <div class="body">
+    <div class="grid g4">
+      <div class="tile">
+        <div class="tn">Шаг 1</div>
+        <div class="th">Маркировка</div>
+        <div class="tb">Планшет и принтер этикеток: повар маркирует заготовку, система знает <b>партию, время и срок годности</b>.</div>
+      </div>
+      <div class="tile">
+        <div class="tn">Шаг 2</div>
+        <div class="th">Предупреждение</div>
+        <div class="tb">Система предупреждает о <b>подходящих сроках и затоваривании</b> и считает списания.</div>
+      </div>
+      <div class="tile accent">
+        <div class="tn">Шаг 3</div>
+        <div class="th">Данные → в зал</div>
+        <div class="tb">Эти данные сразу уходят в подсказки шага 2: <b>официант предлагает то, что нужно продать сегодня</b>.</div>
+      </div>
+      <div class="tile">
+        <div class="tn">Итог</div>
+        <div class="th">Что закрывает</div>
+        <div class="tb">Контроль фудкоста на каждой точке и <b>требования ХАССП</b>.</div>
+      </div>
+    </div>
+    <div class="callout light">
+      <span class="tag">Зачем это УК</span>
+      <div>Каждый процент списаний на 141 точке — заметные деньги. <b>Списания перестают быть статьёй, которую видно только в конце месяца.</b></div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 2 · Дополнительно</span></div>
+</section>
+
+<!-- ============ 12. РАЗДЕЛ 3 ============ -->
+<section class="slide sect">
+  <div class="kicker">Раздел 3</div>
+  <h2>Как это увеличивает ваш доход как владельца сети</h2>
+  <div class="sub">Доход УК растёт четырьмя путями: больше роялти с той же сети, легче продаётся франшиза, появляется новая строка дохода и меньше теряется на слабых точках.</div>
+  <div class="metrics">
+    <div class="m"><div class="v">Путь 1</div><div class="l">Роялти растёт вместе с чеком,<br>а не с ценами</div></div>
+    <div class="m"><div class="v">Путь 2</div><div class="l">Франшиза продаётся<br>легче и дороже</div></div>
+    <div class="m"><div class="v">Путь 3</div><div class="l">Новая строка<br>дохода УК</div></div>
+    <div class="m"><div class="v">Путь 4</div><div class="l">Меньше потерь<br>на слабых точках</div></div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 3 · Доход УК</span></div>
+</section>
+
+<!-- ============ 13. ПУТЬ 1 ============ -->
+<section class="slide">
+  <div class="num">13</div>
+  <div class="kicker">Путь 1 <span class="sep">/</span> <span class="ghost">роялти растёт вместе с чеком, а не с ценами</span></div>
+  <h2 class="sm">Что даёт сети каждый процент среднего чека</h2>
+  <div class="body">
+    <div class="note" style="margin-top:12px;margin-bottom:14px">Расчёт на ваших данных: средняя выручка кофейни <b>3,62 млн ₽ в месяц</b> (март 2026), <b>141 точка</b>, ~125 франчайзинговых, роялти и маркетинговый сбор <b>8%</b>.</div>
+    <div class="tbl">
+    <table class="money compact">
+      <tr>
+        <th style="width:30%">Рост среднего чека<br>за счёт допродаж</th>
+        <th style="width:21%">На одну точку,<br>₽/мес</th>
+        <th style="width:21%">Оборот сети,<br>₽/год</th>
+        <th style="width:28%">Доход УК (роялти<br>+ маркетинг), ₽/год</th>
+      </tr>
+      <tr><td class="k">+1%</td><td>+36 200</td><td>+61 млн</td><td class="v">+4,3 млн</td></tr>
+      <tr class="hi"><td class="k">+3%</td><td>+108 600</td><td>+184 млн</td><td class="v">+13,0 млн</td></tr>
+      <tr><td class="k">+5%</td><td>+181 000</td><td>+306 млн</td><td class="v">+21,7 млн</td></tr>
+    </table></div>
+    <div class="callout light" style="margin-top:16px">
+      <span class="tag">Арифметика для франчайзи</span>
+      <div>При <b>+1%</b> к чеку приложение официанта за <b>5 000 ₽ в месяц</b> возвращает около <b>36 000 ₽</b> — в семь раз больше, чем стоит.</div>
+    </div>
+    <div class="note" style="margin-top:14px"><b>Это сценарии, а не обещание.</b> Реальную цифру для «Здрасте» покажет пилот — раздел 5.</div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 3 · Путь 1</span></div>
+</section>
+
+<!-- ============ 14. ПУТИ 2-4 ============ -->
+<section class="slide">
+  <div class="num">14</div>
+  <div class="kicker">Пути 2–4 <span class="sep">/</span> <span class="ghost">доход УК помимо роялти</span></div>
+  <h2 class="sm">Франшиза, своя маржа и меньше потерь</h2>
+  <div class="body">
+    <div class="grid g3">
+      <div class="tile">
+        <div class="tn">Путь 2</div>
+        <div class="th">Франшиза продаётся легче и дороже</div>
+        <div class="tb">
+          • В каждой новой точке <b>с первого дня</b> работает ИИ-система допродаж и контроля сервиса — этого нет у конкурентов в каталогах франшиз.<br><br>
+          • Экономику точки вы показываете будущим партнёрам <b>на данных о выполнении стандарта и допродажах</b>, а не только на средних цифрах.<br><br>
+          • Новая точка быстрее выходит на плато: новички обучены, новинки продаются с первого дня.
+        </div>
+      </div>
+      <div class="tile accent">
+        <div class="tn">Путь 3</div>
+        <div class="th">Новая строка дохода УК</div>
+        <div class="tb">УК может включить модули RestAI в пакет франшизы и <b>самостоятельно устанавливать цену для партнёров</b> — так же, как сейчас с подбором персонала.<br><br>Сеть получает <b>сетевую лицензию</b> у RestAI и маржу между ней и ценой для франчайзи.</div>
+      </div>
+      <div class="tile">
+        <div class="tn">Путь 4</div>
+        <div class="th">Меньше потерь на слабых точках</div>
+        <div class="tb">Точка, которая начала проседать по сервису, <b>видна в отчёте за недели до жалоб и падения выручки</b>.<br><br>Это меньше расторжений, меньше ущерба бренду в районе и меньше выездов команды УК.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 3 · Пути 2–4</span></div>
+</section>
+
+<!-- ============ 15. ДАННЫЕ ============ -->
+<section class="slide">
+  <div class="num">15</div>
+  <div class="kicker">Раздел 4 <span class="sep">/</span> <span class="ghost">Ваши данные остаются вашими</span></div>
+  <h2 class="wide">База гостей «Здрасте» — актив сети, который вы передаёте партнёрам вместе с франшизой</h2>
+  <div class="body">
+    <div class="rows">
+      <div class="row">
+        <div class="rl">Принадлежность<span>Правило 1</span></div>
+        <div class="rt">Данные гостей, сотрудников и продаж <b>принадлежат сети</b>. RestAI не использует их для других клиентов и не передаёт третьим лицам.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Лояльность<span>Правило 2</span></div>
+        <div class="rt">Гость в QR-меню остаётся участником <b>вашей</b> программы лояльности, а не RestAI.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Записи разговоров<span>Правило 3</span></div>
+        <div class="rt">Анализируются <b>в обезличенном виде</b>; сотрудники и гости уведомлены о записи.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Выгрузка<span>Правило 4</span></div>
+        <div class="rt">Сеть <b>в любой момент</b> может выгрузить свои данные.</div>
+      </div>
+      <div class="row">
+        <div class="rl">Интеграция<span>Правило 5</span></div>
+        <div class="rt">С iiko — через <b>официальное API</b>. Кассу и учёт менять не нужно.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 4 · Данные</span></div>
+</section>
+
+<!-- ============ 16. РАЗДЕЛ 5: ПИЛОТ ============ -->
+<section class="slide sect">
+  <div class="kicker">Раздел 5</div>
+  <h2>Пилот: два месяца бесплатно на двух ваших кофейнях</h2>
+  <div class="sub">Предлагаем начать с собственных точек УК: решение принимаете вы, без согласования с франчайзи, и результат меряется на ваших же данных. В пилот входят шаги 1 и 2 — контроль стандартов и приложение официанта с подсказками и тренажёром.</div>
+  <div class="metrics">
+    <div class="m"><div class="v">2 точки</div><div class="l">пилотные, собственные<br>+ одна контрольная</div></div>
+    <div class="m"><div class="v">2 месяца</div><div class="l">полный цикл: модель успевает<br>перебрать и отобрать приёмы</div></div>
+    <div class="m"><div class="v">0 ₽</div><div class="l">стоимость пилота<br>и подключения</div></div>
+    <div class="m"><div class="v">5 метрик</div><div class="l">фиксируем письменно<br>до старта</div></div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 5 · Пилот</span></div>
+</section>
+
+<!-- ============ 17. ПЛАН ПИЛОТА ============ -->
+<section class="slide">
+  <div class="num">17</div>
+  <div class="kicker">Раздел 5 <span class="sep">/</span> <span class="ghost">план на девять недель</span></div>
+  <h2 class="sm">Как проходит пилот</h2>
+  <div class="body">
+    <div class="tl">
+      <div class="s">
+        <div class="w">Неделя 1</div>
+        <div class="d">Встреча с операционной командой, выбор <b>двух пилотных точек и одной контрольной</b> (без RestAI, с похожим трафиком). Получаем стандарты сервиса, меню и спешлы, подключаемся к iiko.</div>
+      </div>
+      <div class="s">
+        <div class="w">Неделя 2</div>
+        <div class="d">Настраиваем проверку <b>по вашим стандартам</b> и подсказки <b>по вашему меню</b>. Обучаем менеджеров и официантов — около часа на смену.</div>
+      </div>
+      <div class="s">
+        <div class="w">Недели 3–8</div>
+        <div class="d">Работа в штатном режиме. Первые две-три недели модель пробует разные техники продаж, дальше всё чаще предлагает лучшие — <b>поэтому пилот длится два месяца</b>. Каждую неделю — короткий отчёт для УК.</div>
+      </div>
+      <div class="s">
+        <div class="w">Неделя 9</div>
+        <div class="d">Итоговый отчёт и решение: <b>масштабировать, доработать или остановиться</b>.</div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="tag">Условие</span>
+      <div>Если метрики не сдвинулись — <b>вы ничего не платите и ничего не должны</b>.</div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 5 · Пилот</span></div>
+</section>
+
+<!-- ============ 18. МЕТРИКИ ============ -->
+<section class="slide">
+  <div class="num">18</div>
+  <div class="kicker">Раздел 5 <span class="sep">/</span> <span class="ghost">метрики фиксируем письменно до старта</span></div>
+  <h2 class="sm">По чему судим о результате</h2>
+  <div class="body top">
+    <div class="tbl">
+    <table>
+      <tr><th style="width:38%">Метрика</th><th>Как измеряем</th></tr>
+      <tr><td class="k">Средний чек</td><td>Пилотные точки против контрольной и против того же периода прошлого года, по данным iiko</td></tr>
+      <tr><td class="k">Доля чеков с допродажей и новинкой</td><td>Позиции в чеке, по данным iiko</td></tr>
+      <tr><td class="k">Выполнение стандарта сервиса</td><td>Доля разговоров, где соблюдены ключевые пункты вашего стандарта</td></tr>
+      <tr><td class="k">Время до самостоятельной смены новичка</td><td>Дни от выхода до допуска, по данным менеджера</td></tr>
+      <tr><td class="k">Оценки гостей</td><td>Средний балл отзывов на картах до и во время пилота</td></tr>
+    </table></div>
+    <div class="note">Ни одна из метрик не считается нашими средствами в одиночку: <b>четыре из пяти берутся из ваших систем</b> — iiko, данных менеджера и публичных карт.</div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 5 · Метрики</span></div>
+</section>
+
+<!-- ============ 19. СТОИМОСТЬ ============ -->
+<section class="slide">
+  <div class="num">19</div>
+  <div class="kicker">Раздел 6 <span class="sep">/</span> <span class="ghost">стоимость после пилота</span></div>
+  <h2 class="sm" style="font-size:31px;max-width:48ch">Подключение бесплатное. Дальше — подписка за точку, без долгосрочных обязательств</h2>
+  <div class="body">
+    <div class="tbl">
+    <table>
+      <tr><th style="width:44%">Модуль</th><th>Стоимость за точку</th></tr>
+      <tr><td class="k">Приложение официанта с ИИ-подсказками</td><td class="v">5 000 ₽/мес</td></tr>
+      <tr><td class="k">«Контроль стандартов»</td><td><b style="color:var(--honey)">0,60 ₽</b> за минуту проанализированного разговора; объём выбирает сеть.<br><span style="color:var(--mute)">Пример: час разговоров в день ≈ 1 080 ₽/мес</span></td></tr>
+      <tr><td class="k">Гостевое QR-меню с ИИ-ассистентом</td><td class="v">5 000 ₽/мес</td></tr>
+      <tr><td class="k">Тренажёр для новых сотрудников</td><td>Договорная</td></tr>
+      <tr><td class="k">Контроль заготовок</td><td>Договорная + оборудование (планшет, принтер этикеток)</td></tr>
+    </table></div>
+    <div class="callout light">
+      <span class="tag">Для сети от 100 точек</span>
+      <div>Индивидуальные условия <b>сетевой лицензии</b>, в том числе с правом УК устанавливать собственную цену для франчайзи — раздел 3, путь 3.</div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 6 · Стоимость</span></div>
+</section>
+
+<!-- ============ 20. КОМАНДА ============ -->
+<section class="slide">
+  <div class="num">20</div>
+  <div class="kicker">Раздел 7 <span class="sep">/</span> <span class="ghost">кто мы</span></div>
+  <h2 class="sm">Команда RestAI</h2>
+  <div class="body">
+    <div class="people">
+      <div class="p">
+        <div class="av">ВФ</div>
+        <div>
+          <div class="pn">Вадим Фоменко</div>
+          <div class="pr">Основатель RestAI</div>
+          <div class="pb">Более 20 лет в бизнесе: более 10 лет адвокатом по корпоративному праву, последние 12 лет создаёт собственные IT-продукты и компании.</div>
+        </div>
+      </div>
+      <div class="p">
+        <div class="av">ВА</div>
+        <div>
+          <div class="pn">Вениамин Арефьев</div>
+          <div class="pr">Cloud / DevOps Engineer</div>
+          <div class="pb">Облачная инфраструктура и надёжность платформы. Выпускник ВМК МГУ, научный сотрудник РАН, преподаватель ВШЭ.</div>
+        </div>
+      </div>
+      <div class="p">
+        <div class="av">ШЧ</div>
+        <div>
+          <div class="pn">Шамиль Чонкаев</div>
+          <div class="pr">AI Engineer</div>
+          <div class="pb">ИИ-модели подсказок, анализа разговоров и ассистента гостя. Выпускник ВМК МГУ, преподаватель факультета искусственного интеллекта МГУ.</div>
+        </div>
+      </div>
+      <div class="p">
+        <div class="av">АБ</div>
+        <div>
+          <div class="pn">Алексей Букинич</div>
+          <div class="pr">Поведенческая психология</div>
+          <div class="pb">Преподаватель факультета психологии МГУ; научная работа — поведенческая психология потребителя в условиях экономического кризиса. Отвечает за то, как подсказки официанту и ассистент гостя влияют на решение о заказе.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>RestAI × ЗДРАСТЕ</span><span>Раздел 7 · Команда</span></div>
+</section>
+
+<!-- ============ 21. CTA ============ -->
+<section class="slide cta">
+  <div class="kicker">Следующий шаг</div>
+  <div>
+    <h2>Встреча на 30–40 минут с вами и операционной командой</h2>
+    <div class="sub">Удобно на этой или следующей неделе?</div>
+    <div class="asks">
+      <div class="ask">
+        <div class="an">На встрече · 1</div>
+        <div class="ab">Показываем приложение <b>на вашем меню</b> — не на демо-данных.</div>
+      </div>
+      <div class="ask">
+        <div class="an">На встрече · 2</div>
+        <div class="ab">Вместе выбираем <b>две пилотные точки</b> и одну контрольную.</div>
+      </div>
+      <div class="ask">
+        <div class="an">На встрече · 3</div>
+        <div class="ab">Фиксируем <b>метрики письменно</b> до старта пилота.</div>
+      </div>
+    </div>
+  </div>
+  <div class="sign">
+    <div><b>Вадим Фоменко</b>Основатель RestAI · <a href="tel:+79034432868">+7 (903) 443-28-68</a> · <a href="mailto:ceo@restai.pro">ceo@restai.pro</a></div>
+    <div><b>Попробовать приложение</b><a href="/demo/">restai.pro/demo</a></div>
+  </div>
+</section>
+
+</body>
+</html>
