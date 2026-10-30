@@ -17,6 +17,7 @@ import PaymentFlowModal from './components/PaymentFlowModal/PaymentFlowModal';
 import QuizModal from './components/QuizModal/QuizModal';
 import PersonalCabinet from './components/PersonalCabinet/PersonalCabinet';
 import { isStopped } from './lib/stopList';
+import { drinkNotes } from './lib/drinkProfile';
 import { toConfirmedItems, dishCardsFromLines, planPush, adoptServerCart, sameCart } from './lib/tableCart';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -342,7 +343,10 @@ useEffect(() => {
 
     setChatRoleHint(dish ? roleFromContext(dish) : (roleFromText(currentSection) || 'chef'));
     if (dish) {
-      const info = `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
+      // У алкоголя «состав» — это вкус, а свойства (сорт, год, аромат…) — в nutritional_info.
+      const info = dish.product_type === 'alcohol'
+        ? `Напиток: ${dish.dish_name}. О напитке: ${dish.description || ''}. Вкус: ${[].concat(dish.ingredients || []).join(', ')}. ${drinkNotes(dish.nutritional_info)}`
+        : `Блюдо: ${dish.dish_name}. Описание: ${dish.description}. Состав: ${dish.ingredients}`;
       setChatContext(info);
     } else if (currentSection) {
       setChatContext(`Пользователь сейчас просматривает раздел меню: "${currentSection}"`);
