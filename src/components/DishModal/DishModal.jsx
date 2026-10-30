@@ -4,6 +4,7 @@ import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import CloseButton from '../CloseButton/CloseButton';
 import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 import { adviserLabel } from '../../lib/adviser';
+import { drinkProfile } from '../../lib/drinkProfile';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -80,21 +81,6 @@ function kbjuOf(info) {
     { v: f || 0, l: 'жиры', w: ((f || 0) / grams) * 100, c: 'var(--kbju-f)' },
     { v: c || 0, l: 'углеводы', w: ((c || 0) / grams) * 100, c: 'var(--kbju-c)' },
   ];
-}
-
-// Свойства напитка из nutritional_info: «Крепость» — в строку с ценой, прочее
-// (танины, полнота…) — строками в шторке. Служебные поля еды пропускаем.
-const FOOD_KEYS = new Set(['calories_kcal', 'protein_g', 'fat_g', 'carbs_g', 'weight_value', 'weight_unit']);
-function drinkSpecs(info) {
-  if (!info || typeof info !== 'object') return { strength: null, rows: [] };
-  let strength = null;
-  const rows = [];
-  for (const [k, v] of Object.entries(info)) {
-    if (FOOD_KEYS.has(k) || v === null || v === '') continue;
-    if (/крепост/i.test(k)) { strength = `${String(v).replace(/%$/, '')}%`; continue; }
-    rows.push([k, String(v)]);
-  }
-  return { strength, rows };
 }
 
 export default function DishModal({
@@ -227,7 +213,7 @@ export default function DishModal({
   const weight = formatWeight(dish);
   const kbju = isDrink ? null : kbjuOf(dish.nutritional_info);
   const ingredients = ingredientsView(dish.ingredients);
-  const specs = isAlcohol ? drinkSpecs(dish.nutritional_info) : { strength: null, rows: [] };
+  const specs = isAlcohol ? drinkProfile(dish.nutritional_info) : { strength: null, aroma: null, rows: [] };
   const cookTime = Number(dish.cook_time_min) > 0 ? `${dish.cook_time_min} мин` : null;
   const pairDish = pair?.dish;
 
@@ -310,6 +296,7 @@ export default function DishModal({
                 <>
                   {dish.description && <><h3 className={styles.dh}>О напитке</h3><p className={styles.dp}>{dish.description}</p></>}
                   {ingredients && <><h3 className={styles.dh}>Вкус</h3><p className={styles.dp}>{ingredients.chips ? ingredients.chips.join(', ') : ingredients.text}</p></>}
+                  {specs.aroma && <><h3 className={styles.dh}>Аромат</h3><p className={styles.dp}>{specs.aroma}</p></>}
                   {specs.rows.length > 0 && (
                     <>
                       <h3 className={styles.dh}>Характеристики</h3>

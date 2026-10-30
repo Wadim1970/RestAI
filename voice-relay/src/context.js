@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
 import { compileCharacterProfile, compileRestaurantPolicy } from './promptCompiler.js';
+import { drinkProfile } from './drinkProfile.js';
 
 // Ленивая инициализация — как и с OPENAI_API_KEY в realtimeProvider.js,
 // отсутствие/опечатка в переменных окружения не должна ронять весь
@@ -121,6 +122,12 @@ async function loadMenuSummary(restaurantId) {
       if (i.weight_g) extras.push(`${i.weight_g}`);
       if (i.nutritional_info?.calories_kcal != null) extras.push(`${i.nutritional_info.calories_kcal} ккал`);
       if (i.cook_time_min != null) extras.push(`~${i.cook_time_min} мин готовка`);
+      // Вино: сорт и год — гость часто выбирает именно по ним.
+      if (i.product_type === 'alcohol') {
+        const p = drinkProfile(i.nutritional_info);
+        if (p.grape) extras.push(p.grape);
+        if (p.vintage) extras.push(`${p.vintage} г.`);
+      }
       const suffix = extras.length ? `, ${extras.join(', ')}` : '';
       const modDish = modsByName.get(normalizeDishName(i.dish_name));
       const modSuffix = modDish?.groups?.length
@@ -268,7 +275,20 @@ export async function lookupDishDetails(restaurantId, dishName) {
     fat_g: dish.nutritional_info?.fat_g ?? null,
     carbs_g: dish.nutritional_info?.carbs_g ?? null,
     price_rub: dish.cost_rub,
-    tasting_notes: dish.product_type === 'alcohol' ? (dish.specific_details || null) : undefined,
+    // Напиток: «состав» у него — это вкус; крепость, сорт винограда, год,
+    // полнота, аромат — в nutritional_info (drinkProfile).
+    ...(dish.product_type === 'alcohol' ? drinkFacts(dish.nutritional_info) : {}),
+  };
+}
+
+function drinkFacts(info) {
+  const p = drinkProfile(info);
+  return {
+    strength: p.strength,
+    aroma: p.aroma,
+    grape_variety: p.grape,
+    vintage_year: p.vintage,
+    characteristics: p.rows.length ? Object.fromEntries(p.rows) : null,
   };
 }
 
