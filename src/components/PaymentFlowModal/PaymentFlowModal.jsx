@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import styles from './PaymentFlowModal.module.css';
 import CloseButton from '../CloseButton/CloseButton';
+import { TIP_FIXED, TIP_PERCENT, tipAmount, sameTip } from '../../lib/tip';
 
 // Поток самостоятельной оплаты гостем: чек (заглушка) -> СБП (заглушка) ->
 // подтверждение оплаты. Важное правило: места помечаются 'paid'
@@ -18,11 +19,18 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
   const [total, setTotal] = useState(0);
   const [errorText, setErrorText] = useState('');
   const [paying, setPaying] = useState(false);
+  // Чаевые: вкладка (рубли / проценты) и выбор { kind, value } или null — без чаевых.
+  const [tipKind, setTipKind] = useState('fixed');
+  const [tip, setTip] = useState(null);
+  const tipSum = tipAmount(tip, total);
+  const grandTotal = total + tipSum;
 
   useEffect(() => {
     if (!isOpen) return;
     setStep('receipt');
     setErrorText('');
+    setTip(null);
+    setTipKind('fixed');
 
     let cancelled = false;
     (async () => {
@@ -66,6 +74,27 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
     const timer = setTimeout(() => controller.abort(), 12000);
 
     try {
+      // Чаевые пишем ДО отметки оплаты: после неё заказ уже не активен.
+      // Сумму сервер считает сам; повтор за те же места заменяет запись.
+      if (tip) {
+        const { error: tipError } = await supabase
+          .rpc('record_table_tip', {
+            p_restaurant_id: restaurantId,
+            p_table_number: String(tableNumber),
+            p_seat_numbers: seatNumbers,
+            p_kind: tip.kind,
+            p_value: tip.value,
+          })
+          .abortSignal(controller.signal);
+        if (tipError) {
+          clearTimeout(timer);
+          console.error('Ошибка записи чаевых:', tipError);
+          setErrorText('Не удалось сохранить чаевые. Попробуйте ещё раз или выберите «Без чаевых».');
+          setPaying(false);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .rpc('pay_table_seats', {
           p_restaurant_id: restaurantId,
@@ -125,9 +154,54 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
             </div>
 
             <div className={styles.footer}>
+              {!loading && !errorText && total > 0 && (
+                <div className={styles.tipBlock}>
+                  <div className={styles.tipHeader}>
+                    <span className={styles.tipTitle}>Чаевые официанту</span>
+                    <div className={styles.tipTabs} role="tablist">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tipKind === 'fixed'}
+                        className={`${styles.tipTab} ${tipKind === 'fixed' ? styles.tipTabOn : ''}`}
+                        onClick={() => { setTipKind('fixed'); setTip(null); }}
+                      >₽</button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={tipKind === 'percent'}
+                        className={`${styles.tipTab} ${tipKind === 'percent' ? styles.tipTabOn : ''}`}
+                        onClick={() => { setTipKind('percent'); setTip(null); }}
+                      >%</button>
+                    </div>
+                  </div>
+                  <div className={styles.tipChips}>
+                    {(tipKind === 'fixed' ? TIP_FIXED : TIP_PERCENT).map(v => {
+                      const option = { kind: tipKind, value: v };
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          className={`${styles.tipChip} ${sameTip(tip, option) ? styles.tipChipOn : ''}`}
+                          onClick={() => setTip(sameTip(tip, option) ? null : option)}
+                        >
+                          {tipKind === 'fixed' ? `${v} ₽` : `${v}%`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {tip && <div className={styles.tipHint}>{tipSum} ₽ · повторное нажатие снимает выбор</div>}
+                </div>
+              )}
+              {tipSum > 0 && (
+                <>
+                  <div className={styles.subRow}><span>Чек</span><span>{total} ₽</span></div>
+                  <div className={styles.subRow}><span>Чаевые</span><span>{tipSum} ₽</span></div>
+                </>
+              )}
               <div className={styles.totalRow}>
-                <span>Итого</span>
-                <span>{total} ₽</span>
+                <span>{tipSum > 0 ? 'К оплате' : 'Итого'}</span>
+                <span>{grandTotal} ₽</span>
               </div>
               <button
                 className={styles.primaryBtn}
@@ -150,7 +224,8 @@ const PaymentFlowModal = ({ isOpen, onClose, restaurantId, tableNumber, seatNumb
             <div className={styles.sbpBox}>
               <div className={styles.qrStub}>QR-код СБП<br />(заглушка)</div>
               <span className={styles.sbpLink}>Ссылка для оплаты через СБП (заглушка)</span>
-              <div className={styles.sbpAmount}>{total} ₽</div>
+              <div className={styles.sbpAmount}>{grandTotal} ₽</div>
+              {tipSum > 0 && <span className={styles.sbpTip}>в том числе чаевые {tipSum} ₽</span>}
             </div>
 
             {errorText && <div className={styles.infoText}>{errorText}</div>}
