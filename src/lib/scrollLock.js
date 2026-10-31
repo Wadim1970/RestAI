@@ -25,13 +25,3 @@ export function lockBodyScroll() {
     window.scrollTo(0, y);
   };
 }
-
-// Прокручиваемый блок внутри окна не должен упираться в край: у края
-// iPhone отдаёт жест наружу (а старые iOS не знают overscroll-behavior).
-// Перед касанием сдвигаем его на 1 px от края — жест остаётся в блоке.
-export function keepOffEdge(el) {
-  if (!el || el.scrollHeight <= el.clientHeight) return;
-  const max = el.scrollHeight - el.clientHeight;
-  if (el.scrollTop <= 0) el.scrollTop = 1;
-  else if (el.scrollTop >= max) el.scrollTop = max - 1;
-}

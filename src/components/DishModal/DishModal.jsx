@@ -5,7 +5,7 @@ import CloseButton from '../CloseButton/CloseButton';
 import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 import { adviserLabel } from '../../lib/adviser';
 import { drinkProfile } from '../../lib/drinkProfile';
-import { lockBodyScroll, keepOffEdge } from '../../lib/scrollLock';
+import { lockBodyScroll } from '../../lib/scrollLock';
 
 // Карточка блюда на весь экран: фото от края до края, поверх — название,
 // цена и одна кнопка; описание, состав и КБЖУ — в стеклянной шторке по свайпу
@@ -179,7 +179,6 @@ export default function DishModal({
     const inScroll = scrollRef.current && scrollRef.current.contains(e.target);
     // Где был текст до касания: у самого верха — потянув вниз, сворачиваем шторку.
     touch.current = { x: t.clientX, y: t.clientY, dx: 0, dy: 0, inScroll, scrollTop: scrollRef.current?.scrollTop || 0, axis: null };
-    if (expanded && inScroll) keepOffEdge(scrollRef.current);
   };
   const onTouchMove = (e) => {
     const s = touch.current;
@@ -207,7 +206,7 @@ export default function DishModal({
       return;
     }
     // Шторка открыта: свернуть, если тянут вниз от самого верха текста.
-    if (s.dy > SWIPE && (!s.inScroll || s.scrollTop <= 1)) setExpanded(false);
+    if (s.dy > SWIPE && (!s.inScroll || s.scrollTop <= 0)) setExpanded(false);
   };
 
   if (!isOpen || !dish) return null;

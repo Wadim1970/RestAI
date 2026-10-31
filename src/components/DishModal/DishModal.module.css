@@ -18,7 +18,11 @@
     display: flex;
     justify-content: center;
     animation: fadeIn 0.25s ease;
-    touch-action: none;
+    /* Только вертикальная прокрутка (текста шторки); масштаб и горизонтальные
+       жесты — наши (листание блюд). Раньше здесь было none: Safari на iPhone
+       учитывает его и у прокручиваемого текста внутри — тот «не цеплялся»
+       за палец с первого раза. Страница под окном заморожена (scrollLock). */
+    touch-action: pan-y;
 }
 
 .root {
@@ -151,21 +155,38 @@
     transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.expanded .sheet { transform: translateY(0); }
+/* Раскрытая шторка — без transform: у прокручиваемого блока внутри
+   сдвинутого (transform) родителя Safari на iPhone не сразу ловит жест. */
+.expanded .sheet { transform: none; }
 
-.sheetIn {
-    flex: 1;
+/* Стекло шторки — отдельным слоем ПОД текстом: backdrop-filter на самом
+   прокручиваемом блоке ломает прокрутку пальцем в Safari на iPhone. */
+.sheet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
     border-radius: 28px 28px 0 0;
-    padding: 10px 20px calc(env(safe-area-inset-bottom, 0px) + 104px);
-    overflow: hidden;
-    transition: background-color 0.45s ease;
-}
-
-.expanded .sheetIn {
     background: var(--sheet-glass);
     -webkit-backdrop-filter: blur(22px) saturate(150%);
     backdrop-filter: blur(22px) saturate(150%);
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    pointer-events: none;
+}
+.expanded .sheet::before { opacity: 1; }
+
+.sheetIn {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: 28px 28px 0 0;
+    padding: 10px 20px calc(env(safe-area-inset-bottom, 0px) + 104px);
+    overflow: hidden;
+}
+
+.expanded .sheetIn {
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
     scrollbar-width: none;
