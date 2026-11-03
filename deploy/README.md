@@ -228,3 +228,21 @@ curl -s localhost:3001/api/__health
 curl -s localhost:3002/api/__health
 sudo nginx -t && sudo tail -50 /var/log/nginx/error.log
 ```
+
+## Тренажёр официанта (trainer.restai.pro, отдельный продукт)
+
+Приложение-тренажёр (PWA для официантов) со своим репозиторием и своим API. Подробная инструкция (почта, миграции, переменные) — `docs/DEPLOY.md` в репозитории Trainer-RestAI.
+
+1. DNS: A-запись `trainer.restai.pro` → IP этого сервера.
+2. Установка (репозиторий закрытый: скрипт создаст deploy-ключ на чтение и покажет, куда его добавить в GitHub; потом создаст `.env.production` — его нужно заполнить):
+   ```bash
+   TRAINER_DOMAIN=trainer.restai.pro bash /opt/restai/RestAI/deploy/setup-trainer.sh
+   ```
+   Скрипт ставит API в pm2 (`restai-trainer-api`, порт 3003) и nginx; запускайте повторно после каждой остановки.
+3. HTTPS, когда DNS обновился:
+   ```bash
+   EMAIL=<почта> TRAINER_DOMAIN=trainer.restai.pro bash /opt/restai/RestAI/deploy/enable-https.sh trainer
+   ```
+4. Обновление: автовыкладка (`auto-update.sh`) следит за веткой `main` тренажёра; вручную — `bash deploy/update.sh trainer`.
+
+Миграции базы автоматически не выкладываются (как у остальных приложений): их применяют вручную на сервере базы, порядок — в DEPLOY.md тренажёра.

@@ -6,6 +6,7 @@
 #   RestAI       main           → update.sh guest   (гостевое приложение и его API)
 #   Waiter-app   RestAI-weiter  → update.sh waiter  (приложение официанта и API админки)
 #   Admin-restai main           → update.sh admin   (панель администратора)
+#   Trainer-RestAI main         → update.sh trainer (тренажёр официанта и его API)
 #
 # Сайт restai.pro обновляет свой cron (site-sync.sh). Миграции базы — по-прежнему
 # вручную на сервере базы: автоматически их запускать нельзя.
@@ -61,3 +62,4 @@ deploy() {  # $1=цель update.sh $2=папка $3=ветка
 deploy guest  "$ROOT/RestAI"       main
 deploy waiter "$ROOT/Waiter-app"   RestAI-weiter
 deploy admin  "$ROOT/Admin-restai" main
+deploy trainer "$ROOT/Trainer-RestAI" main
