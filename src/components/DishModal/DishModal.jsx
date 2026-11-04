@@ -4,6 +4,7 @@ import { formatPrice, formatWeight } from '../../lib/menuFormat';
 import CloseButton from '../CloseButton/CloseButton';
 import { dishPhoto, dishThumb, fallbackToPhoto } from '../../lib/dishImage';
 import { adviserLabel } from '../../lib/adviser';
+import { videoOf, canPlayVideo, canPrefetchVideo, neighborVideoUrls, prefetchVideo, releasePrefetch } from '../../lib/dishVideo';
 import { drinkProfile } from '../../lib/drinkProfile';
 import { lockBodyScroll } from '../../lib/scrollLock';
 
@@ -94,6 +95,9 @@ export default function DishModal({
   const [closing, setClosing] = useState(false);
   const [img, setImg] = useState({ id: null, loaded: false, failed: false });
   const [slide, setSlide] = useState(0); // −1/1 — направление листания, для анимации
+  // Видео блюда: заиграло ли оно (тогда плавно заменяет фото) и не сломалось ли.
+  const [vid, setVid] = useState({ id: null, playing: false, failed: false });
+  const videoRef = useRef(null);
   const rootRef = useRef(null);
   const sheetRef = useRef(null);
   const headRef = useRef(null);
@@ -110,6 +114,14 @@ export default function DishModal({
   });
   const imgNow = img.id === dishId ? img : { loaded: false, failed: false };
   const bigLoaded = imgNow.loaded;
+  const vidNow = vid.id === dishId ? vid : { playing: false, failed: false };
+  // Сеть и системные настройки гостя читаем один раз при открытии окна.
+  const mediaEnv = useMemo(() => ({
+    connection: typeof navigator !== 'undefined' ? navigator.connection : undefined,
+    reducedMotion: typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+  }), []);
+  const videoUrl = videoOf(dish);
+  const showVideo = !!videoUrl && canPlayVideo(mediaEnv) && !vidNow.failed;
   const bigFailed = imgNow.failed;
   const isDrink = dish && (dish.product_type === 'drink' || dish.product_type === 'alcohol');
   const isAlcohol = dish?.product_type === 'alcohol';
@@ -122,6 +134,28 @@ export default function DishModal({
 
   const index = useMemo(() => (siblings && dish ? siblings.findIndex((d) => d.id === dish.id) : -1), [siblings, dish]);
   const total = siblings ? siblings.length : 0;
+
+  // Следующее блюдо в разделе: его видео подгружаем заранее (только на быстрой
+  // сети), чтобы при листании оно начиналось сразу. Окно закрыто — отпускаем.
+  useEffect(() => {
+    if (!isOpen || !canPrefetchVideo(mediaEnv)) return undefined;
+    const [next] = neighborVideoUrls(siblings, dishId);
+    if (next) prefetchVideo(next);
+    return () => releasePrefetch();
+  }, [isOpen, siblings, dishId, mediaEnv]);
+
+  // Приложение свернули — видео на паузу, вернулись — дальше.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onVisibility = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      if (document.visibilityState === 'hidden') v.pause();
+      else v.play().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -254,6 +288,22 @@ export default function DishModal({
                 if (!bigFailed && thumb && thumb !== big) setImg({ id: dishId, loaded: false, failed: true });
                 else e.currentTarget.style.visibility = 'hidden';
               }}
+            />
+          )}
+          {showVideo && (
+            <video
+              key={videoUrl}
+              ref={(el) => { videoRef.current = el; if (el) el.muted = true; }}
+              className={`${styles.video} ${vidNow.playing ? styles.videoOn : ''}`}
+              src={videoUrl}
+              muted
+              loop
+              playsInline
+              autoPlay
+              preload="auto"
+              aria-hidden="true"
+              onPlaying={() => setVid({ id: dishId, playing: true, failed: false })}
+              onError={() => setVid({ id: dishId, playing: false, failed: true })}
             />
           )}
         </div>
