@@ -26,10 +26,11 @@ export default async function handler(req, res) {
   // «Кухня» админки (миграция 20261025010000_kitchen).
   // course_role / meal_times — ручная роль блюда и время подачи
   // (миграция 20261026010000_cart_advice); пусто — по разделу и названию.
-  const query = (hideHidden, kitchen = true, meal = true) => {
+  // video_url — короткое видео блюда (миграция 20261104010000_menu_item_video).
+  const query = (hideHidden, kitchen = true, meal = true, video = true) => {
     let q = supabase
       .from('menu_items')
-      .select([BASE_COLS, kitchen && 'stop_until, urgent_until', meal && 'course_role, meal_times'].filter(Boolean).join(', '))
+      .select([BASE_COLS, video && 'video_url', kitchen && 'stop_until, urgent_until', meal && 'course_role, meal_times'].filter(Boolean).join(', '))
       .eq('restaurant_id', restaurantId)
     // is_hidden — «скрыто от гостя» (Лавка, комбо и т.п.): официант их видит,
     // гость — нет.
@@ -40,11 +41,12 @@ export default async function handler(req, res) {
   }
 
   let { data, error } = await query(true)
-  // Нет колонок ролей, «Кухни» или is_hidden (миграции не применены) — меню
-  // всё равно работает, без ролей, без стопа или без скрытия.
-  if (error && error.code === '42703') ({ data, error } = await query(true, true, false))
-  if (error && error.code === '42703') ({ data, error } = await query(true, false, false))
-  if (error && error.code === '42703') ({ data, error } = await query(false, false, false))
+  // Нет колонок видео, ролей, «Кухни» или is_hidden (миграции не применены) —
+  // меню всё равно работает: без видео, без ролей, без стопа или без скрытия.
+  if (error && error.code === '42703') ({ data, error } = await query(true, true, true, false))
+  if (error && error.code === '42703') ({ data, error } = await query(true, true, false, false))
+  if (error && error.code === '42703') ({ data, error } = await query(true, false, false, false))
+  if (error && error.code === '42703') ({ data, error } = await query(false, false, false, false))
 
   if (error) {
     // Раньше отдавали только общий текст и глотали настоящую причину —

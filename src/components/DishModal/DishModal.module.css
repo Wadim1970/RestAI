@@ -95,6 +95,21 @@
     filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.35));
 }
 
+/* Видео блюда: на всю область фото (9:16), проявляется поверх фото, когда реально
+   заиграло. Не заиграло (энергосбережение, ошибка) — остаётся фото. */
+.video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+}
+
+.videoOn { opacity: 1; }
+
 .scrim {
     position: absolute;
     inset: 0;
